@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+
 import 'dart:io';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -132,15 +134,12 @@ class DatabaseHelper {
         throw Exception('Database file not found');
       }
 
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Export Cashflow Backup',
-        fileName: 'cashflow_backup.db',
-      );
-
-      if (outputFile == null) return null;
-
-      await file.copy(outputFile);
-      return outputFile;
+      // Use the Documents directory as a default export location
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final backupPath = join(documentsDir.path, 'cashflow_backup.db');
+      final backupFile = await file.copy(backupPath);
+      
+      return backupFile.path;
     } catch (e) {
       print('Export error: $e');
       return null;
@@ -150,9 +149,8 @@ class DatabaseHelper {
   /// Imports a database file from a user-selected location.
   Future<bool> importDatabase() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-      );
+      // Change FilePickerResult to dynamic if the type is not found
+      dynamic result = await FilePicker.pickFiles(type: FileType.any);
 
       if (result == null || result.files.single.path == null) return false;
 
@@ -163,10 +161,10 @@ class DatabaseHelper {
 
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'money_tracker.db');
-      
+
       await sourceFile.copy(path);
       await instance.database;
-      
+
       return true;
     } catch (e) {
       print('Import error: $e');
