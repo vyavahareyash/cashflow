@@ -16,6 +16,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Account> _accounts = [];
   double _totalBalance = 0.0;
   double _lockedAmount = 0.0;
+  double _usableBalance = 0.0;
 
   @override
   void initState() {
@@ -27,6 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Fetch physical accounts and total locked funds from DB
     final accountsData = await DatabaseHelper.instance.readAllAccounts();
     final locked = await DatabaseHelper.instance.getTotalLockedAmount();
+    final usable = await DatabaseHelper.instance.calculateUsableBalance();
 
     double sum = 0;
     for (var acc in accountsData) {
@@ -37,13 +39,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _accounts = accountsData;
       _totalBalance = sum;
       _lockedAmount = locked;
+      _usableBalance = usable;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    double usableBalance = _totalBalance - _lockedAmount;
-
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -76,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '\$${usableBalance.toStringAsFixed(2)}',
+                    '\$${_usableBalance.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 36,

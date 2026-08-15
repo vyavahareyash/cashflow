@@ -232,4 +232,56 @@ class DatabaseHelper {
 
     return result.map((json) => LockedAllocation.fromMap(json)).toList();
   }
+
+  // --- CORE CALCULATION LOGIC ---
+
+  /// Calculates the "Usable Balance" based on the formula:
+  /// Usable Balance = (Sum of all Accounts) - (Total Locked for Plans) - (Total Reserved for Monthly Budgets)
+  Future<double> calculateUsableBalance() async {
+    final db = await instance.database;
+
+    // 1. Sum of all account balances
+    final accountResult = await db.rawQuery(
+      'SELECT SUM(balance) as total FROM accounts',
+    );
+    double totalPhysical = (accountResult.first['total'] as num? ?? 0)
+        .toDouble();
+
+    // 2. Total locked for plans
+    final lockedResult = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM locked_allocations',
+    );
+    double totalLocked = (lockedResult.first['total'] as num? ?? 0).toDouble();
+
+    // 3. Total reserved for monthly budgets (Sum of monthly_budget for all categories)
+    final budgetResult = await db.rawQuery(
+      'SELECT SUM(monthly_budget) as total FROM categories',
+    );
+    double totalReserved = (budgetResult.first['total'] as num? ?? 0)
+        .toDouble();
+
+    return totalPhysical - totalLocked - totalReserved;
+  }
+
+  /// Gets the total spent in a specific category for the current month.
+  /// Used to calculate budget progress.
+  Future<double> getCategorySpendingForCurrentMonth(int categoryId) async {
+    final db = await instance.database;
+
+    // Get current month and year in YYYY-MM format
+    final now = DateTime.now();
+    final monthStart = DateTime(
+      now.year,
+      now.month,
+      1,
+    ).toIso8601String().substring(0, 7);
+    final monthEnd = DateTime(now.year, now.month + 1, 0).toIso8601String();
+
+    final result = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM transactions WHERE category_id = ? AND date >= ? AND date <= ?',
+      [categoryId, monthStart, monthEnd],
+    );
+
+    return (result.first['total'] as num? ?? 0).toDouble();
+  }
 }

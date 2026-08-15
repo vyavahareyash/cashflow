@@ -1,7 +1,46 @@
 import 'package:flutter/material.dart';
 
-class BudgetScreen extends StatelessWidget {
+import '../services/database_helper.dart';
+import '../models/category_model.dart';
+
+class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
+
+  @override
+  State<BudgetScreen> createState() => _BudgetScreenState();
+}
+
+class _BudgetScreenState extends State<BudgetScreen> {
+  List<Category> _categories = [];
+  Map<int, double> _spending = {};
+  double _totalReserved = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBudgets();
+  }
+
+  void _loadBudgets() async {
+    final categories = await DatabaseHelper.instance.readAllCategories();
+    double totalReserved = 0;
+    Map<int, double> spendingMap = {};
+
+    for (var cat in categories) {
+      totalReserved += cat.monthlyBudget;
+      if (cat.id != null) {
+        final spent = await DatabaseHelper.instance
+            .getCategorySpendingForCurrentMonth(cat.id!);
+        spendingMap[cat.id!] = spent;
+      }
+    }
+
+    setState(() {
+      _categories = categories;
+      _spending = spendingMap;
+      _totalReserved = totalReserved;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,44 +54,56 @@ class BudgetScreen extends StatelessWidget {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Total Reserved: \$800.00', // This ties back to your Usable Balance logic
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+          Text(
+            'Total Reserved: \$${_totalReserved.toStringAsFixed(2)}',
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 25),
 
-          // We use an Expanded widget here so the list can scroll
           Expanded(
-            child: ListView(
-              children: [
-                _buildBudgetItem('Groceries', 120.0, 300.0, Colors.orange),
-                _buildBudgetItem('Transport', 45.0, 100.0, Colors.blue),
-                _buildBudgetItem('Entertainment', 180.0, 200.0, Colors.purple),
-                _buildBudgetItem(
-                  'Dining Out',
-                  210.0,
-                  200.0,
-                  Colors.red,
-                ), // Over budget example
-              ],
-            ),
+            child: _categories.isEmpty
+                ? const Center(child: Text('No categories found.'))
+                : ListView.builder(
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final cat = _categories[index];
+                      final spent = _spending[cat.id] ?? 0.0;
+                      return _buildBudgetItem(
+                        cat.name,
+                        spent,
+                        cat.monthlyBudget,
+                        _getCategoryColor(cat.name),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  // Helper method to build a Budget Row
+  Color _getCategoryColor(String name) {
+    switch (name) {
+      case 'Groceries':
+        return Colors.orange;
+      case 'Transport':
+        return Colors.blue;
+      case 'Entertainment':
+        return Colors.purple;
+      case 'Dining Out':
+        return Colors.red;
+      default:
+        return Colors.green;
+    }
+  }
+
   Widget _buildBudgetItem(
     String category,
     double spent,
     double budget,
     Color color,
   ) {
-    // Calculate percentage for the progress bar (0.0 to 1.0)
-    double progress = spent / budget;
-
-    // Change color to red if spending exceeds budget
+    double progress = budget > 0 ? spent / budget : 0.0;
     Color barColor = progress > 1.0 ? Colors.red : color;
 
     return Card(
@@ -74,29 +125,22 @@ class BudgetScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '\$${spent.toStringAsFixed(0)} / \$${budget.toStringAsFixed(0)}',
+                  '\$${spent.toStringAsFixed(2)} / \$${budget.toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-
-            // --- THE PROGRESS BAR ---
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
-                value: progress > 1.0
-                    ? 1.0
-                    : progress, // Cap at 1.0 for the visual bar
+                value: progress > 1.0 ? 1.0 : progress,
                 minHeight: 10,
                 backgroundColor: Colors.grey.shade200,
                 valueColor: AlwaysStoppedAnimation<Color>(barColor),
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // Show a warning if over budget
             if (progress > 1.0)
               const Text(
                 'Over budget!',
