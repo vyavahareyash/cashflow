@@ -132,6 +132,24 @@ class DatabaseHelper {
     return await db.insert('transactions', transaction.toMap());
   }
 
+  /// Fetches all transactions with their associated account and category names.
+  Future<List<Map<String, dynamic>>> getTransactionHistory() async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT 
+        t.id, 
+        t.amount, 
+        t.date, 
+        t.note, 
+        a.name as account_name, 
+        c.name as category_name 
+      FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
+      JOIN categories c ON t.category_id = c.id
+      ORDER BY t.date DESC
+    ''');
+  }
+
   // Helper method to subtract money from an account
   Future<void> subtractFromAccount(int accountId, double amount) async {
     final db = await instance.database;
@@ -151,6 +169,51 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [accountId],
     );
+  }
+
+  /// Deletes a transaction and refunds the amount to the associated account balance.
+  Future<void> deleteTransaction(int transactionId) async {
+    final db = await instance.database;
+
+    // 1. Get transaction details to know which account to refund
+    final result = await db.query(
+      'transactions',
+      where: 'id = ?',
+      whereArgs: [transactionId],
+    );
+
+    if (result.isEmpty) return;
+
+    final transaction = result.first;
+    final int accountId = transaction['account_id'] as int;
+    final double amount = (transaction['amount'] as num).toDouble();
+
+    // Use a transaction to ensure both operations succeed or fail together
+    await db.transaction((txn) async {
+      // 2. Refund the amount to the account
+      List<Map> accountResult = await txn.query(
+        'accounts',
+        where: 'id = ?',
+        whereArgs: [accountId],
+      );
+
+      if (accountResult.isNotEmpty) {
+        double currentBalance = accountResult.first['balance'];
+        await txn.update(
+          'accounts',
+          {'balance': currentBalance + amount},
+          where: 'id = ?',
+          whereArgs: [accountId],
+        );
+      }
+
+      // 3. Delete the transaction record
+      await txn.delete(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [transactionId],
+      );
+    });
   }
 
   // SEED DATA: Call this once to add default categories
@@ -174,6 +237,12 @@ class DatabaseHelper {
 
   Future<List<Plan>> readAllPlans() async {
     final db = await instance.database;
+    // Only fetch plans that are not yet fully paid (current_saved < total_target)
+    // Or we can add a 'is_completed' flag. For now, let's assume if target is met and
+    // locked allocations are gone, it's done.
+    // Actually, the cleanest way is to filter out plans where current_saved <= 0
+    // AND total_target was previously something, but that's tricky.
+    // Let's implement a simple filter: if the payment makes current_saved 0 and total_target was met.
     final result = await db.query('planned_spends');
     return result.map((json) => Plan.fromMap(json)).toList();
   }
@@ -213,7 +282,7 @@ class DatabaseHelper {
     final result = await db.rawQuery(
       'SELECT SUM(amount) as total FROM locked_allocations',
     );
-    return (result.first['total'] as int? ?? 0).toDouble();
+    return (result.first['total'] as num? ?? 0).toDouble();
   }
 
   // Get locked breakdown for a specific account (for Accounts screen)
@@ -231,6 +300,93 @@ class DatabaseHelper {
     );
 
     return result.map((json) => LockedAllocation.fromMap(json)).toList();
+  }
+
+  /// Processes a payment for a planned spend.
+  /// This moves money from "Locked" to "Spent".
+  Future<void> payBill(int planId, int accountId, double amount) async {
+    final db = await instance.database;
+
+    await db.transaction((txn) async {
+      // 1. Subtract from physical account balance
+      List<Map> accRes = await txn.query(
+        'accounts',
+        where: 'id = ?',
+        whereArgs: [accountId],
+      );
+      if (accRes.isEmpty) throw Exception('Account not found');
+      double currentBalance = accRes.first['balance'];
+      await txn.update(
+        'accounts',
+        {'balance': currentBalance - amount},
+        where: 'id = ?',
+        whereArgs: [accountId],
+      );
+
+      // 2. Subtract from locked_allocations
+      // We find the allocation for this plan and account and reduce it.
+      List<Map> lockRes = await txn.query(
+        'locked_allocations',
+        where: 'plan_id = ? AND account_id = ?',
+        whereArgs: [planId, accountId],
+      );
+      if (lockRes.isEmpty)
+        throw Exception('No locked funds found for this plan in this account');
+
+      double currentLock = lockRes.first['amount'];
+      if (currentLock < amount)
+        throw Exception('Insufficient locked funds in this account');
+
+      if (currentLock == amount) {
+        await txn.delete(
+          'locked_allocations',
+          where: 'id = ?',
+          whereArgs: [lockRes.first['id']],
+        );
+      } else {
+        await txn.update(
+          'locked_allocations',
+          {'amount': currentLock - amount},
+          where: 'id = ?',
+          whereArgs: [lockRes.first['id']],
+        );
+      }
+
+      // 3. Update planned_spends total saved
+      List<Map> planRes = await txn.query(
+        'planned_spends',
+        where: 'id = ?',
+        whereArgs: [planId],
+      );
+      if (planRes.isEmpty) throw Exception('Plan not found');
+      double currentSaved = planRes.first['current_saved'];
+      double newSaved = currentSaved - amount;
+
+      if (newSaved <= 0) {
+        // Plan is fully paid/consumed, delete it
+        await txn.delete(
+          'planned_spends',
+          where: 'id = ?',
+          whereArgs: [planId],
+        );
+      } else {
+        await txn.update(
+          'planned_spends',
+          {'current_saved': newSaved},
+          where: 'id = ?',
+          whereArgs: [planId],
+        );
+      }
+
+      // 4. Create a transaction record
+      await txn.insert('transactions', {
+        'account_id': accountId,
+        'category_id': 1, // Using a default 'General' or similar category, or passed as param
+        'amount': amount,
+        'date': DateTime.now().toIso8601String(),
+        'note': 'Payment for plan id $planId',
+      });
+    });
   }
 
   // --- CORE CALCULATION LOGIC ---

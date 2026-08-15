@@ -3,6 +3,7 @@ import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/budget_screen.dart';
 import 'package:cashflow/screens/planner_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
+import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/models/account_model.dart';
 
@@ -46,12 +47,13 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  // These are the 4 screens we will build in Phase 2
+  // These are the screens we use for navigation
   final List<Widget> _screens = [
     const DashboardScreen(),
     const BudgetScreen(),
     const PlannerScreen(),
     const AccountsScreen(),
+    const HistoryScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -80,6 +82,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.account_balance),
             label: 'Accounts',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
         ],
       ),
     );

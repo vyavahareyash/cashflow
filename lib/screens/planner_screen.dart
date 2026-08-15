@@ -174,6 +174,110 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
+  void _showPaymentDialog(Plan plan) async {
+    final List<Account> accounts = await DatabaseHelper.instance
+        .readAllAccounts();
+
+    TextEditingController amountController = TextEditingController();
+    int? selectedAccountId;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20,
+                right: 20,
+                top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Pay Bill for ${plan.name}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Payment Amount',
+                      prefixText: '\$ ',
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<int>(
+                    value: selectedAccountId,
+                    decoration: const InputDecoration(
+                      labelText: 'Pay from Account',
+                    ),
+                    // Use the accounts list we fetched above
+                    items: accounts
+                        .map(
+                          (acc) => DropdownMenuItem(
+                            value: acc.id,
+                            child: Text(acc.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) =>
+                        setStateSheet(() => selectedAccountId = val),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (selectedAccountId == null) return;
+
+                        try {
+                          await DatabaseHelper.instance.payBill(
+                            plan.id!,
+                            selectedAccountId!,
+                            double.tryParse(amountController.text) ?? 0.0,
+                          );
+                          Navigator.pop(context);
+                          _loadData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Payment processed successfully'),
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Payment failed: $e')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                      ),
+                      child: const Text('Confirm Payment'),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -249,13 +353,36 @@ class _PlannerScreenState extends State<PlannerScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => _showContributionDialog(plan),
-                child: const Text('Confirm Contribution'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4.0),
+                    child: OutlinedButton(
+                      onPressed: () => _showPaymentDialog(plan),
+                      child: const Text(
+                        'Pay Bill',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: OutlinedButton(
+                      onPressed: () => _showContributionDialog(plan),
+                      child: const Text(
+                        'Contribute',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 10),
           ],
         ),
       ),
