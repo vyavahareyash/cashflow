@@ -1,5 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
@@ -110,8 +113,65 @@ class DatabaseHelper {
 
   // Close database
   Future close() async {
-    final db = await instance.database;
-    db.close();
+    if (_database == null) return;
+    final db = _database!;
+    await db.close();
+    _database = null;
+  }
+
+  // --- DATABASE MANAGEMENT ---
+
+  /// Exports the database file to a user-selected location.
+  Future<String?> exportDatabase() async {
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, 'money_tracker.db');
+      final file = File(path);
+
+      if (!await file.exists()) {
+        throw Exception('Database file not found');
+      }
+
+      String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Export Cashflow Backup',
+        fileName: 'cashflow_backup.db',
+      );
+
+      if (outputFile == null) return null;
+
+      await file.copy(outputFile);
+      return outputFile;
+    } catch (e) {
+      print('Export error: $e');
+      return null;
+    }
+  }
+
+  /// Imports a database file from a user-selected location.
+  Future<bool> importDatabase() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+      );
+
+      if (result == null || result.files.single.path == null) return false;
+
+      final sourceFile = File(result.files.single.path!);
+
+      await close();
+      _database = null;
+
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, 'money_tracker.db');
+      
+      await sourceFile.copy(path);
+      await instance.database;
+      
+      return true;
+    } catch (e) {
+      print('Import error: $e');
+      return false;
+    }
   }
 
   // --- CATEGORY OPERATIONS ---
