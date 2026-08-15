@@ -4,8 +4,8 @@ import 'package:cashflow/screens/budget_screen.dart';
 import 'package:cashflow/screens/planner_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
 import 'package:cashflow/screens/history_screen.dart';
+import 'package:cashflow/screens/analytics_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
-import 'package:cashflow/models/account_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +53,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const BudgetScreen(),
     const PlannerScreen(),
     const AccountsScreen(),
+    const AnalyticsScreen(),
     const HistoryScreen(),
   ];
 
@@ -82,6 +83,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.account_balance),
             label: 'Accounts',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analytics'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
         ],
       ),

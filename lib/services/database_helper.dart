@@ -756,4 +756,96 @@ class DatabaseHelper {
 
     return parts;
   }
+
+  // --- ANALYTICS QUERIES ---
+  /// Gets spending by category for current month or all-time.
+  /// Returns a Map<categoryName, totalAmount>
+  Future<Map<String, double>> getSpendingByCategory(
+      {bool currentMonthOnly = true}) async {
+    final db = await instance.database;
+
+    String whereClause = '';
+    if (currentMonthOnly) {
+      final now = DateTime.now();
+      final monthStart = DateTime(now.year, now.month, 1).toIso8601String();
+      final monthEnd =
+          DateTime(now.year, now.month + 1, 0, 23, 59, 59).toIso8601String();
+      whereClause = 'WHERE t.date >= "$monthStart" AND t.date <= "$monthEnd"';
+    }
+
+    final result = await db.rawQuery('''
+      SELECT c.name, SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.id
+      $whereClause
+      GROUP BY t.category_id
+      ORDER BY total DESC
+    ''');
+
+    final map = <String, double>{};
+    for (var row in result) {
+      map[row['name'] as String] =
+          (row['total'] as num? ?? 0).toDouble();
+    }
+    return map;
+  }
+
+  /// Gets monthly spending totals for the last N months.
+  /// Returns a Map<"YYYY-MM", totalAmount>
+  Future<Map<String, double>> getMonthlySpendings({int months = 12}) async {
+    final db = await instance.database;
+
+    final result = await db.rawQuery('''
+      SELECT 
+        SUBSTR(date, 1, 7) as month,
+        SUM(amount) as total
+      FROM transactions
+      WHERE date >= datetime('now', '-$months months')
+      GROUP BY month
+      ORDER BY month ASC
+    ''');
+
+    final map = <String, double>{};
+    for (var row in result) {
+      map[row['month'] as String] =
+          (row['total'] as num? ?? 0).toDouble();
+    }
+    return map;
+  }
+
+  /// Gets spending by category for a specific month.
+  /// Month format: "YYYY-MM"
+  Future<Map<String, double>> getSpendingByCategoryForMonth(
+      String month) async {
+    final db = await instance.database;
+
+    final result = await db.rawQuery('''
+      SELECT c.name, SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.id
+      WHERE SUBSTR(t.date, 1, 7) = ?
+      GROUP BY t.category_id
+      ORDER BY total DESC
+    ''', [month]);
+
+    final map = <String, double>{};
+    for (var row in result) {
+      map[row['name'] as String] =
+          (row['total'] as num? ?? 0).toDouble();
+    }
+    return map;
+  }
+
+  /// Gets total spending for a specific month.
+  Future<double> getTotalSpendingForMonth(String month) async {
+    final db = await instance.database;
+
+    final result = await db.rawQuery('''
+      SELECT SUM(amount) as total
+      FROM transactions
+      WHERE SUBSTR(date, 1, 7) = ?
+    ''', [month]);
+
+    return (result.first['total'] as num? ?? 0).toDouble();
+  }
 }
