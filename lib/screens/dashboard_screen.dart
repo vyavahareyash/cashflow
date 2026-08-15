@@ -4,6 +4,7 @@ import '../services/database_helper.dart';
 import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
+import 'backup_restore_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -85,19 +86,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildBalanceDetail(
-                        'Total',
-                        '\$${_totalBalance.toStringAsFixed(2)}',
-                      ),
-                      _buildBalanceDetail(
-                        'Locked',
-                        '\$${_lockedAmount.toStringAsFixed(2)}',
-                      ),
-                    ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                  _buildBalanceDetail(
+                    'Total',
+                    '\$${_totalBalance.toStringAsFixed(2)}',
                   ),
+                  _buildBalanceDetail(
+                    'Locked',
+                    '\$${_lockedAmount.toStringAsFixed(2)}',
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BackupRestoreScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Backup',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  ],
+                ),
                 ],
               ),
             ),
