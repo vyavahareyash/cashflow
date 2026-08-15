@@ -498,4 +498,262 @@ class DatabaseHelper {
 
     return (result.first['total'] as num? ?? 0).toDouble();
   }
+
+  // --- JSON EXPORT/IMPORT ---
+  /// Exports all database tables to a JSON file.
+  Future<String?> exportDatabaseAsJSON() async {
+    try {
+      final db = await instance.database;
+
+      final accounts = await db.query('accounts');
+      final categories = await db.query('categories');
+      final transactions = await db.query('transactions');
+      final plannedSpends = await db.query('planned_spends');
+      final lockedAllocations = await db.query('locked_allocations');
+
+      final data = {
+        'accounts': accounts,
+        'categories': categories,
+        'transactions': transactions,
+        'planned_spends': plannedSpends,
+        'locked_allocations': lockedAllocations,
+      };
+
+      final jsonString = _jsonEncode(data);
+
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final jsonPath = join(documentsDir.path, 'cashflow_backup.json');
+      final jsonFile = File(jsonPath);
+      await jsonFile.writeAsString(jsonString);
+
+      return jsonFile.path;
+    } catch (e) {
+      print('JSON export error: $e');
+      return null;
+    }
+  }
+
+  /// Imports database from a JSON file.
+  Future<bool> importDatabaseFromJSON() async {
+    try {
+      dynamic result = await FilePicker.pickFiles(type: FileType.any);
+      if (result == null || result.files.single.path == null) return false;
+
+      final sourceFile = File(result.files.single.path!);
+      final jsonString = await sourceFile.readAsString();
+      final data = _jsonDecode(jsonString);
+
+      await close();
+      _database = null;
+
+      final db = await instance.database;
+
+      // Clear existing data
+      await db.delete('locked_allocations');
+      await db.delete('planned_spends');
+      await db.delete('transactions');
+      await db.delete('categories');
+      await db.delete('accounts');
+
+      // Insert data
+      if (data['accounts'] != null) {
+        for (var account in data['accounts']) {
+          await db.insert('accounts', account);
+        }
+      }
+      if (data['categories'] != null) {
+        for (var category in data['categories']) {
+          await db.insert('categories', category);
+        }
+      }
+      if (data['transactions'] != null) {
+        for (var transaction in data['transactions']) {
+          await db.insert('transactions', transaction);
+        }
+      }
+      if (data['planned_spends'] != null) {
+        for (var plan in data['planned_spends']) {
+          await db.insert('planned_spends', plan);
+        }
+      }
+      if (data['locked_allocations'] != null) {
+        for (var lock in data['locked_allocations']) {
+          await db.insert('locked_allocations', lock);
+        }
+      }
+
+      return true;
+    } catch (e) {
+      print('JSON import error: $e');
+      return false;
+    }
+  }
+
+  // --- CSV EXPORT ---
+  /// Exports transactions to a CSV file.
+  Future<String?> exportTransactionsAsCSV() async {
+    try {
+      final transactions = await getTransactionHistory();
+
+      String csv = 'Amount,Category,Account,Date,Note\n';
+      for (var tx in transactions) {
+        csv += '${tx['amount']},${tx['category_name']},${tx['account_name']},${tx['date']},${tx['note'] ?? ''}\n';
+      }
+
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final csvPath = join(documentsDir.path, 'cashflow_transactions.csv');
+      final csvFile = File(csvPath);
+      await csvFile.writeAsString(csv);
+
+      return csvFile.path;
+    } catch (e) {
+      print('CSV export error: $e');
+      return null;
+    }
+  }
+
+  // Helper methods for JSON encoding/decoding
+  String _jsonEncode(Map<String, dynamic> data) {
+    return _mapToJson(data);
+  }
+
+  Map<String, dynamic> _jsonDecode(String jsonString) {
+    return _parseJson(jsonString);
+  }
+
+  String _mapToJson(Map<String, dynamic> map) {
+    final entries = map.entries.map((e) {
+      final value = e.value;
+      if (value is List) {
+        final listJson = '[${value.map((item) {
+          if (item is Map) {
+            return _mapToJson(item as Map<String, dynamic>);
+          }
+          return item is String ? '"$item"' : item;
+        }).join(',')}]';
+        return '"${e.key}":$listJson';
+      } else if (value is Map) {
+        return '"${e.key}":${_mapToJson(value as Map<String, dynamic>)}';
+      }
+      return '"${e.key}":${value is String ? '"$value"' : value}';
+    }).join(',');
+    return '{$entries}';
+  }
+
+  Map<String, dynamic> _parseJson(String json) {
+    json = json.trim();
+    if (json.startsWith('{') && json.endsWith('}')) {
+      json = json.substring(1, json.length - 1);
+    }
+
+    final map = <String, dynamic>{};
+    final parts = _splitJson(json);
+
+    for (var part in parts) {
+      final colonIndex = part.indexOf(':');
+      if (colonIndex == -1) continue;
+
+      String key = part.substring(0, colonIndex).trim();
+      String value = part.substring(colonIndex + 1).trim();
+
+      if (key.startsWith('"') && key.endsWith('"')) {
+        key = key.substring(1, key.length - 1);
+      }
+
+      if (value.startsWith('[') && value.endsWith(']')) {
+        map[key] = _parseJsonArray(value);
+      } else if (value.startsWith('{') && value.endsWith('}')) {
+        map[key] = _parseJson(value);
+      } else if (value.startsWith('"') && value.endsWith('"')) {
+        map[key] = value.substring(1, value.length - 1);
+      } else if (value == 'null') {
+        map[key] = null;
+      } else if (value == 'true') {
+        map[key] = true;
+      } else if (value == 'false') {
+        map[key] = false;
+      } else {
+        map[key] = double.tryParse(value) ?? int.tryParse(value) ?? value;
+      }
+    }
+
+    return map;
+  }
+
+  List<dynamic> _parseJsonArray(String json) {
+    json = json.substring(1, json.length - 1).trim();
+    if (json.isEmpty) return [];
+
+    final list = <dynamic>[];
+    final parts = _splitJson(json);
+
+    for (var part in parts) {
+      part = part.trim();
+      if (part.startsWith('{') && part.endsWith('}')) {
+        list.add(_parseJson(part));
+      } else if (part.startsWith('"') && part.endsWith('"')) {
+        list.add(part.substring(1, part.length - 1));
+      } else if (part == 'null') {
+        list.add(null);
+      } else if (part == 'true') {
+        list.add(true);
+      } else if (part == 'false') {
+        list.add(false);
+      } else {
+        list.add(double.tryParse(part) ?? int.tryParse(part) ?? part);
+      }
+    }
+
+    return list;
+  }
+
+  List<String> _splitJson(String json) {
+    final parts = <String>[];
+    var current = '';
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+
+    for (var i = 0; i < json.length; i++) {
+      final char = json[i];
+
+      if (escape) {
+        current += char;
+        escape = false;
+        continue;
+      }
+
+      if (char == '\\') {
+        current += char;
+        escape = true;
+        continue;
+      }
+
+      if (char == '"') {
+        inString = !inString;
+        current += char;
+        continue;
+      }
+
+      if (!inString) {
+        if (char == '{' || char == '[') {
+          depth++;
+        } else if (char == '}' || char == ']') {
+          depth--;
+        } else if (char == ',' && depth == 0) {
+          parts.add(current);
+          current = '';
+          continue;
+        }
+      }
+
+      current += char;
+    }
+
+    if (current.isNotEmpty) {
+      parts.add(current);
+    }
+
+    return parts;
+  }
 }
