@@ -113,6 +113,25 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> updateAccount(Account account) async {
+    final db = await instance.database;
+    return await db.update(
+      'accounts',
+      account.toMap(),
+      where: 'id = ?',
+      whereArgs: [account.id],
+    );
+  }
+
+  Future<int> deleteAccount(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'accounts',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   // Close database
   Future close() async {
     if (_database == null) return;

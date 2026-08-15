@@ -156,20 +156,52 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   ),
                 ),
                 const SizedBox(width: 15),
-                Text(
-                  acc.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        acc.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        acc.type,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 Text(
                   '\$${acc.balance.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditAccountDialog(acc);
+                    } else if (value == 'delete') {
+                      _showDeleteConfirmation(acc);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -222,6 +254,98 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEditAccountDialog(Account account) {
+    TextEditingController nameController =
+        TextEditingController(text: account.name);
+    TextEditingController balanceController =
+        TextEditingController(text: account.balance.toString());
+    String selectedType = account.type;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Edit Account'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Account Name'),
+              ),
+              TextField(
+                controller: balanceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Balance'),
+              ),
+              const SizedBox(height: 15),
+              DropdownButton<String>(
+                value: selectedType,
+                isExpanded: true,
+                items: ['Bank', 'Cash']
+                    .map(
+                      (type) =>
+                          DropdownMenuItem(value: type, child: Text(type)),
+                    )
+                    .toList(),
+                onChanged: (val) => setStateDialog(() => selectedType = val!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await DatabaseHelper.instance.updateAccount(
+                  Account(
+                    id: account.id,
+                    name: nameController.text,
+                    balance: double.tryParse(balanceController.text) ?? 0.0,
+                    type: selectedType,
+                  ),
+                );
+                Navigator.pop(context);
+                _refreshAccounts();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(Account account) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: Text(
+            'Are you sure you want to delete "${account.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await DatabaseHelper.instance.deleteAccount(account.id!);
+              Navigator.pop(context);
+              _refreshAccounts();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

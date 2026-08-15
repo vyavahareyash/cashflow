@@ -315,7 +315,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         sideTitles: SideTitles(showTitles: false)),
                   ),
                   lineBarsData: [
-                    LineBarData(
+                    LineChartBarData(
                       spots: spots,
                       isCurved: true,
                       color: Colors.green.shade700,
