@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import '../models/plan_model.dart';
 import '../models/account_model.dart';
+import '../theme/theme_constants.dart';
+import '../components/custom_card.dart';
+import '../components/custom_input.dart';
 
 class PlannerScreen extends StatefulWidget {
   const PlannerScreen({super.key});
@@ -36,25 +39,26 @@ class _PlannerScreenState extends State<PlannerScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create New Plan'),
+        title: Text('Create New Plan', style: AppTypography.titleLarge),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            CustomInputField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Plan Name'),
+              label: 'Plan Name',
             ),
-            TextField(
+            const SizedBox(height: AppSpacing.md),
+            CustomInputField(
               controller: targetController,
+              label: 'Target Amount',
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Target Amount'),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: AppTypography.labelMedium),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -69,7 +73,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               Navigator.pop(context);
               _loadData();
             },
-            child: const Text('Save'),
+            child: Text('Save', style: AppTypography.labelMedium),
           ),
         ],
       ),
@@ -98,34 +102,33 @@ class _PlannerScreenState extends State<PlannerScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Lock Funds for ${plan.name}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 15),
-                  TextField(
+                  const SizedBox(height: AppSpacing.md),
+                  CustomInputField(
                     controller: amountController,
+                    label: 'Amount to Lock',
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount to Lock',
-                      prefixText: '\$ ',
-                    ),
+                    prefixIcon: Icons.lock,
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<int>(
                     value: selectedAccountId,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Lock in Account',
+                      border: OutlineInputBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
                     ),
                     // Use the accounts list we fetched above
                     items: accounts
@@ -139,7 +142,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     onChanged: (val) =>
                         setStateSheet(() => selectedAccountId = val),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -157,14 +160,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         _loadData(); // Refresh the planner list
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
+                        backgroundColor: AppColors.green700,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
                       ),
                       child: const Text('Confirm Contribution'),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             );
@@ -193,34 +199,33 @@ class _PlannerScreenState extends State<PlannerScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Pay Bill for ${plan.name}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 15),
-                  TextField(
+                  const SizedBox(height: AppSpacing.md),
+                  CustomInputField(
                     controller: amountController,
+                    label: 'Payment Amount',
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Amount',
-                      prefixText: '\$ ',
-                    ),
+                    prefixIcon: Icons.payment,
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<int>(
                     value: selectedAccountId,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Pay from Account',
+                      border: OutlineInputBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
                     ),
                     // Use the accounts list we fetched above
                     items: accounts
@@ -234,7 +239,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     onChanged: (val) =>
                         setStateSheet(() => selectedAccountId = val),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -261,14 +266,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade700,
+                        backgroundColor: AppColors.danger,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
                       ),
                       child: const Text('Confirm Payment'),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             );
@@ -281,19 +289,34 @@ class _PlannerScreenState extends State<PlannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Planned Spends',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          const SizedBox(height: 50),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Planned Spends',
+                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Total Locked: \$${_totalLocked.toStringAsFixed(2)}',
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                  ),
+                ],
+              ),
+              IconButton(
+                onPressed: _showAddPlanDialog,
+                icon: const Icon(Icons.event_repeat, color: AppColors.green700, size: 32),
+              ),
+            ],
           ),
-          Text(
-            'Total Locked: \$${_totalLocked.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppSpacing.xl),
           Expanded(
             child: _plans.isEmpty
                 ? const Center(child: Text('No plans created yet.'))
@@ -303,19 +326,6 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         _buildPlanItem(_plans[index]),
                   ),
           ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _showAddPlanDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Add New Plan'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-                backgroundColor: Colors.green.shade700,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -323,68 +333,91 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
   Widget _buildPlanItem(Plan plan) {
     double progress = plan.currentSaved / plan.totalTarget;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  plan.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text('${(progress * 100).toStringAsFixed(0)}%'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            LinearProgressIndicator(
+    return CustomCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                plan.name,
+                style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${(progress * 100).toStringAsFixed(0)}%',
+                style: AppTypography.labelSmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: AppBorderRadius.smallBorder,
+            child: LinearProgressIndicator(
               value: progress > 1.0 ? 1.0 : progress,
               minHeight: 10,
+              backgroundColor: AppColors.gray200,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.green700),
             ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Saved: \$${plan.currentSaved.toStringAsFixed(2)}'),
-                Text('Target: \$${plan.totalTarget.toStringAsFixed(2)}'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 4.0),
-                    child: OutlinedButton(
-                      onPressed: () => _showPaymentDialog(plan),
-                      child: const Text(
-                        'Pay Bill',
-                        overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Saved: \$${plan.currentSaved.toStringAsFixed(2)}',
+                style: AppTypography.labelSmall,
+              ),
+              Text(
+                'Target: \$${plan.totalTarget.toStringAsFixed(2)}',
+                style: AppTypography.labelSmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: OutlinedButton(
+                    onPressed: () => _showPaymentDialog(plan),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
                       ),
+                    ),
+                    child: Text(
+                      'Pay Bill',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall,
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4.0),
-                    child: OutlinedButton(
-                      onPressed: () => _showContributionDialog(plan),
-                      child: const Text(
-                        'Contribute',
-                        overflow: TextOverflow.ellipsis,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.xs),
+                  child: OutlinedButton(
+                    onPressed: () => _showContributionDialog(plan),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
                       ),
+                    ),
+                    child: Text(
+                      'Contribute',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall,
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
       ),
     );
   }

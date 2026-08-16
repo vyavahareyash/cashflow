@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import '../models/account_model.dart';
 import '../models/locked_allocation_model.dart';
+import '../theme/theme_constants.dart';
+import '../components/custom_card.dart';
+import '../components/custom_input.dart';
 
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({super.key});
@@ -36,21 +39,22 @@ class _AccountsScreenState extends State<AccountsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Add New Account'),
+          title: Text('Add New Account', style: AppTypography.titleLarge),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              CustomInputField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Account Name'),
+                label: 'Account Name',
               ),
-              TextField(
+              const SizedBox(height: AppSpacing.md),
+              CustomInputField(
                 controller: balanceController,
+                label: 'Initial Balance',
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Initial Balance'),
               ),
-              const SizedBox(height: 15),
-              DropdownButton<String>(
+              const SizedBox(height: AppSpacing.md),
+              DropdownButtonFormField<String>(
                 value: selectedType,
                 isExpanded: true,
                 items: ['Bank', 'Cash']
@@ -60,13 +64,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     )
                     .toList(),
                 onChanged: (val) => setStateDialog(() => selectedType = val!),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('Cancel', style: AppTypography.labelMedium),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -80,7 +89,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 Navigator.pop(context);
                 _refreshAccounts();
               },
-              child: const Text('Save'),
+              child: Text('Save', style: AppTypography.labelMedium),
             ),
           ],
         ),
@@ -96,19 +105,34 @@ class _AccountsScreenState extends State<AccountsScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'My Accounts',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          const SizedBox(height: 50),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'My Accounts',
+                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Total Physical Balance: \$${totalPhysical.toStringAsFixed(2)}',
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                  ),
+                ],
+              ),
+              IconButton(
+                onPressed: _showAddAccountDialog,
+                icon: const Icon(Icons.add_circle, color: AppColors.green700, size: 32),
+              ),
+            ],
           ),
-          Text(
-            'Total Physical Balance: \$${totalPhysical.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppSpacing.xl),
           Expanded(
             child: _accounts.isEmpty
                 ? const Center(child: Text('No accounts added yet.'))
@@ -118,142 +142,119 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         _buildAccountCard(_accounts[index]),
                   ),
           ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _showAddAccountDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Add New Account'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-                backgroundColor: Colors.green.shade700,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildAccountCard(Account acc) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.grey.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.green.shade100,
-                  child: Icon(
-                    acc.type == 'Bank' ? Icons.account_balance : Icons.wallet,
-                    color: Colors.green.shade700,
-                  ),
+    return CustomCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.green100,
+                child: Icon(
+                  acc.type == 'Bank' ? Icons.account_balance : Icons.wallet,
+                  color: AppColors.green700,
                 ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        acc.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      acc.name,
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                      Text(
-                        acc.type,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '\$${acc.balance.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _showEditAccountDialog(acc);
-                    } else if (value == 'delete') {
-                      _showDeleteConfirmation(acc);
-                    }
-                  },
-                  itemBuilder: (BuildContext context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit'),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete'),
+                    Text(
+                      acc.type,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.gray700,
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-            const Divider(height: 30),
-            const Text(
-              'Locked Funds Breakdown:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black54,
               ),
+              Text(
+                '\$${acc.balance.toStringAsFixed(2)}',
+                style: AppTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _showEditAccountDialog(acc);
+                  } else if (value == 'delete') {
+                    _showDeleteConfirmation(acc);
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Edit'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const Divider(height: 30),
+          Text(
+            'Locked Funds Breakdown:',
+            style: AppTypography.labelMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray900,
             ),
-            const SizedBox(height: 10),
-            FutureBuilder<List<LockedAllocation>>(
-              future: DatabaseHelper.instance.getLocksForAccount(acc.id!),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const SizedBox();
-                if (snapshot.data!.isEmpty)
-                  return const Text(
-                    'No funds locked in this account',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  );
-
-                return Column(
-                  children: snapshot.data!
-                      .map(
-                        (lock) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                lock.planName,
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                              Text(
-                                '\$${lock.amount.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FutureBuilder<List<LockedAllocation>>(
+            future: DatabaseHelper.instance.getLocksForAccount(acc.id!),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox();
+              if (snapshot.data!.isEmpty)
+                return Text(
+                  'No funds locked in this account',
+                  style: AppTypography.labelSmall.copyWith(color: AppColors.gray700),
                 );
-              },
-            ),
-          ],
-        ),
+
+              return Column(
+                children: snapshot.data!
+                    .map(
+                      (lock) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              lock.planName,
+                              style: AppTypography.labelSmall,
+                            ),
+                            Text(
+                              '\$${lock.amount.toStringAsFixed(2)}',
+                              style: AppTypography.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -269,21 +270,22 @@ class _AccountsScreenState extends State<AccountsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Edit Account'),
+          title: Text('Edit Account', style: AppTypography.titleLarge),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              CustomInputField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Account Name'),
+                label: 'Account Name',
               ),
-              TextField(
+              const SizedBox(height: AppSpacing.md),
+              CustomInputField(
                 controller: balanceController,
+                label: 'Balance',
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Balance'),
               ),
-              const SizedBox(height: 15),
-              DropdownButton<String>(
+              const SizedBox(height: AppSpacing.md),
+              DropdownButtonFormField<String>(
                 value: selectedType,
                 isExpanded: true,
                 items: ['Bank', 'Cash']
@@ -293,13 +295,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     )
                     .toList(),
                 onChanged: (val) => setStateDialog(() => selectedType = val!),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('Cancel', style: AppTypography.labelMedium),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -314,7 +321,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 Navigator.pop(context);
                 _refreshAccounts();
               },
-              child: const Text('Save'),
+              child: Text('Save', style: AppTypography.labelMedium),
             ),
           ],
         ),
@@ -326,13 +333,15 @@ class _AccountsScreenState extends State<AccountsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account?'),
+        title: Text('Delete Account?', style: AppTypography.titleLarge),
         content: Text(
-            'Are you sure you want to delete "${account.name}"? This action cannot be undone.'),
+            'Are you sure you want to delete "${account.name}"? This action cannot be undone.',
+            style: AppTypography.bodyMedium,
+          ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: AppTypography.labelMedium),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -341,9 +350,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
               _refreshAccounts();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppBorderRadius.smallBorder,
+              ),
             ),
-            child: const Text('Delete'),
+            child: Text('Delete', style: AppTypography.labelMedium),
           ),
         ],
       ),

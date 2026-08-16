@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../services/database_helper.dart';
 import '../models/category_model.dart';
+import '../theme/theme_constants.dart';
+import '../components/custom_card.dart';
+import '../components/category_badge.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -45,20 +48,35 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Monthly Budgets',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          const SizedBox(height: 50),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Monthly Budgets',
+                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Total Reserved: \$${_totalReserved.toStringAsFixed(2)}',
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                  ),
+                ],
+              ),
+              Icon(
+                Icons.pie_chart,
+                color: AppColors.green700,
+                size: 32,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Total Reserved: \$${_totalReserved.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppSpacing.xl),
 
           Expanded(
             child: _categories.isEmpty
@@ -104,54 +122,49 @@ class _BudgetScreenState extends State<BudgetScreen> {
     Color color,
   ) {
     double progress = budget > 0 ? spent / budget : 0.0;
-    Color barColor = progress > 1.0 ? Colors.red : color;
+    Color barColor = progress > 1.0 ? AppColors.danger : color;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  category,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '\$${spent.toStringAsFixed(2)} / \$${budget.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: progress > 1.0 ? 1.0 : progress,
-                minHeight: 10,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(barColor),
+    return CustomCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              CategoryBadge(
+                label: category,
+                color: color,
               ),
-            ),
-            const SizedBox(height: 8),
-            if (progress > 1.0)
-              const Text(
-                'Over budget!',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+              Text(
+                '\$${spent.toStringAsFixed(2)} / \$${budget.toStringAsFixed(2)}',
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.gray700,
                 ),
               ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ClipRRect(
+            borderRadius: AppBorderRadius.smallBorder,
+            child: LinearProgressIndicator(
+              value: progress > 1.0 ? 1.0 : progress,
+              minHeight: 10,
+              backgroundColor: AppColors.gray200,
+              valueColor: AlwaysStoppedAnimation<Color>(barColor),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (progress > 1.0)
+            Text(
+              'Over budget!',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+        ],
       ),
     );
   }

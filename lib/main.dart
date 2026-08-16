@@ -6,6 +6,7 @@ import 'package:cashflow/screens/accounts_screen.dart';
 import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/screens/analytics_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
+import 'package:cashflow/theme/theme_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,11 +28,83 @@ class MoneyTrackerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Money Tracker',
+      title: 'Cashflow',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true, // This enables the modern UI design
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.green700,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: AppColors.gray50,
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.gray900,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        textTheme: TextTheme(
+          displayLarge: AppTypography.displayLarge.copyWith(color: AppColors.gray900),
+          headlineLarge: AppTypography.headlineLarge.copyWith(color: AppColors.gray900),
+          headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColors.gray900),
+          titleLarge: AppTypography.titleLarge.copyWith(color: AppColors.gray900),
+          titleMedium: AppTypography.titleMedium.copyWith(color: AppColors.gray900),
+          bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColors.gray900),
+          bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+          labelLarge: AppTypography.labelLarge.copyWith(color: AppColors.green700),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.green700,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: AppBorderRadius.smallBorder,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+          ),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: AppColors.white,
+          selectedItemColor: AppColors.green700,
+          unselectedItemColor: AppColors.gray400,
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+        ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.green700,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: AppColors.darkBg,
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppColors.darkSurface,
+          foregroundColor: AppColors.darkText,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        textTheme: TextTheme(
+          displayLarge: AppTypography.displayLarge.copyWith(color: AppColors.darkText),
+          headlineLarge: AppTypography.headlineLarge.copyWith(color: AppColors.darkText),
+          headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColors.darkText),
+          titleLarge: AppTypography.titleLarge.copyWith(color: AppColors.darkText),
+          titleMedium: AppTypography.titleMedium.copyWith(color: AppColors.darkText),
+          bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColors.darkText),
+          bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColors.gray400),
+          labelLarge: AppTypography.labelLarge.copyWith(color: AppColors.green500),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: AppColors.darkSurface,
+          selectedItemColor: AppColors.green500,
+          unselectedItemColor: AppColors.gray400,
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       home: const MainNavigationScreen(),
     );
   }

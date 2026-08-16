@@ -5,6 +5,9 @@ import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import 'backup_restore_screen.dart';
+import '../theme/theme_constants.dart';
+import '../components/stat_card.dart';
+import '../components/custom_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -48,44 +51,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 50),
-            const Text(
-              'Welcome Back!',
-              style: TextStyle(fontSize: 20, color: Colors.grey),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome Back!',
+                      style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                    ),
+                    Text(
+                      'Manage your finances',
+                      style: AppTypography.labelSmall.copyWith(color: AppColors.gray400),
+                    ),
+                  ],
+                ),
+                CircleAvatar(
+                  backgroundColor: AppColors.green100,
+                  child: Icon(Icons.person, color: AppColors.green700),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.lg),
 
             // USABLE BALANCE CARD
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green.shade700, Colors.green.shade400],
-                ),
-                borderRadius: BorderRadius.circular(24),
-              ),
+            CustomCard(
+              backgroundColor: AppColors.green700,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Usable Balance',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Usable Balance',
+                        style: AppTypography.labelSmall.copyWith(color: Colors.white70),
+                      ),
+                      Icon(Icons.account_balance_wallet, color: Colors.white70, size: 20),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     '\$${_usableBalance.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: AppTypography.displayLarge.copyWith(
                       color: Colors.white,
-                      fontSize: 36,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -106,9 +125,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       );
                     },
-                    child: const Text(
+                    child: Text(
                       'Backup',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: AppTypography.labelMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   ],
@@ -117,12 +139,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            const SizedBox(height: 30),
-            const Text(
-              'My Accounts',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            const SizedBox(height: AppSpacing.xxl),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'My Accounts',
+                  style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/accounts');
+                  },
+                  child: Text(
+                    'See All',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.green700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: AppSpacing.md),
 
             Expanded(
               child: _accounts.isEmpty
@@ -140,7 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onPressed: () => _showTransactionSheet(context),
         label: const Text('Log Spend'),
         icon: const Icon(Icons.add),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: AppColors.green700,
         foregroundColor: Colors.white,
       ),
     );
@@ -152,13 +191,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: AppTypography.labelSmall.copyWith(color: Colors.white70),
         ),
         Text(
           amount,
-          style: const TextStyle(
+          style: AppTypography.titleMedium.copyWith(
             color: Colors.white,
-            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -167,25 +205,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAccountItem(Account acc) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return CustomCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.green.shade100,
+          backgroundColor: AppColors.green100,
           child: Icon(
             acc.type == 'Bank' ? Icons.account_balance : Icons.wallet,
-            color: Colors.green.shade700,
+            color: AppColors.green700,
           ),
         ),
         title: Text(
           acc.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
         ),
-        subtitle: const Text('Check account for locked funds'),
+        subtitle: Text(
+          'Check account for locked funds',
+          style: AppTypography.labelSmall,
+        ),
         trailing: Text(
           '\$${acc.balance.toStringAsFixed(2)}',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -208,19 +248,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Log New Expense',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   TextField(
                     controller: amountController,
                     keyboardType: TextInputType.number,
@@ -228,11 +268,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       labelText: 'Amount',
                       prefixText: '\$ ',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: AppBorderRadius.smallBorder,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.md),
                   FutureBuilder<List<Category>>(
                     future: DatabaseHelper.instance.readAllCategories(),
                     builder: (context, snapshot) {
@@ -243,7 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         decoration: InputDecoration(
                           labelText: 'Category',
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: AppBorderRadius.smallBorder,
                           ),
                         ),
                         items: snapshot.data!
@@ -259,7 +299,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.md),
                   FutureBuilder<List<Account>>(
                     future: DatabaseHelper.instance.readAllAccounts(),
                     builder: (context, snapshot) {
@@ -270,7 +310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         decoration: InputDecoration(
                           labelText: 'From Account',
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: AppBorderRadius.smallBorder,
                           ),
                         ),
                         items: snapshot.data!
@@ -286,7 +326,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: AppSpacing.xl),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -314,17 +354,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _loadData();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
+                        backgroundColor: AppColors.green700,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: AppBorderRadius.smallBorder,
                         ),
                       ),
                       child: const Text('Save Transaction'),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             );

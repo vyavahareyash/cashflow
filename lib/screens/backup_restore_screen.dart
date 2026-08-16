@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cashflow/services/database_helper.dart';
+import '../theme/theme_constants.dart';
+import '../components/custom_card.dart';
 
 class BackupRestoreScreen extends StatefulWidget {
   const BackupRestoreScreen({super.key});
@@ -96,83 +98,83 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backup & Restore'),
+        title: Text('Backup & Restore', style: AppTypography.titleLarge),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: ListView(
           children: [
-            const Text(
+            Text(
               'Manage your local data. Since Cashflow is local-first, your data stays on your device. Back it up regularly to avoid loss.',
-              style: TextStyle(fontSize: 16),
+              style: AppTypography.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            const Text(
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
               'Database Backup (.db)',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleExport,
               icon: const Icon(Icons.upload),
-              label: const Text('Export Backup (.db)'),
+              label: Text('Export Backup (.db)', style: AppTypography.labelMedium),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleImport,
               icon: const Icon(Icons.download),
-              label: const Text('Import Backup (.db)'),
+              label: Text('Import Backup (.db)', style: AppTypography.labelMedium),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
             ),
-            const SizedBox(height: 32),
-            const Text(
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
               'JSON Export/Import',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleExportJSON,
               icon: const Icon(Icons.upload),
-              label: const Text('Export as JSON'),
+              label: Text('Export as JSON', style: AppTypography.labelMedium),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleImportJSON,
               icon: const Icon(Icons.download),
-              label: const Text('Import from JSON'),
+              label: Text('Import from JSON', style: AppTypography.labelMedium),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
             ),
-            const SizedBox(height: 32),
-            const Text(
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
               'Transaction Export',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleExportCSV,
               icon: const Icon(Icons.download),
-              label: const Text('Export Transactions (CSV)'),
+              label: Text('Export Transactions (CSV)', style: AppTypography.labelMedium),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xxl),
             if (_statusMessage.isNotEmpty)
               Center(
                 child: Text(
                   _statusMessage,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
               ),
