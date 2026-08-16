@@ -132,11 +132,7 @@ class DatabaseHelper {
 
   Future<int> deleteAccount(int id) async {
     final db = await instance.database;
-    return await db.delete(
-      'accounts',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
   }
 
   // Close database
@@ -164,7 +160,7 @@ class DatabaseHelper {
       final documentsDir = await getApplicationDocumentsDirectory();
       final backupPath = join(documentsDir.path, 'cashflow_backup.db');
       final backupFile = await file.copy(backupPath);
-      
+
       return backupFile.path;
     } catch (e) {
       print('Export error: $e');
@@ -202,6 +198,21 @@ class DatabaseHelper {
   Future<int> createCategory(Category category) async {
     final db = await instance.database;
     return await db.insert('categories', category.toMap());
+  }
+
+  Future<int> updateCategory(Category category) async {
+    final db = await instance.database;
+    return await db.update(
+      'categories',
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
+  }
+
+  Future<int> deleteCategory(int id) async {
+    final db = await instance.database;
+    return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<Category>> readAllCategories() async {
@@ -623,7 +634,8 @@ class DatabaseHelper {
 
       String csv = 'Amount,Category,Account,Date,Note\n';
       for (var tx in transactions) {
-        csv += '${tx['amount']},${tx['category_name']},${tx['account_name']},${tx['date']},${tx['note'] ?? ''}\n';
+        csv +=
+            '${tx['amount']},${tx['category_name']},${tx['account_name']},${tx['date']},${tx['note'] ?? ''}\n';
       }
 
       final documentsDir = await getApplicationDocumentsDirectory();
@@ -648,21 +660,24 @@ class DatabaseHelper {
   }
 
   String _mapToJson(Map<String, dynamic> map) {
-    final entries = map.entries.map((e) {
-      final value = e.value;
-      if (value is List) {
-        final listJson = '[${value.map((item) {
-          if (item is Map) {
-            return _mapToJson(item as Map<String, dynamic>);
+    final entries = map.entries
+        .map((e) {
+          final value = e.value;
+          if (value is List) {
+            final listJson =
+                '[${value.map((item) {
+                  if (item is Map) {
+                    return _mapToJson(item as Map<String, dynamic>);
+                  }
+                  return item is String ? '"$item"' : item;
+                }).join(',')}]';
+            return '"${e.key}":$listJson';
+          } else if (value is Map) {
+            return '"${e.key}":${_mapToJson(value as Map<String, dynamic>)}';
           }
-          return item is String ? '"$item"' : item;
-        }).join(',')}]';
-        return '"${e.key}":$listJson';
-      } else if (value is Map) {
-        return '"${e.key}":${_mapToJson(value as Map<String, dynamic>)}';
-      }
-      return '"${e.key}":${value is String ? '"$value"' : value}';
-    }).join(',');
+          return '"${e.key}":${value is String ? '"$value"' : value}';
+        })
+        .join(',');
     return '{$entries}';
   }
 
@@ -786,16 +801,23 @@ class DatabaseHelper {
   // --- ANALYTICS QUERIES ---
   /// Gets spending by category for current month or all-time.
   /// Returns a Map<categoryName, totalAmount>
-  Future<Map<String, double>> getSpendingByCategory(
-      {bool currentMonthOnly = true}) async {
+  Future<Map<String, double>> getSpendingByCategory({
+    bool currentMonthOnly = true,
+  }) async {
     final db = await instance.database;
 
     String whereClause = '';
     if (currentMonthOnly) {
       final now = DateTime.now();
       final monthStart = DateTime(now.year, now.month, 1).toIso8601String();
-      final monthEnd =
-          DateTime(now.year, now.month + 1, 0, 23, 59, 59).toIso8601String();
+      final monthEnd = DateTime(
+        now.year,
+        now.month + 1,
+        0,
+        23,
+        59,
+        59,
+      ).toIso8601String();
       whereClause = 'WHERE t.date >= "$monthStart" AND t.date <= "$monthEnd"';
     }
 
@@ -810,8 +832,7 @@ class DatabaseHelper {
 
     final map = <String, double>{};
     for (var row in result) {
-      map[row['name'] as String] =
-          (row['total'] as num? ?? 0).toDouble();
+      map[row['name'] as String] = (row['total'] as num? ?? 0).toDouble();
     }
     return map;
   }
@@ -833,8 +854,7 @@ class DatabaseHelper {
 
     final map = <String, double>{};
     for (var row in result) {
-      map[row['month'] as String] =
-          (row['total'] as num? ?? 0).toDouble();
+      map[row['month'] as String] = (row['total'] as num? ?? 0).toDouble();
     }
     return map;
   }
@@ -842,22 +862,25 @@ class DatabaseHelper {
   /// Gets spending by category for a specific month.
   /// Month format: "YYYY-MM"
   Future<Map<String, double>> getSpendingByCategoryForMonth(
-      String month) async {
+    String month,
+  ) async {
     final db = await instance.database;
 
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT c.name, SUM(t.amount) as total
       FROM transactions t
       JOIN categories c ON t.category_id = c.id
       WHERE SUBSTR(t.date, 1, 7) = ?
       GROUP BY t.category_id
       ORDER BY total DESC
-    ''', [month]);
+    ''',
+      [month],
+    );
 
     final map = <String, double>{};
     for (var row in result) {
-      map[row['name'] as String] =
-          (row['total'] as num? ?? 0).toDouble();
+      map[row['name'] as String] = (row['total'] as num? ?? 0).toDouble();
     }
     return map;
   }
@@ -866,11 +889,14 @@ class DatabaseHelper {
   Future<double> getTotalSpendingForMonth(String month) async {
     final db = await instance.database;
 
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT SUM(amount) as total
       FROM transactions
       WHERE SUBSTR(date, 1, 7) = ?
-    ''', [month]);
+    ''',
+      [month],
+    );
 
     return (result.first['total'] as num? ?? 0).toDouble();
   }

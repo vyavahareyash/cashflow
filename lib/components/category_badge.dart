@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/theme_constants.dart';
 
 class CategoryBadge extends StatelessWidget {
@@ -32,9 +33,12 @@ class CategoryBadge extends StatelessWidget {
             Icon(icon, size: 16, color: color),
             const SizedBox(width: AppSpacing.xs),
           ],
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(color: color),
+          Flexible(
+            child: Text(
+              label,
+              style: AppTypography.labelSmall.copyWith(color: color),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
