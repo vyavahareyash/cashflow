@@ -4,79 +4,102 @@ import '../theme/theme_constants.dart';
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
+  final String? subtitle;
   final IconData? icon;
   final Color? iconColor;
-  final Color? borderLeftColor;
+  final Color? accentColor;
+  final VoidCallback? onTap;
 
   const StatCard({
     Key? key,
     required this.label,
     required this.value,
+    this.subtitle,
     this.icon,
     this.iconColor,
-    this.borderLeftColor = AppColors.green700,
+    this.accentColor,
+    this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.darkText : AppColors.gray900;
-    final secondaryTextColor = isDark ? AppColors.gray400 : AppColors.gray700;
+    final primaryColor = accentColor ?? AppColors.emerald700;
+    final bg = isDark ? AppColors.darkSurface : AppColors.white;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.gray200;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.white,
-        borderRadius: AppBorderRadius.mediumBorder,
-        boxShadow: [AppShadows.level1],
-        border: Border(
-          left: BorderSide(
-            color: borderLeftColor ?? AppColors.green700,
-            width: AppComponentSizes.cardBorderMedium,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppBorderRadius.largeBorder,
+        child: Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: AppBorderRadius.largeBorder,
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: isDark ? [] : [AppShadows.subtle],
           ),
-        ),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: (iconColor ?? AppColors.green700).withOpacity(0.1),
-                borderRadius: AppBorderRadius.smallBorder,
-              ),
-              child: Icon(
-                icon,
-                color: iconColor ?? AppColors.green700,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.lg),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: secondaryTextColor,
+          padding: const EdgeInsets.all(AppSpacing.md + 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (icon != null)
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                      decoration: BoxDecoration(
+                        color: (iconColor ?? primaryColor).withOpacity(0.12),
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      child: Icon(
+                        icon,
+                        color: iconColor ?? primaryColor,
+                        size: 18,
+                      ),
+                    ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: icon != null ? AppSpacing.sm : 0),
+                      child: Text(
+                        label,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                value,
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.darkText : AppColors.gray900,
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  value,
-                  style: AppTypography.titleLarge.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
+                  subtitle!,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray500 : AppColors.gray400,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

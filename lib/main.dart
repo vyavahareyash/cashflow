@@ -3,8 +3,8 @@ import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/budget_screen.dart';
 import 'package:cashflow/screens/planner_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
-import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/screens/analytics_screen.dart';
+import 'package:cashflow/screens/backup_restore_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/theme/theme_constants.dart';
 
@@ -38,6 +38,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
       } else if (_themeMode == ThemeMode.dark) {
         _themeMode = ThemeMode.light;
       } else {
+        // If system, switch to dark first
         _themeMode = ThemeMode.dark;
       }
     });
@@ -51,76 +52,103 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.green700,
+          seedColor: AppColors.emerald700,
           brightness: Brightness.light,
+          primary: AppColors.emerald700,
+          surface: AppColors.white,
+          background: AppColors.gray50,
         ),
         scaffoldBackgroundColor: AppColors.gray50,
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.white,
           foregroundColor: AppColors.gray900,
           elevation: 0,
+          scrolledUnderElevation: 0.5,
           centerTitle: false,
         ),
-        textTheme: TextTheme(
-          displayLarge: AppTypography.displayLarge.copyWith(color: AppColors.gray900),
-          headlineLarge: AppTypography.headlineLarge.copyWith(color: AppColors.gray900),
-          headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColors.gray900),
-          titleLarge: AppTypography.titleLarge.copyWith(color: AppColors.gray900),
-          titleMedium: AppTypography.titleMedium.copyWith(color: AppColors.gray900),
-          bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColors.gray900),
-          bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
-          labelLarge: AppTypography.labelLarge.copyWith(color: AppColors.green700),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.green700,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: AppBorderRadius.smallBorder,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
-          ),
-        ),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        navigationBarTheme: NavigationBarThemeData(
           backgroundColor: AppColors.white,
-          selectedItemColor: AppColors.green700,
-          unselectedItemColor: AppColors.gray400,
-          type: BottomNavigationBarType.fixed,
-          elevation: 8,
+          elevation: 3,
+          indicatorColor: AppColors.emerald100,
+          iconTheme: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const IconThemeData(color: AppColors.emerald800, size: 22);
+            }
+            return const IconThemeData(color: AppColors.gray500, size: 22);
+          }),
+          labelTextStyle: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return AppTypography.labelSmall.copyWith(
+                color: AppColors.emerald800,
+                fontWeight: FontWeight.bold,
+              );
+            }
+            return AppTypography.labelSmall.copyWith(
+              color: AppColors.gray500,
+            );
+          }),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: AppColors.gray200,
+          thickness: 1,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.green700,
+          seedColor: AppColors.emerald700,
           brightness: Brightness.dark,
+          primary: AppColors.emerald500,
+          surface: AppColors.darkSurface,
+          background: AppColors.darkBg,
         ),
         scaffoldBackgroundColor: AppColors.darkBg,
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.darkSurface,
           foregroundColor: AppColors.darkText,
           elevation: 0,
+          scrolledUnderElevation: 0.5,
           centerTitle: false,
         ),
-        textTheme: TextTheme(
-          displayLarge: AppTypography.displayLarge.copyWith(color: AppColors.darkText),
-          headlineLarge: AppTypography.headlineLarge.copyWith(color: AppColors.darkText),
-          headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColors.darkText),
-          titleLarge: AppTypography.titleLarge.copyWith(color: AppColors.darkText),
-          titleMedium: AppTypography.titleMedium.copyWith(color: AppColors.darkText),
-          bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColors.darkText),
-          bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColors.gray400),
-          labelLarge: AppTypography.labelLarge.copyWith(color: AppColors.green500),
-        ),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        navigationBarTheme: NavigationBarThemeData(
           backgroundColor: AppColors.darkSurface,
-          selectedItemColor: AppColors.green500,
-          unselectedItemColor: AppColors.gray400,
-          type: BottomNavigationBarType.fixed,
-          elevation: 8,
+          elevation: 3,
+          indicatorColor: AppColors.emerald900.withOpacity(0.6),
+          iconTheme: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const IconThemeData(color: AppColors.emerald400, size: 22);
+            }
+            return const IconThemeData(color: AppColors.gray400, size: 22);
+          }),
+          labelTextStyle: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return AppTypography.labelSmall.copyWith(
+                color: AppColors.emerald400,
+                fontWeight: FontWeight.bold,
+              );
+            }
+            return AppTypography.labelSmall.copyWith(
+              color: AppColors.gray400,
+            );
+          }),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: AppColors.darkBorder,
+          thickness: 1,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.darkSurface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
         ),
       ),
       themeMode: _themeMode,
@@ -140,16 +168,6 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  // These are the screens we use for navigation
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const BudgetScreen(),
-    const PlannerScreen(),
-    const AccountsScreen(),
-    const AnalyticsScreen(),
-    const HistoryScreen(),
-  ];
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -158,37 +176,112 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final List<Widget> screens = [
+      DashboardScreen(onNavigateTab: _onItemTapped),
+      const BudgetScreen(),
+      const PlannerScreen(),
+      const AccountsScreen(),
+      const AnalyticsScreen(),
+    ];
+
+    final titles = [
+      'Cashflow',
+      'Monthly Budgets',
+      'Sinking Funds',
+      'My Accounts',
+      'Insights & Activity',
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Money Tracker'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.xs + 2),
+              decoration: BoxDecoration(
+                color: AppColors.emerald500.withOpacity(0.15),
+                borderRadius: AppBorderRadius.smallBorder,
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: AppColors.emerald600,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              titles[_selectedIndex],
+              style: AppTypography.headlineMedium.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
+            tooltip: 'Settings & Data Backup',
+            icon: Icon(
+              Icons.settings_outlined,
+              color: isDark ? AppColors.darkText : AppColors.gray700,
+              size: 22,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BackupRestoreScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Toggle Theme',
             onPressed: widget.onThemeToggle,
             icon: Icon(
-              Theme.of(context).brightness == Brightness.dark 
-                  ? Icons.light_mode 
-                  : Icons.dark_mode,
-              color: Theme.of(context).colorScheme.onSurface,
+              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: isDark ? AppColors.warning : AppColors.gray700,
+              size: 22,
             ),
           ),
+          const SizedBox(width: AppSpacing.xs),
         ],
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: 'Budget'),
-          BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Plan'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.pie_chart_outline_rounded),
+            selectedIcon: Icon(Icons.pie_chart_rounded),
+            label: 'Budgets',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.savings_outlined),
+            selectedIcon: Icon(Icons.savings_rounded),
+            label: 'Goals',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_outlined),
+            selectedIcon: Icon(Icons.account_balance_rounded),
             label: 'Accounts',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analytics'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights_rounded),
+            label: 'Insights',
+          ),
         ],
       ),
     );

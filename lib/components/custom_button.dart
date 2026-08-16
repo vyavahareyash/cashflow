@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-
 import '../theme/theme_constants.dart';
 
-enum ButtonVariant { primary, secondary, text }
+enum ButtonVariant { primary, secondary, outlined, text, danger }
 
 class CustomButton extends StatelessWidget {
   final String label;
@@ -12,6 +11,7 @@ class CustomButton extends StatelessWidget {
   final bool isLoading;
   final bool isEnabled;
   final double? width;
+  final double? height;
 
   const CustomButton({
     Key? key,
@@ -22,63 +22,94 @@ class CustomButton extends StatelessWidget {
     this.isLoading = false,
     this.isEnabled = true,
     this.width,
+    this.height,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Color backgroundColor;
     Color textColor;
     Color borderColor;
 
     switch (variant) {
       case ButtonVariant.primary:
-        backgroundColor = isEnabled ? AppColors.green700 : AppColors.gray400;
+        backgroundColor = isEnabled ? AppColors.emerald700 : (isDark ? AppColors.gray700 : AppColors.gray300);
         textColor = Colors.white;
         borderColor = Colors.transparent;
         break;
       case ButtonVariant.secondary:
-        backgroundColor = AppColors.green100;
-        textColor = AppColors.green700;
-        borderColor = AppColors.green700;
+        backgroundColor = isDark ? AppColors.emerald900.withOpacity(0.6) : AppColors.emerald50;
+        textColor = isDark ? AppColors.emerald300 : AppColors.emerald800;
+        borderColor = isDark ? AppColors.emerald700 : AppColors.emerald200;
+        break;
+      case ButtonVariant.outlined:
+        backgroundColor = Colors.transparent;
+        textColor = isDark ? AppColors.emerald400 : AppColors.emerald700;
+        borderColor = isDark ? AppColors.darkBorder : AppColors.gray300;
+        break;
+      case ButtonVariant.danger:
+        backgroundColor = AppColors.danger;
+        textColor = Colors.white;
+        borderColor = AppColors.danger;
         break;
       case ButtonVariant.text:
         backgroundColor = Colors.transparent;
-        textColor = AppColors.green700;
+        textColor = isDark ? AppColors.emerald400 : AppColors.emerald700;
         borderColor = Colors.transparent;
         break;
     }
 
+    Widget content = Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (isLoading)
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(textColor),
+            ),
+          )
+        else if (icon != null) ...[
+          Icon(icon, size: 18, color: textColor),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Text(
+          label,
+          style: AppTypography.labelLarge.copyWith(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+
     return SizedBox(
       width: width ?? double.infinity,
-      height: AppComponentSizes.buttonHeightMedium,
-      child: ElevatedButton.icon(
+      height: height ?? AppComponentSizes.buttonHeightMedium,
+      child: ElevatedButton(
         onPressed: isEnabled && !isLoading ? onPressed : null,
-        icon: isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                ),
-              )
-            : (icon != null ? Icon(icon) : SizedBox.shrink()),
-        label: Text(label),
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: textColor,
-          disabledBackgroundColor: AppColors.gray400,
-          disabledForegroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          disabledBackgroundColor: isDark ? AppColors.gray800 : AppColors.gray300,
+          disabledForegroundColor: isDark ? AppColors.gray600 : AppColors.gray500,
           shape: RoundedRectangleBorder(
-            borderRadius: AppBorderRadius.smallBorder,
-            side: BorderSide(color: borderColor, width: 1),
+            borderRadius: AppBorderRadius.mediumBorder,
+            side: BorderSide(color: borderColor, width: 1.5),
           ),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
           elevation: 0,
         ),
+        child: content,
       ),
     );
   }

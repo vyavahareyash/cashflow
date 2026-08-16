@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -17,6 +18,13 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
+  /// Global notifier that broadcasts whenever any financial data or database state changes
+  static final ValueNotifier<int> dataRevision = ValueNotifier<int>(0);
+
+  static void notifyDataChanged() {
+    dataRevision.value++;
+  }
+
   DatabaseHelper._init();
 
   Future<Database> get database async {
@@ -30,6 +38,7 @@ class DatabaseHelper {
     final path = join(dbPath, 'money_tracker.db');
     await deleteDatabase(path);
     _database = null; // Reset the singleton instance
+    notifyDataChanged();
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -101,7 +110,9 @@ class DatabaseHelper {
   // --- ACCOUNT OPERATIONS ---
   Future<int> createAccount(Account account) async {
     final db = await instance.database;
-    return await db.insert('accounts', account.toMap());
+    final id = await db.insert('accounts', account.toMap());
+    notifyDataChanged();
+    return id;
   }
 
   Future<List<Account>> readAllAccounts() async {
@@ -112,27 +123,33 @@ class DatabaseHelper {
 
   Future<int> updateAccountBalance(int id, double newBalance) async {
     final db = await instance.database;
-    return await db.update(
+    final res = await db.update(
       'accounts',
       {'balance': newBalance},
       where: 'id = ?',
       whereArgs: [id],
     );
+    notifyDataChanged();
+    return res;
   }
 
   Future<int> updateAccount(Account account) async {
     final db = await instance.database;
-    return await db.update(
+    final res = await db.update(
       'accounts',
       account.toMap(),
       where: 'id = ?',
       whereArgs: [account.id],
     );
+    notifyDataChanged();
+    return res;
   }
 
   Future<int> deleteAccount(int id) async {
     final db = await instance.database;
-    return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
+    final res = await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
+    notifyDataChanged();
+    return res;
   }
 
   // Close database
@@ -186,6 +203,7 @@ class DatabaseHelper {
 
       await sourceFile.copy(path);
       await instance.database;
+      notifyDataChanged();
 
       return true;
     } catch (e) {
@@ -197,22 +215,28 @@ class DatabaseHelper {
   // --- CATEGORY OPERATIONS ---
   Future<int> createCategory(Category category) async {
     final db = await instance.database;
-    return await db.insert('categories', category.toMap());
+    final id = await db.insert('categories', category.toMap());
+    notifyDataChanged();
+    return id;
   }
 
   Future<int> updateCategory(Category category) async {
     final db = await instance.database;
-    return await db.update(
+    final res = await db.update(
       'categories',
       category.toMap(),
       where: 'id = ?',
       whereArgs: [category.id],
     );
+    notifyDataChanged();
+    return res;
   }
 
   Future<int> deleteCategory(int id) async {
     final db = await instance.database;
-    return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+    final res = await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+    notifyDataChanged();
+    return res;
   }
 
   Future<List<Category>> readAllCategories() async {
@@ -224,7 +248,9 @@ class DatabaseHelper {
   // --- TRANSACTION OPERATIONS ---
   Future<int> insertTransaction(TransactionModel transaction) async {
     final db = await instance.database;
-    return await db.insert('transactions', transaction.toMap());
+    final id = await db.insert('transactions', transaction.toMap());
+    notifyDataChanged();
+    return id;
   }
 
   /// Fetches all transactions with their associated account and category names.
@@ -238,7 +264,7 @@ class DatabaseHelper {
         t.note, 
         a.name as account_name, 
         c.name as category_name 
-      FROM transactions t
+        FROM transactions t
       JOIN accounts a ON t.account_id = a.id
       JOIN categories c ON t.category_id = c.id
       ORDER BY t.date DESC
@@ -264,6 +290,7 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [accountId],
     );
+    notifyDataChanged();
   }
 
   /// Deletes a transaction and refunds the amount to the associated account balance.
@@ -309,35 +336,101 @@ class DatabaseHelper {
         whereArgs: [transactionId],
       );
     });
+    notifyDataChanged();
   }
 
   // SEED DATA: Call this once to add default categories
   Future<void> seedDatabase() async {
     final categories = [
-      Category(name: 'Groceries', monthlyBudget: 300),
-      Category(name: 'Transport', monthlyBudget: 100),
-      Category(name: 'Entertainment', monthlyBudget: 200),
-      Category(name: 'Dining Out', monthlyBudget: 200),
+      Category(name: 'Groceries', monthlyBudget: 15000),
+      Category(name: 'Dining Out', monthlyBudget: 8000),
+      Category(name: 'Transport', monthlyBudget: 5000),
+      Category(name: 'Entertainment', monthlyBudget: 4000),
+      Category(name: 'Utilities & Bills', monthlyBudget: 10000),
+      Category(name: 'Shopping', monthlyBudget: 6000),
     ];
     for (var cat in categories) {
       await createCategory(cat);
     }
+    notifyDataChanged();
   }
+
+  /// Populates comprehensive sample data (Accounts, Plans, Categories, Transactions) for demo & testing
+  Future<void> seedSampleData() async {
+    await resetDatabase();
+
+    // 1. Accounts
+    final salaryAccId = await createAccount(
+      Account(name: 'Salary Account (HDFC)', balance: 85000.0, type: 'Bank'),
+    );
+    final savingsAccId = await createAccount(
+      Account(name: 'Emergency Savings (SBI)', balance: 120000.0, type: 'Savings'),
+    );
+    final walletAccId = await createAccount(
+      Account(name: 'Cash Wallet', balance: 5400.0, type: 'Cash'),
+    );
+
+    // 2. Categories
+    final catGroceries = await createCategory(Category(name: 'Groceries', monthlyBudget: 15000));
+    final catDining = await createCategory(Category(name: 'Dining Out', monthlyBudget: 8000));
+    final catTransport = await createCategory(Category(name: 'Transport & Fuel', monthlyBudget: 5000));
+    final catUtilities = await createCategory(Category(name: 'Utilities & Bills', monthlyBudget: 10000));
+    final catShopping = await createCategory(Category(name: 'Shopping', monthlyBudget: 7000));
+    final catHealth = await createCategory(Category(name: 'Health & Medical', monthlyBudget: 4000));
+
+    // 3. Sinking Funds / Plans
+    final planInsurance = await createPlan(
+      Plan(name: 'Annual Car Insurance', totalTarget: 25000.0, targetDate: '2026-11-30', currentSaved: 0.0),
+    );
+    final planVacation = await createPlan(
+      Plan(name: 'Goa Vacation Fund', totalTarget: 40000.0, targetDate: '2026-12-25', currentSaved: 0.0),
+    );
+    final planGadget = await createPlan(
+      Plan(name: 'New Laptop', totalTarget: 80000.0, targetDate: '2027-03-31', currentSaved: 0.0),
+    );
+
+    // Lock funds to plans
+    await lockFunds(planInsurance, savingsAccId, 15000.0);
+    await lockFunds(planVacation, salaryAccId, 20000.0);
+    await lockFunds(planGadget, savingsAccId, 25000.0);
+
+    // 4. Sample Transactions
+    final now = DateTime.now();
+    final sampleTxs = [
+      TransactionModel(accountId: salaryAccId, categoryId: catGroceries, amount: 3250.0, date: now.subtract(const Duration(days: 1)).toIso8601String(), note: 'Supermarket weekly stock'),
+      TransactionModel(accountId: walletAccId, categoryId: catDining, amount: 850.0, date: now.subtract(const Duration(days: 2)).toIso8601String(), note: 'Lunch with team'),
+      TransactionModel(accountId: salaryAccId, categoryId: catTransport, amount: 2200.0, date: now.subtract(const Duration(days: 3)).toIso8601String(), note: 'Petrol fill up'),
+      TransactionModel(accountId: salaryAccId, categoryId: catUtilities, amount: 4800.0, date: now.subtract(const Duration(days: 5)).toIso8601String(), note: 'Electricity & Wifi bill'),
+      TransactionModel(accountId: salaryAccId, categoryId: catShopping, amount: 3100.0, date: now.subtract(const Duration(days: 8)).toIso8601String(), note: 'Weekend clothing'),
+      TransactionModel(accountId: walletAccId, categoryId: catHealth, amount: 650.0, date: now.subtract(const Duration(days: 10)).toIso8601String(), note: 'Pharmacy medicines'),
+    ];
+
+    for (var tx in sampleTxs) {
+      await insertTransaction(tx);
+      await subtractFromAccount(tx.accountId, tx.amount);
+    }
+    notifyDataChanged();
+  }
+
 
   // --- PLANNER OPERATIONS ---
   Future<int> createPlan(Plan plan) async {
     final db = await instance.database;
-    return await db.insert('planned_spends', plan.toMap());
+    final id = await db.insert('planned_spends', plan.toMap());
+    notifyDataChanged();
+    return id;
   }
 
   Future<int> updatePlan(Plan plan) async {
     final db = await instance.database;
-    return await db.update(
+    final res = await db.update(
       'planned_spends',
       plan.toMap(),
       where: 'id = ?',
       whereArgs: [plan.id],
     );
+    notifyDataChanged();
+    return res;
   }
 
   Future<void> deletePlan(int planId) async {
@@ -383,16 +476,11 @@ class DatabaseHelper {
         whereArgs: [planId],
       );
     });
+    notifyDataChanged();
   }
 
   Future<List<Plan>> readAllPlans() async {
     final db = await instance.database;
-    // Only fetch plans that are not yet fully paid (current_saved < total_target)
-    // Or we can add a 'is_completed' flag. For now, let's assume if target is met and
-    // locked allocations are gone, it's done.
-    // Actually, the cleanest way is to filter out plans where current_saved <= 0
-    // AND total_target was previously something, but that's tricky.
-    // Let's implement a simple filter: if the payment makes current_saved 0 and total_target was met.
     final result = await db.query('planned_spends');
     return result.map((json) => Plan.fromMap(json)).toList();
   }
@@ -424,6 +512,7 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [planId],
     );
+    notifyDataChanged();
   }
 
   // Get total locked amount across all accounts (for Dashboard)
@@ -550,6 +639,7 @@ class DatabaseHelper {
         'note': 'Payment for plan id $planId',
       });
     });
+    notifyDataChanged();
   }
 
   // --- CORE CALCULATION LOGIC ---
@@ -687,6 +777,7 @@ class DatabaseHelper {
         }
       }
 
+      notifyDataChanged();
       return true;
     } catch (e) {
       print('JSON import error: $e');

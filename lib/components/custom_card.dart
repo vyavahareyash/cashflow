@@ -9,7 +9,10 @@ class CustomCard extends StatelessWidget {
   final double borderLeftWidth;
   final VoidCallback? onTap;
   final Color? backgroundColor;
+  final Gradient? gradient;
   final BoxShadow? shadow;
+  final BorderRadius? borderRadius;
+  final Border? border;
 
   const CustomCard({
     Key? key,
@@ -20,36 +23,58 @@ class CustomCard extends StatelessWidget {
     this.borderLeftWidth = AppComponentSizes.cardBorderMedium,
     this.onTap,
     this.backgroundColor,
+    this.gradient,
     this.shadow,
+    this.borderRadius,
+    this.border,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final defaultBg = isDark ? AppColors.darkSurface : AppColors.white;
+    final defaultBorderColor = isDark ? AppColors.darkBorder : AppColors.gray200;
+    final radius = borderRadius ?? AppBorderRadius.largeBorder;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: margin,
-        decoration: BoxDecoration(
-          color: backgroundColor ?? defaultBg,
-          borderRadius: AppBorderRadius.mediumBorder,
-          boxShadow: shadow != null ? [shadow!] : [AppShadows.level1],
-          border: borderLeftColor != null
-              ? Border(
-                  left: BorderSide(
-                    color: borderLeftColor!,
-                    width: borderLeftWidth,
-                  ),
-                )
-              : null,
-        ),
-        child: Padding(
-          padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
-          child: child,
-        ),
+    Widget cardContent = Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: gradient == null ? (backgroundColor ?? defaultBg) : null,
+        gradient: gradient,
+        borderRadius: radius,
+        boxShadow: shadow != null
+            ? [shadow!]
+            : (isDark ? [] : [AppShadows.level1]),
+        border: border ??
+            (borderLeftColor != null
+                ? Border(
+                    left: BorderSide(
+                      color: borderLeftColor!,
+                      width: borderLeftWidth,
+                    ),
+                    top: BorderSide(color: defaultBorderColor, width: 1),
+                    right: BorderSide(color: defaultBorderColor, width: 1),
+                    bottom: BorderSide(color: defaultBorderColor, width: 1),
+                  )
+                : Border.all(color: defaultBorderColor, width: 1)),
+      ),
+      child: Padding(
+        padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+        child: child,
       ),
     );
+
+    if (onTap != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: cardContent,
+        ),
+      );
+    }
+
+    return cardContent;
   }
 }

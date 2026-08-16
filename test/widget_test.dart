@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:cashflow/main.dart';
+import 'package:cashflow/theme/theme_constants.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MoneyTrackerApp());
+  group('AppFormatters unit tests', () {
+    test('currency formats numbers correctly', () {
+      expect(AppFormatters.currency(5000), '₹5,000');
+      expect(AppFormatters.currency(1234.56), '₹1,234.56');
+      expect(AppFormatters.currency(5000, isPrivate: true), '••••••');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('compactCurrency formats large values cleanly', () {
+      expect(AppFormatters.compactCurrency(1500), '₹1.5k');
+      expect(AppFormatters.compactCurrency(250000), '₹2.5L');
+      expect(AppFormatters.compactCurrency(15000000), '₹1.5Cr');
+      expect(AppFormatters.compactCurrency(500, isPrivate: true), '••••');
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('CategoryStyle maps category names to distinct icons and colors', () {
+      final groceryStyle = CategoryStyle.getStyle('Groceries');
+      final diningStyle = CategoryStyle.getStyle('Dining Out');
+      final transportStyle = CategoryStyle.getStyle('Transport');
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(groceryStyle.color, AppColors.emerald600);
+      expect(diningStyle.color, AppColors.orange);
+      expect(transportStyle.color, AppColors.info);
+    });
   });
 }

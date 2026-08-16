@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cashflow/services/database_helper.dart';
 import 'package:intl/intl.dart';
 
+import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
+import '../components/category_badge.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -15,6 +16,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   List<Map<String, dynamic>> _transactions = [];
   bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -26,88 +28,84 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() => _isLoading = true);
     try {
       final data = await DatabaseHelper.instance.getTransactionHistory();
-      setState(() {
-        _transactions = data;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _transactions = data;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error loading history: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading history: $e')),
+        );
+      }
     }
   }
 
   Future<void> _deleteTransaction(int id) async {
-    try {
-      await DatabaseHelper.instance.deleteTransaction(id);
-      await _loadTransactions();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transaction deleted and balance restored'),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Transaction?'),
+        content: const Text(
+          'This will remove the transaction and refund the money back to the account balance.',
         ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error deleting transaction: $e')));
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete & Refund',
+              style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await DatabaseHelper.instance.deleteTransaction(id);
+        await _loadTransactions();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transaction deleted and balance refunded!'),
+            backgroundColor: AppColors.emerald700,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting transaction: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Transaction History',
-                      style: AppTypography.headlineMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Your recent spending logs',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.gray700,
-                      ),
-                    ),
-                  ],
-                ),
-                Icon(Icons.history, color: AppColors.green700, size: 32),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _transactions.isEmpty
-                  ? const Center(child: Text('No transactions found'))
-                  : _buildGroupedTransactions(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  Widget _buildGroupedTransactions() {
+    final filtered = _transactions.where((tx) {
+      final note = (tx['note'] as String? ?? '').toLowerCase();
+      final category = (tx['category_name'] as String? ?? '').toLowerCase();
+      final account = (tx['account_name'] as String? ?? '').toLowerCase();
+      final q = _searchQuery.toLowerCase();
+      return q.isEmpty || note.contains(q) || category.contains(q) || account.contains(q);
+    }).toList();
+
     // Group transactions by month
     Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (var tx in _transactions) {
-      final date = DateTime.parse(tx['date']);
+    for (var tx in filtered) {
+      final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
       final monthKey = DateFormat('MMMM yyyy').format(date);
       grouped.putIfAbsent(monthKey, () => []).add(tx);
     }
 
-    // Sort months in descending order based on the date
     final sortedMonths = grouped.keys.toList()
       ..sort((a, b) {
         final dateA = DateFormat('MMMM yyyy').parse(a);
@@ -115,105 +113,150 @@ class _HistoryScreenState extends State<HistoryScreen> {
         return dateB.compareTo(dateA);
       });
 
-    return ListView.builder(
-      itemCount: sortedMonths.length,
-      itemBuilder: (context, index) {
-        final month = sortedMonths[index];
-        final transactions = grouped[month]!;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Text(
-                month,
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.green700,
-                ),
-              ),
-            ),
-            ...transactions.map((tx) {
-              final date = DateTime.parse(tx['date']);
-              final formattedDate = DateFormat('MMM dd, yyyy').format(date);
-
-              return CustomCard(
-                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.green100,
-                    child: const Icon(
-                      Icons.receipt_long,
-                      color: AppColors.green700,
-                    ),
-                  ),
-                  title: Text(
-                    '${tx['category_name']} - ${tx['account_name']}',
-                    style: AppTypography.bodyLarge.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '$formattedDate • ${tx['note'] ?? 'No note'}',
-                    style: AppTypography.labelSmall,
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '-\₹${tx['amount'].toStringAsFixed(2)}',
-                        style: AppTypography.titleMedium.copyWith(
-                          color: AppColors.danger,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: AppColors.gray400,
-                        ),
-                        onPressed: () => _confirmDelete(tx['id']),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ],
-        );
-      },
-    );
-  }
-
-  void _confirmDelete(int id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete Transaction?', style: AppTypography.titleLarge),
-        content: Text(
-          'This will remove the transaction and refund the amount back to the account.',
-          style: AppTypography.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: AppTypography.labelMedium),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _deleteTransaction(id);
-            },
-            child: Text(
-              'Delete',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.danger,
-              ),
-            ),
-          ),
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Transaction Ledger', style: AppTypography.titleLarge),
       ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.emerald700),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadTransactions,
+              color: AppColors.emerald700,
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: [
+                  // Search Box
+                  TextField(
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Search ledger by note, category...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: isDark ? AppColors.darkSurface : AppColors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: AppBorderRadius.mediumBorder,
+                        borderSide: BorderSide(
+                          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.sm,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  if (filtered.isEmpty)
+                    CustomCard(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          child: Text(
+                            'No transactions found',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...sortedMonths.map((month) {
+                      final txs = grouped[month]!;
+                      double monthTotal = 0;
+                      for (var t in txs) {
+                        monthTotal += (t['amount'] as num?)?.toDouble() ?? 0.0;
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  month,
+                                  style: AppTypography.titleMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.emerald700,
+                                  ),
+                                ),
+                                Text(
+                                  'Total: ₹${monthTotal.toStringAsFixed(0)}',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ...txs.map((tx) {
+                            final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
+                            final categoryName = tx['category_name'] ?? 'General';
+                            final accountName = tx['account_name'] ?? 'Account';
+                            final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
+                            final note = tx['note'] as String?;
+
+                            return CustomCard(
+                              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Row(
+                                children: [
+                                  CategoryBadge(label: categoryName),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          note != null && note.isNotEmpty ? note : categoryName,
+                                          style: AppTypography.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          '$accountName • ${DateFormat('MMM dd, yyyy').format(date)}',
+                                          style: AppTypography.labelSmall.copyWith(
+                                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '-${AppFormatters.currency(amount)}',
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: AppColors.danger,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 18,
+                                      color: isDark ? AppColors.gray500 : AppColors.gray400,
+                                    ),
+                                    onPressed: () => _deleteTransaction(tx['id']),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      );
+                    }),
+                  const SizedBox(height: AppSpacing.huge),
+                ],
+              ),
+            ),
     );
   }
 }
