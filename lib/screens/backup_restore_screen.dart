@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cashflow/services/database_helper.dart';
+
 import '../theme/theme_constants.dart';
-import '../components/custom_card.dart';
 
 class BackupRestoreScreen extends StatefulWidget {
   const BackupRestoreScreen({super.key});
@@ -21,11 +21,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     });
 
     final path = await DatabaseHelper.instance.exportDatabase();
-    
+
     setState(() {
       _isProcessing = false;
-      _statusMessage = path != null 
-          ? 'Backup exported successfully to $path' 
+      _statusMessage = path != null
+          ? 'Backup exported successfully to $path'
           : 'Export failed or cancelled';
     });
   }
@@ -37,11 +37,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     });
 
     final success = await DatabaseHelper.instance.importDatabase();
-    
+
     setState(() {
       _isProcessing = false;
-      _statusMessage = success 
-          ? 'Backup imported successfully! Please restart the app.' 
+      _statusMessage = success
+          ? 'Backup imported successfully! Please restart the app.'
           : 'Import failed or cancelled';
     });
   }
@@ -53,11 +53,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     });
 
     final path = await DatabaseHelper.instance.exportDatabaseAsJSON();
-    
+
     setState(() {
       _isProcessing = false;
-      _statusMessage = path != null 
-          ? 'JSON exported successfully to $path' 
+      _statusMessage = path != null
+          ? 'JSON exported successfully to $path'
           : 'JSON export failed or cancelled';
     });
   }
@@ -69,11 +69,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     });
 
     final success = await DatabaseHelper.instance.importDatabaseFromJSON();
-    
+
     setState(() {
       _isProcessing = false;
-      _statusMessage = success 
-          ? 'JSON imported successfully! Please restart the app.' 
+      _statusMessage = success
+          ? 'JSON imported successfully! Please restart the app.'
           : 'JSON import failed or cancelled';
     });
   }
@@ -85,11 +85,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     });
 
     final path = await DatabaseHelper.instance.exportTransactionsAsCSV();
-    
+
     setState(() {
       _isProcessing = false;
-      _statusMessage = path != null 
-          ? 'CSV exported successfully to $path' 
+      _statusMessage = path != null
+          ? 'CSV exported successfully to $path'
           : 'CSV export failed or cancelled';
     });
   }
@@ -110,7 +110,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Reset', style: AppTypography.labelMedium.copyWith(color: AppColors.danger)),
+            child: Text(
+              'Reset',
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.danger,
+              ),
+            ),
           ),
         ],
       ),
@@ -126,7 +131,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         await DatabaseHelper.instance.resetDatabase();
         setState(() {
           _isProcessing = false;
-          _statusMessage = 'Database reset successfully! Please restart the app.';
+          _statusMessage =
+              'Database reset successfully! Please restart the app.';
         });
       } catch (e) {
         setState(() {
@@ -155,13 +161,18 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'Database Backup (.db)',
-              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.labelMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleExport,
               icon: const Icon(Icons.upload),
-              label: Text('Export Backup (.db)', style: AppTypography.labelMedium),
+              label: Text(
+                'Export Backup (.db)',
+                style: AppTypography.labelMedium,
+              ),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
@@ -170,7 +181,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleImport,
               icon: const Icon(Icons.download),
-              label: Text('Import Backup (.db)', style: AppTypography.labelMedium),
+              label: Text(
+                'Import Backup (.db)',
+                style: AppTypography.labelMedium,
+              ),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
@@ -178,7 +192,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'JSON Export/Import',
-              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.labelMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
@@ -201,13 +217,18 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'Transaction Export',
-              style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.labelMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleExportCSV,
               icon: const Icon(Icons.download),
-              label: Text('Export Transactions (CSV)', style: AppTypography.labelMedium),
+              label: Text(
+                'Export Transactions (CSV)',
+                style: AppTypography.labelMedium,
+              ),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               ),
@@ -236,7 +257,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               Center(
                 child: Text(
                   _statusMessage,
-                  style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),

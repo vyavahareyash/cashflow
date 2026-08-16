@@ -90,61 +90,99 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _transactions.isEmpty
                   ? const Center(child: Text('No transactions found'))
-                  : ListView.builder(
-                      itemCount: _transactions.length,
-                      itemBuilder: (context, index) {
-                        final tx = _transactions[index];
-                        final date = DateTime.parse(tx['date']);
-                        final formattedDate = DateFormat('MMM dd, yyyy')
-                            .format(date);
-
-                        return CustomCard(
-                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.green100,
-                              child: const Icon(
-                                Icons.receipt_long,
-                                color: AppColors.green700,
-                              ),
-                            ),
-                            title: Text(
-                              '${tx['category_name']} - ${tx['account_name']}',
-                              style: AppTypography.bodyLarge.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '$formattedDate • ${tx['note'] ?? 'No note'}',
-                              style: AppTypography.labelSmall,
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '-\₹${tx['amount'].toStringAsFixed(2)}',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: AppColors.gray400,
-                                  ),
-                                  onPressed: () => _confirmDelete(tx['id']),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  : _buildGroupedTransactions(),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildGroupedTransactions() {
+    // Group transactions by month
+    Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var tx in _transactions) {
+      final date = DateTime.parse(tx['date']);
+      final monthKey = DateFormat('MMMM yyyy').format(date);
+      grouped.putIfAbsent(monthKey, () => []).add(tx);
+    }
+
+    // Sort months in descending order based on the date
+    final sortedMonths = grouped.keys.toList()
+      ..sort((a, b) {
+        final dateA = DateFormat('MMMM yyyy').parse(a);
+        final dateB = DateFormat('MMMM yyyy').parse(b);
+        return dateB.compareTo(dateA);
+      });
+
+    return ListView.builder(
+      itemCount: sortedMonths.length,
+      itemBuilder: (context, index) {
+        final month = sortedMonths[index];
+        final transactions = grouped[month]!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Text(
+                month,
+                style: AppTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.green700,
+                ),
+              ),
+            ),
+            ...transactions.map((tx) {
+              final date = DateTime.parse(tx['date']);
+              final formattedDate = DateFormat('MMM dd, yyyy').format(date);
+
+              return CustomCard(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.green100,
+                    child: const Icon(
+                      Icons.receipt_long,
+                      color: AppColors.green700,
+                    ),
+                  ),
+                  title: Text(
+                    '${tx['category_name']} - ${tx['account_name']}',
+                    style: AppTypography.bodyLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '$formattedDate • ${tx['note'] ?? 'No note'}',
+                    style: AppTypography.labelSmall,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '-\₹${tx['amount'].toStringAsFixed(2)}',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: AppColors.gray400,
+                        ),
+                        onPressed: () => _confirmDelete(tx['id']),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
+        );
+      },
     );
   }
 

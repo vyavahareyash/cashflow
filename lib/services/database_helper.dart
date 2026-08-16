@@ -330,6 +330,61 @@ class DatabaseHelper {
     return await db.insert('planned_spends', plan.toMap());
   }
 
+  Future<int> updatePlan(Plan plan) async {
+    final db = await instance.database;
+    return await db.update(
+      'planned_spends',
+      plan.toMap(),
+      where: 'id = ?',
+      whereArgs: [plan.id],
+    );
+  }
+
+  Future<void> deletePlan(int planId) async {
+    final db = await instance.database;
+
+    await db.transaction((txn) async {
+      // 1. Find all locked allocations for this plan
+      final locks = await txn.query(
+        'locked_allocations',
+        where: 'plan_id = ?',
+        whereArgs: [planId],
+      );
+
+      // 2. For each lock, refund the amount to the respective account
+      for (var lock in locks) {
+        final int accountId = lock['account_id'] as int;
+        final double amount = (lock['amount'] as num).toDouble();
+
+        List<Map> accRes = await txn.query(
+          'accounts',
+          where: 'id = ?',
+          whereArgs: [accountId],
+        );
+
+        if (accRes.isNotEmpty) {
+          double currentBalance = accRes.first['balance'];
+          await txn.update(
+            'accounts',
+            {'balance': currentBalance + amount},
+            where: 'id = ?',
+            whereArgs: [accountId],
+          );
+        }
+      }
+
+      // 3. Delete the plan itself
+      await txn.delete('planned_spends', where: 'id = ?', whereArgs: [planId]);
+
+      // 4. Delete all associated locked allocations
+      await txn.delete(
+        'locked_allocations',
+        where: 'plan_id = ?',
+        whereArgs: [planId],
+      );
+    });
+  }
+
   Future<List<Plan>> readAllPlans() async {
     final db = await instance.database;
     // Only fetch plans that are not yet fully paid (current_saved < total_target)
@@ -395,6 +450,19 @@ class DatabaseHelper {
     );
 
     return result.map((json) => LockedAllocation.fromMap(json)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getPlanContributions(int planId) async {
+    final db = await instance.database;
+    return await db.rawQuery(
+      '''
+      SELECT la.amount, a.name as account_name, la.id as lock_id
+      FROM locked_allocations la
+      JOIN accounts a ON la.account_id = a.id
+      WHERE la.plan_id = ?
+      ''',
+      [planId],
+    );
   }
 
   /// Processes a payment for a planned spend.

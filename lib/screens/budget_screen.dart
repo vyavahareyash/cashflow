@@ -4,7 +4,6 @@ import '../services/database_helper.dart';
 import '../models/category_model.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
-import '../components/category_badge.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 
@@ -270,8 +269,23 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Expanded(
                 child: Row(
                   children: [
-                    Flexible(
-                      child: CategoryBadge(label: cat.name, color: color),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.xs),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      child: Icon(Icons.category, color: color, size: 20),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        cat.name,
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -279,16 +293,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    child: Text(
-                      '\₹${spent.toStringAsFixed(2)} / \₹${budget.toStringAsFixed(2)}',
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.gray700,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    '\₹${spent.toStringAsFixed(0)} / \₹${budget.toStringAsFixed(0)}',
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray700,
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
                   IconButton(
                     icon: const Icon(
                       Icons.edit,
@@ -302,22 +314,37 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          ClipRRect(
-            borderRadius: AppBorderRadius.smallBorder,
-            child: LinearProgressIndicator(
-              value: progress > 1.0 ? 1.0 : progress,
-              minHeight: 10,
-              backgroundColor: AppColors.gray200,
-              valueColor: AlwaysStoppedAnimation<Color>(barColor),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ClipRRect(
+                borderRadius: AppBorderRadius.smallBorder,
+                child: LinearProgressIndicator(
+                  value: progress > 1.0 ? 1.0 : progress,
+                  minHeight: 8,
+                  backgroundColor: AppColors.gray200,
+                  valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${(progress * 100).toStringAsFixed(1)}%',
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: barColor,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.sm),
           if (progress > 1.0)
-            Text(
-              'Over budget!',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.danger,
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                'Over budget!',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
         ],

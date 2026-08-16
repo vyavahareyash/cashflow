@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../services/database_helper.dart';
 import '../models/account_model.dart';
@@ -6,7 +7,6 @@ import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import 'backup_restore_screen.dart';
 import '../theme/theme_constants.dart';
-import '../components/stat_card.dart';
 import '../components/custom_card.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -21,6 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _totalBalance = 0.0;
   double _lockedAmount = 0.0;
   double _usableBalance = 0.0;
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -45,6 +46,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _lockedAmount = locked;
       _usableBalance = usable;
     });
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   @override
@@ -341,6 +356,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     },
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  ListTile(
+                    title: const Text('Transaction Date'),
+                    subtitle: Text(
+                      DateFormat('yyyy-MM-dd').format(_selectedDate),
+                      style: AppTypography.bodyMedium,
+                    ),
+                    trailing: const Icon(
+                      Icons.calendar_today,
+                      color: AppColors.green700,
+                    ),
+                    onTap: () => _selectDate(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppBorderRadius.smallBorder,
+                      side: const BorderSide(color: AppColors.gray200),
+                    ),
+                    tileColor: AppColors.gray50,
+                  ),
                   const SizedBox(height: AppSpacing.xl),
                   SizedBox(
                     width: double.infinity,
@@ -357,7 +390,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             accountId: selectedAccountId!,
                             categoryId: selectedCategoryId!,
                             amount: amount,
-                            date: DateTime.now().toIso8601String(),
+                            date: _selectedDate.toIso8601String(),
                             note: '',
                           ),
                         );
