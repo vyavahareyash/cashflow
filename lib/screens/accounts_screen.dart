@@ -109,7 +109,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 50),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -118,17 +117,25 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 children: [
                   Text(
                     'My Accounts',
-                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.headlineMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
-                    'Total Physical Balance: \$${totalPhysical.toStringAsFixed(2)}',
-                    style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                    'Total Physical Balance: \₹${totalPhysical.toStringAsFixed(2)}',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.gray700,
+                    ),
                   ),
                 ],
               ),
               IconButton(
                 onPressed: _showAddAccountDialog,
-                icon: const Icon(Icons.add_circle, color: AppColors.green700, size: 32),
+                icon: const Icon(
+                  Icons.add_circle,
+                  color: AppColors.green700,
+                  size: 32,
+                ),
               ),
             ],
           ),
@@ -183,7 +190,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ),
               ),
               Text(
-                '\$${acc.balance.toStringAsFixed(2)}',
+                '\₹${acc.balance.toStringAsFixed(2)}',
                 style: AppTypography.titleMedium.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -197,14 +204,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   }
                 },
                 itemBuilder: (BuildContext context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Text('Edit'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete'),
-                  ),
+                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
                 ],
               ),
             ],
@@ -225,7 +226,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
               if (snapshot.data!.isEmpty)
                 return Text(
                   'No funds locked in this account',
-                  style: AppTypography.labelSmall.copyWith(color: AppColors.gray700),
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.gray700,
+                  ),
                 );
 
               return Column(
@@ -241,7 +244,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               style: AppTypography.labelSmall,
                             ),
                             Text(
-                              '\$${lock.amount.toStringAsFixed(2)}',
+                              '\₹${lock.amount.toStringAsFixed(2)}',
                               style: AppTypography.labelSmall.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -260,10 +263,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
   }
 
   void _showEditAccountDialog(Account account) {
-    TextEditingController nameController =
-        TextEditingController(text: account.name);
-    TextEditingController balanceController =
-        TextEditingController(text: account.balance.toString());
+    TextEditingController nameController = TextEditingController(
+      text: account.name,
+    );
+    TextEditingController balanceController = TextEditingController(
+      text: account.balance.toString(),
+    );
     String selectedType = account.type;
 
     showDialog(
@@ -335,9 +340,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
       builder: (context) => AlertDialog(
         title: Text('Delete Account?', style: AppTypography.titleLarge),
         content: Text(
-            'Are you sure you want to delete "${account.name}"? This action cannot be undone.',
-            style: AppTypography.bodyMedium,
-          ),
+          'Are you sure you want to delete "${account.name}"? This action cannot be undone.',
+          style: AppTypography.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

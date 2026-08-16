@@ -55,7 +55,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 50),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -64,11 +63,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       'Welcome Back!',
-                      style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.gray700,
+                      ),
                     ),
                     Text(
                       'Manage your finances',
-                      style: AppTypography.labelSmall.copyWith(color: AppColors.gray400),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.gray400,
+                      ),
                     ),
                   ],
                 ),
@@ -91,50 +94,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Text(
                         'Usable Balance',
-                        style: AppTypography.labelSmall.copyWith(color: Colors.white70),
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white70,
+                        ),
                       ),
-                      Icon(Icons.account_balance_wallet, color: Colors.white70, size: 20),
+                      Icon(
+                        Icons.account_balance_wallet,
+                        color: Colors.white70,
+                        size: 20,
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    '\$${_usableBalance.toStringAsFixed(2)}',
+                    '\₹${_usableBalance.toStringAsFixed(2)}',
                     style: AppTypography.displayLarge.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                  _buildBalanceDetail(
-                    'Total',
-                    '\$${_totalBalance.toStringAsFixed(2)}',
-                  ),
-                  _buildBalanceDetail(
-                    'Locked',
-                    '\$${_lockedAmount.toStringAsFixed(2)}',
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const BackupRestoreScreen(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Backup',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildBalanceDetail(
+                        'Total',
+                        '\₹${_totalBalance.toStringAsFixed(2)}',
                       ),
-                    ),
+                      _buildBalanceDetail(
+                        'Locked',
+                        '\₹${_lockedAmount.toStringAsFixed(2)}',
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const BackupRestoreScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Backup',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  ],
-                ),
                 ],
               ),
             ),
@@ -145,7 +154,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   'My Accounts',
-                  style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 TextButton(
                   onPressed: () {
@@ -224,8 +235,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: AppTypography.labelSmall,
         ),
         trailing: Text(
-          '\$${acc.balance.toStringAsFixed(2)}',
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          '\₹${acc.balance.toStringAsFixed(2)}',
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -258,7 +271,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Text(
                     'Log New Expense',
-                    style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   TextField(

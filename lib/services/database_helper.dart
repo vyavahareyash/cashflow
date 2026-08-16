@@ -25,6 +25,13 @@ class DatabaseHelper {
     return _database!;
   }
 
+  Future<void> resetDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'money_tracker.db');
+    await deleteDatabase(path);
+    _database = null; // Reset the singleton instance
+  }
+
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);

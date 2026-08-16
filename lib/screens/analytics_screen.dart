@@ -3,6 +3,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:intl/intl.dart';
 
+import '../theme/theme_constants.dart';
+import '../components/custom_card.dart';
+
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
 
@@ -26,10 +29,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    final categoryData =
-        await DatabaseHelper.instance.getSpendingByCategoryForMonth(
-      _selectedMonth,
-    );
+    final categoryData = await DatabaseHelper.instance
+        .getSpendingByCategoryForMonth(_selectedMonth);
     final monthlyData = await DatabaseHelper.instance.getMonthlySpendings();
 
     setState(() {
@@ -45,31 +46,47 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Spending Analytics',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Spending Analytics',
+                            style: AppTypography.headlineMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Visual insights into your money',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.gray700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Icon(Icons.insights, color: AppColors.green700, size: 32),
+                    ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xl),
                   _buildMonthSelector(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xxl),
                   if (_categorySpending.isNotEmpty)
                     _buildCategoryPieChart()
                   else
                     const Center(
                       child: Text('No spending data for selected month'),
                     ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: AppSpacing.xxl),
                   if (_monthlySpendings.isNotEmpty)
                     _buildMonthlyTrendsChart()
                   else
-                    const Center(
-                      child: Text('No monthly data available'),
-                    ),
+                    const Center(child: Text('No monthly data available')),
                 ],
               ),
             ),
@@ -77,55 +94,50 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildMonthSelector() {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select Month',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: _selectMonth,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.green.shade700),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_selectedMonth),
-                          Icon(
-                            Icons.calendar_today,
-                            color: Colors.green.shade700,
-                          ),
-                        ],
-                      ),
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Select Month',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: _selectMonth,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.green700),
+                      borderRadius: AppBorderRadius.smallBorder,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_selectedMonth),
+                        Icon(Icons.calendar_today, color: AppColors.green700),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: _loadData,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                  ),
-                  child: const Text('Refresh'),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              ElevatedButton(
+                onPressed: _loadData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.green700,
                 ),
-              ],
-            ),
-          ],
-        ),
+                child: const Text('Refresh'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -158,7 +170,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       Colors.amber.shade500,
     ];
 
-    final sections = _categorySpending.entries.toList().asMap().entries.map((e) {
+    final sections = _categorySpending.entries.toList().asMap().entries.map((
+      e,
+    ) {
       final index = e.key;
       final entry = e.value;
       return PieChartSectionData(
@@ -174,10 +188,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       );
     }).toList();
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return CustomCard(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -185,7 +198,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               'Spending by Category',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 300,
               child: PieChart(
@@ -196,7 +209,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             _buildCategoryLegend(),
           ],
         ),
@@ -233,11 +246,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(entry.key),
-              ),
+              Expanded(child: Text(entry.key)),
               Text(
-                '\$${entry.value.toStringAsFixed(2)}',
+                '\₹${entry.value.toStringAsFixed(2)}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
@@ -260,10 +271,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       return FlSpot(index.toDouble(), amount);
     }).toList();
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return CustomCard(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -271,7 +281,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               'Monthly Spending Trends',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 300,
               child: LineChart(
@@ -288,7 +298,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         reservedSize: 50,
                         getTitlesWidget: (value, meta) {
                           return Text(
-                            '\$${(value / 1000).toStringAsFixed(1)}k',
+                            '\₹${(value / 1000).toStringAsFixed(1)}k',
                             style: const TextStyle(fontSize: 10),
                           );
                         },
@@ -310,38 +320,40 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     ),
                     topTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                     rightTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                   ),
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      color: Colors.green.shade700,
+                      color: AppColors.green700,
                       barWidth: 3,
                       dotData: FlDotData(
                         show: true,
                         getDotPainter: (spot, percent, barData, index) =>
                             FlDotCirclePainter(
-                          radius: 4,
-                          color: Colors.green.shade700,
-                          strokeWidth: 0,
-                        ),
+                              radius: 4,
+                              color: AppColors.green700,
+                              strokeWidth: 0,
+                            ),
                       ),
                     ),
                   ],
                   borderData: FlBorderData(
                     show: true,
                     border: Border(
-                      left: BorderSide(color: Colors.green.shade700),
-                      bottom: BorderSide(color: Colors.green.shade700),
+                      left: BorderSide(color: AppColors.green700),
+                      bottom: BorderSide(color: AppColors.green700),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             _buildTrendStats(),
           ],
         ),
@@ -376,9 +388,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 Text(
-                  '\$${avgSpending.toStringAsFixed(2)}',
+                  '\₹${avgSpending.toStringAsFixed(2)}',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -392,7 +406,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Text(
                   '$maxMonth',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -406,7 +422,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Text(
                   '$minMonth',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),

@@ -52,7 +52,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 50),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -61,19 +60,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 children: [
                   Text(
                     'Monthly Budgets',
-                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.headlineMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
-                    'Total Reserved: \$${_totalReserved.toStringAsFixed(2)}',
-                    style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                    'Total Reserved: \₹${_totalReserved.toStringAsFixed(2)}',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.gray700,
+                    ),
                   ),
                 ],
               ),
-              Icon(
-                Icons.pie_chart,
-                color: AppColors.green700,
-                size: 32,
-              ),
+              Icon(Icons.pie_chart, color: AppColors.green700, size: 32),
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -132,12 +131,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CategoryBadge(
-                label: category,
-                color: color,
-              ),
+              CategoryBadge(label: category, color: color),
               Text(
-                '\$${spent.toStringAsFixed(2)} / \$${budget.toStringAsFixed(2)}',
+                '\₹${spent.toStringAsFixed(2)} / \₹${budget.toStringAsFixed(2)}',
                 style: AppTypography.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.gray700,

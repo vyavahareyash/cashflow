@@ -21,8 +21,27 @@ void main() async {
   runApp(const MoneyTrackerApp());
 }
 
-class MoneyTrackerApp extends StatelessWidget {
+class MoneyTrackerApp extends StatefulWidget {
   const MoneyTrackerApp({super.key});
+
+  @override
+  State<MoneyTrackerApp> createState() => _MoneyTrackerAppState();
+}
+
+class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  void _toggleTheme() {
+    setState(() {
+      if (_themeMode == ThemeMode.light) {
+        _themeMode = ThemeMode.dark;
+      } else if (_themeMode == ThemeMode.dark) {
+        _themeMode = ThemeMode.light;
+      } else {
+        _themeMode = ThemeMode.dark;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,14 +123,15 @@ class MoneyTrackerApp extends StatelessWidget {
           elevation: 8,
         ),
       ),
-      themeMode: ThemeMode.system,
-      home: const MainNavigationScreen(),
+      themeMode: _themeMode,
+      home: MainNavigationScreen(onThemeToggle: _toggleTheme),
     );
   }
 }
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final VoidCallback onThemeToggle;
+  const MainNavigationScreen({super.key, required this.onThemeToggle});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -141,6 +161,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Money Tracker'),
+        actions: [
+          IconButton(
+            onPressed: widget.onThemeToggle,
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark 
+                  ? Icons.light_mode 
+                  : Icons.dark_mode,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: _screens[_selectedIndex],

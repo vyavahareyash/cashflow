@@ -94,6 +94,49 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     });
   }
 
+  Future<void> _handleReset() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reset All Data?', style: AppTypography.titleLarge),
+        content: Text(
+          'This will permanently delete all accounts, transactions, and plans. This action cannot be undone.',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: AppTypography.labelMedium),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Reset', style: AppTypography.labelMedium.copyWith(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() {
+        _isProcessing = true;
+        _statusMessage = 'Resetting database...';
+      });
+
+      try {
+        await DatabaseHelper.instance.resetDatabase();
+        setState(() {
+          _isProcessing = false;
+          _statusMessage = 'Database reset successfully! Please restart the app.';
+        });
+      } catch (e) {
+        setState(() {
+          _isProcessing = false;
+          _statusMessage = 'Reset failed: $e';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,6 +210,25 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               label: Text('Export Transactions (CSV)', style: AppTypography.labelMedium),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              'Danger Zone',
+              style: AppTypography.labelMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.danger,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ElevatedButton.icon(
+              onPressed: _isProcessing ? null : _handleReset,
+              icon: const Icon(Icons.delete_forever),
+              label: Text('Reset All Data', style: AppTypography.labelMedium),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),

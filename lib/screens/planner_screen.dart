@@ -43,10 +43,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CustomInputField(
-              controller: nameController,
-              label: 'Plan Name',
-            ),
+            CustomInputField(controller: nameController, label: 'Plan Name'),
             const SizedBox(height: AppSpacing.md),
             CustomInputField(
               controller: targetController,
@@ -112,7 +109,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 children: [
                   Text(
                     'Lock Funds for ${plan.name}',
-                    style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   CustomInputField(
@@ -209,7 +208,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 children: [
                   Text(
                     'Pay Bill for ${plan.name}',
-                    style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   CustomInputField(
@@ -293,7 +294,6 @@ class _PlannerScreenState extends State<PlannerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 50),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -302,17 +302,25 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 children: [
                   Text(
                     'Planned Spends',
-                    style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.headlineMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
-                    'Total Locked: \$${_totalLocked.toStringAsFixed(2)}',
-                    style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                    'Total Locked: \₹${_totalLocked.toStringAsFixed(2)}',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.gray700,
+                    ),
                   ),
                 ],
               ),
               IconButton(
                 onPressed: _showAddPlanDialog,
-                icon: const Icon(Icons.event_repeat, color: AppColors.green700, size: 32),
+                icon: const Icon(
+                  Icons.event_repeat,
+                  color: AppColors.green700,
+                  size: 32,
+                ),
               ),
             ],
           ),
@@ -342,7 +350,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
             children: [
               Text(
                 plan.name,
-                style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.bodyLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 '${(progress * 100).toStringAsFixed(0)}%',
@@ -365,11 +375,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Saved: \$${plan.currentSaved.toStringAsFixed(2)}',
+                'Saved: \₹${plan.currentSaved.toStringAsFixed(2)}',
                 style: AppTypography.labelSmall,
               ),
               Text(
-                'Target: \$${plan.totalTarget.toStringAsFixed(2)}',
+                'Target: \₹${plan.totalTarget.toStringAsFixed(2)}',
                 style: AppTypography.labelSmall,
               ),
             ],

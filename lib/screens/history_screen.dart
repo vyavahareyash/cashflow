@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:intl/intl.dart';
+
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 
@@ -60,7 +61,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 50),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -69,19 +69,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   children: [
                     Text(
                       'Transaction History',
-                      style: AppTypography.headlineMedium.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTypography.headlineMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'Your recent spending logs',
-                      style: AppTypography.bodyMedium.copyWith(color: AppColors.gray700),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.gray700,
+                      ),
                     ),
                   ],
                 ),
-                Icon(
-                  Icons.history,
-                  color: AppColors.green700,
-                  size: 32,
-                ),
+                Icon(Icons.history, color: AppColors.green700, size: 32),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -89,55 +89,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _transactions.isEmpty
-                      ? const Center(child: Text('No transactions found'))
-                      : ListView.builder(
-                          itemCount: _transactions.length,
-                          itemBuilder: (context, index) {
-                            final tx = _transactions[index];
-                            final date = DateTime.parse(tx['date']);
-                            final formattedDate = DateFormat('MMM dd, yyyy').format(date);
+                  ? const Center(child: Text('No transactions found'))
+                  : ListView.builder(
+                      itemCount: _transactions.length,
+                      itemBuilder: (context, index) {
+                        final tx = _transactions[index];
+                        final date = DateTime.parse(tx['date']);
+                        final formattedDate = DateFormat('MMM dd, yyyy')
+                            .format(date);
 
-                            return CustomCard(
-                              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppColors.green100,
-                                  child: const Icon(
-                                    Icons.receipt_long,
-                                    color: AppColors.green700,
-                                ),
-                                ),
-                                title: Text(
-                                  '${tx['category_name']} - ${tx['account_name']}',
-                                  style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Text(
-                                  '$formattedDate • ${tx['note'] ?? 'No note'}',
-                                  style: AppTypography.labelSmall,
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '-\$${tx['amount'].toStringAsFixed(2)}',
-                                      style: AppTypography.titleMedium.copyWith(
-                                        color: AppColors.danger,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: AppColors.gray400,
-                                      ),
-                                      onPressed: () => _confirmDelete(tx['id']),
-                                    ),
-                                  ],
-                                ),
+                        return CustomCard(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: AppColors.green100,
+                              child: const Icon(
+                                Icons.receipt_long,
+                                color: AppColors.green700,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                            title: Text(
+                              '${tx['category_name']} - ${tx['account_name']}',
+                              style: AppTypography.bodyLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '$formattedDate • ${tx['note'] ?? 'No note'}',
+                              style: AppTypography.labelSmall,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '-\₹${tx['amount'].toStringAsFixed(2)}',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: AppColors.gray400,
+                                  ),
+                                  onPressed: () => _confirmDelete(tx['id']),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -164,7 +167,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Navigator.pop(ctx);
               _deleteTransaction(id);
             },
-            child: Text('Delete', style: AppTypography.labelMedium.copyWith(color: AppColors.danger)),
+            child: Text(
+              'Delete',
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.danger,
+              ),
+            ),
           ),
         ],
       ),
