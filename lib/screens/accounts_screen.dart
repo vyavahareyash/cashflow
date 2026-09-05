@@ -90,7 +90,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ),
             title: Text(
               'Add New Account',
-              style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: SingleChildScrollView(
               child: Form(
@@ -103,7 +105,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       label: 'Account Name',
                       hint: 'e.g. HDFC Bank, Cash Wallet, Salary A/C',
                       prefixIcon: Icons.account_balance_rounded,
-                      validator: (value) => (value == null || value.trim().isEmpty)
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
                           ? 'Please enter an account name'
                           : null,
                     ),
@@ -113,7 +116,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       label: 'Current Physical Balance',
                       hint: '0.00',
                       prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter a balance';
@@ -131,21 +136,29 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         Text(
                           'Account Type',
                           style: AppTypography.labelMedium.copyWith(
-                            color: isDark ? AppColors.gray300 : AppColors.gray700,
+                            color: isDark
+                                ? AppColors.gray300
+                                : AppColors.gray700,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         DropdownButtonFormField<String>(
-                          value: selectedType,
-                          dropdownColor: isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+                          initialValue: selectedType,
+                          dropdownColor: isDark
+                              ? AppColors.darkSurfaceElevated
+                              : AppColors.white,
                           decoration: InputDecoration(
                             filled: true,
-                            fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
+                            fillColor: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.gray50,
                             border: OutlineInputBorder(
                               borderRadius: AppBorderRadius.mediumBorder,
                               borderSide: BorderSide(
-                                color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                                color: isDark
+                                    ? AppColors.darkBorder
+                                    : AppColors.gray300,
                               ),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
@@ -161,7 +174,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (val) => setStateDialog(() => selectedType = val!),
+                          onChanged: (val) =>
+                              setStateDialog(() => selectedType = val!),
                         ),
                       ],
                     ),
@@ -182,7 +196,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     await DatabaseHelper.instance.createAccount(
                       Account(
                         name: nameController.text.trim(),
-                        balance: double.tryParse(balanceController.text.trim()) ?? 0.0,
+                        balance:
+                            double.tryParse(balanceController.text.trim()) ??
+                            0.0,
                         type: selectedType,
                       ),
                     );
@@ -200,7 +216,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   void _showEditAccountDialog(Account account) {
     final nameController = TextEditingController(text: account.name);
-    final balanceController = TextEditingController(text: account.balance.toStringAsFixed(0));
+    final balanceController = TextEditingController(
+      text: account.balance.toStringAsFixed(0),
+    );
     String selectedType = account.type;
     final formKey = GlobalKey<FormState>();
 
@@ -216,7 +234,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
             ),
             title: Text(
               'Edit Account',
-              style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: SingleChildScrollView(
               child: Form(
@@ -227,7 +247,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     CustomInputField(
                       controller: nameController,
                       label: 'Account Name',
-                      validator: (value) => (value == null || value.trim().isEmpty)
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
                           ? 'Please enter an account name'
                           : null,
                     ),
@@ -236,7 +257,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       controller: balanceController,
                       label: 'Balance',
                       prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter balance';
@@ -249,22 +272,30 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
-                      value: selectedType,
-                      dropdownColor: isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+                      initialValue: selectedType,
+                      dropdownColor: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.white,
                       decoration: InputDecoration(
                         labelText: 'Account Type',
                         filled: true,
-                        fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
+                        fillColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
                         border: OutlineInputBorder(
                           borderRadius: AppBorderRadius.mediumBorder,
                         ),
                       ),
                       items: ['Bank', 'Cash', 'Savings', 'Wallet']
                           .map(
-                            (type) => DropdownMenuItem(value: type, child: Text(type)),
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
                           )
                           .toList(),
-                      onChanged: (val) => setStateDialog(() => selectedType = val!),
+                      onChanged: (val) =>
+                          setStateDialog(() => selectedType = val!),
                     ),
                   ],
                 ),
@@ -275,7 +306,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 onPressed: () => _showDeleteConfirmation(account),
                 child: const Text(
                   'Delete',
-                  style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               TextButton(
@@ -291,7 +325,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       Account(
                         id: account.id,
                         name: nameController.text.trim(),
-                        balance: double.tryParse(balanceController.text.trim()) ?? 0.0,
+                        balance:
+                            double.tryParse(balanceController.text.trim()) ??
+                            0.0,
                         type: selectedType,
                       ),
                     );
@@ -329,7 +365,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
             },
             child: const Text(
               'Delete',
-              style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -340,7 +379,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final availableLiquidity = (_totalPhysical - _totalLocked).clamp(0.0, double.infinity);
+    final availableLiquidity = (_totalPhysical - _totalLocked).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return Scaffold(
       body: _isLoading
@@ -364,7 +406,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     children: [
                       Text(
                         'All Accounts',
-                        style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${_accounts.length} Total',
@@ -387,7 +431,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               Icon(
                                 Icons.account_balance_outlined,
                                 size: 48,
-                                color: isDark ? AppColors.gray600 : AppColors.gray400,
+                                color: isDark
+                                    ? AppColors.gray600
+                                    : AppColors.gray400,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               Text(
@@ -401,7 +447,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                 'Add your physical bank accounts, cash wallets, or savings accounts below.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
                                 ),
                               ),
                             ],
@@ -523,7 +571,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: (isBank ? AppColors.info : AppColors.emerald600).withOpacity(0.12),
+                  color: (isBank ? AppColors.info : AppColors.emerald600)
+                      .withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.mediumBorder,
                 ),
                 child: Icon(

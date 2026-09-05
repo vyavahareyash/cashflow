@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/theme_constants.dart';
 
 class CustomInputField extends StatelessWidget {
@@ -17,7 +18,7 @@ class CustomInputField extends StatelessWidget {
   final bool autofocus;
 
   const CustomInputField({
-    Key? key,
+    super.key,
     this.controller,
     required this.label,
     this.hint,
@@ -31,7 +32,7 @@ class CustomInputField extends StatelessWidget {
     this.onChanged,
     this.obscureText = false,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -94,17 +95,11 @@ class CustomInputField extends StatelessWidget {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: AppBorderRadius.mediumBorder,
-              borderSide: const BorderSide(
-                color: AppColors.danger,
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: AppColors.danger, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: AppBorderRadius.mediumBorder,
-              borderSide: const BorderSide(
-                color: AppColors.danger,
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: AppColors.danger, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,

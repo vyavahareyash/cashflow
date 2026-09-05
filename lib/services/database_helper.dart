@@ -671,12 +671,14 @@ class DatabaseHelper {
         where: 'plan_id = ? AND account_id = ?',
         whereArgs: [planId, accountId],
       );
-      if (lockRes.isEmpty)
+      if (lockRes.isEmpty) {
         throw Exception('No locked funds found for this plan in this account');
+      }
 
       double currentLock = lockRes.first['amount'];
-      if (currentLock < amount)
+      if (currentLock < amount) {
         throw Exception('Insufficient locked funds in this account');
+      }
 
       if (currentLock == amount) {
         await txn.delete(

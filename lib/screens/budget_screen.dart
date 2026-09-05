@@ -92,7 +92,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
           title: Text(
             isEditing ? 'Edit Category Budget' : 'Add Category Budget',
-            style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+            style: AppTypography.titleLarge.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: SingleChildScrollView(
             child: Form(
@@ -105,7 +107,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     label: 'Category Name',
                     hint: 'e.g. Groceries, Entertainment',
                     prefixIcon: Icons.category_rounded,
-                    validator: (value) => (value == null || value.trim().isEmpty)
+                    validator: (value) =>
+                        (value == null || value.trim().isEmpty)
                         ? 'Please enter a category name'
                         : null,
                   ),
@@ -115,7 +118,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     label: 'Monthly Budget Target',
                     hint: 'e.g. 5000',
                     prefixText: '₹ ',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter a budget amount';
@@ -139,7 +144,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 },
                 child: const Text(
                   'Delete',
-                  style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             TextButton(
@@ -195,7 +203,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Delete',
-              style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -211,8 +222,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final totalProgress = _totalReserved > 0 ? (_totalSpent / _totalReserved) : 0.0;
-    final remainingTotal = (_totalReserved - _totalSpent).clamp(0.0, double.infinity);
+    final totalProgress = _totalReserved > 0
+        ? (_totalSpent / _totalReserved)
+        : 0.0;
+    final remainingTotal = (_totalReserved - _totalSpent).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return Scaffold(
       body: _isLoading
@@ -236,7 +252,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     children: [
                       Text(
                         'Category Allocations',
-                        style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${_categories.length} Categories',
@@ -259,7 +277,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               Icon(
                                 Icons.pie_chart_outline_rounded,
                                 size: 48,
-                                color: isDark ? AppColors.gray600 : AppColors.gray400,
+                                color: isDark
+                                    ? AppColors.gray600
+                                    : AppColors.gray400,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               Text(
@@ -273,7 +293,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 'Tap + below to add your monthly categories like Groceries, Rent, Transport.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
                                 ),
                               ),
                             ],
@@ -301,7 +323,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  Widget _buildBudgetHeaderCard(bool isDark, double totalProgress, double remainingTotal) {
+  Widget _buildBudgetHeaderCard(
+    bool isDark,
+    double totalProgress,
+    double remainingTotal,
+  ) {
     final isOver = totalProgress > 1.0;
 
     return Container(
@@ -334,7 +360,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   vertical: AppSpacing.xxs,
                 ),
                 decoration: BoxDecoration(
-                  color: (isOver ? AppColors.danger : AppColors.emerald600).withOpacity(0.12),
+                  color: (isOver ? AppColors.danger : AppColors.emerald600)
+                      .withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.pillBorder,
                 ),
                 child: Text(
@@ -363,7 +390,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
             child: LinearProgressIndicator(
               value: totalProgress.clamp(0.0, 1.0),
               minHeight: 10,
-              backgroundColor: isDark ? AppColors.darkBorder : AppColors.gray200,
+              backgroundColor: isDark
+                  ? AppColors.darkBorder
+                  : AppColors.gray200,
               valueColor: AlwaysStoppedAnimation<Color>(
                 isOver ? AppColors.danger : AppColors.emerald600,
               ),
@@ -388,7 +417,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       AppFormatters.currency(_totalSpent),
                       style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isOver ? AppColors.danger : (isDark ? AppColors.darkText : AppColors.gray900),
+                        color: isOver
+                            ? AppColors.danger
+                            : (isDark ? AppColors.darkText : AppColors.gray900),
                       ),
                     ),
                   ],
@@ -439,7 +470,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: style.color.withOpacity(0.12),
+                  color: style.color.withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.mediumBorder,
                 ),
                 child: Icon(style.icon, color: style.color, size: 20),
@@ -462,8 +493,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           ? 'Over budget by ₹${(spent - budget).toStringAsFixed(0)}'
                           : '₹${remaining.toStringAsFixed(0)} left of ₹${budget.toStringAsFixed(0)}',
                       style: AppTypography.labelSmall.copyWith(
-                        color: isOver ? AppColors.danger : (isDark ? AppColors.gray400 : AppColors.gray600),
-                        fontWeight: isOver ? FontWeight.bold : FontWeight.normal,
+                        color: isOver
+                            ? AppColors.danger
+                            : (isDark ? AppColors.gray400 : AppColors.gray600),
+                        fontWeight: isOver
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ],
@@ -476,7 +511,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     '₹${spent.toStringAsFixed(0)}',
                     style: AppTypography.titleMedium.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isOver ? AppColors.danger : (isDark ? AppColors.darkText : AppColors.gray900),
+                      color: isOver
+                          ? AppColors.danger
+                          : (isDark ? AppColors.darkText : AppColors.gray900),
                     ),
                   ),
                   Text(
@@ -510,7 +547,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     minHeight: 8,
-                    backgroundColor: isDark ? AppColors.darkBorder : AppColors.gray200,
+                    backgroundColor: isDark
+                        ? AppColors.darkBorder
+                        : AppColors.gray200,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isOver ? AppColors.danger : style.color,
                     ),

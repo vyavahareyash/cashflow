@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/theme_constants.dart';
 
 class StatCard extends StatelessWidget {
@@ -11,7 +12,7 @@ class StatCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const StatCard({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     this.subtitle,
@@ -19,7 +20,7 @@ class StatCard extends StatelessWidget {
     this.iconColor,
     this.accentColor,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +52,9 @@ class StatCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.xs + 2),
                       decoration: BoxDecoration(
-                        color: (iconColor ?? primaryColor).withOpacity(0.12),
+                        color: (iconColor ?? primaryColor).withValues(
+                          alpha: 0.12,
+                        ),
                         borderRadius: AppBorderRadius.smallBorder,
                       ),
                       child: Icon(
@@ -62,7 +65,9 @@ class StatCard extends StatelessWidget {
                     ),
                   Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(left: icon != null ? AppSpacing.sm : 0),
+                      padding: EdgeInsets.only(
+                        left: icon != null ? AppSpacing.sm : 0,
+                      ),
                       child: Text(
                         label,
                         style: AppTypography.labelSmall.copyWith(

@@ -80,7 +80,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
             ),
             title: Text(
               'Create Sinking Fund / Goal',
-              style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: SingleChildScrollView(
               child: Form(
@@ -93,7 +95,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       label: 'Goal Name',
                       hint: 'e.g. Car Insurance, Vacation, MacBook',
                       prefixIcon: Icons.savings_rounded,
-                      validator: (value) => (value == null || value.trim().isEmpty)
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
                           ? 'Please enter a goal name'
                           : null,
                     ),
@@ -103,7 +106,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       label: 'Target Amount',
                       hint: 'e.g. 50000',
                       prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter a target amount';
@@ -116,7 +121,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       title: Text(
                         'Target Date',
                         style: AppTypography.labelSmall.copyWith(
@@ -125,7 +132,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       ),
                       subtitle: Text(
                         DateFormat('MMM dd, yyyy').format(targetDate),
-                        style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       trailing: const Icon(
                         Icons.calendar_month_rounded,
@@ -145,10 +154,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: AppBorderRadius.mediumBorder,
                         side: BorderSide(
-                          color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : AppColors.gray300,
                         ),
                       ),
-                      tileColor: isDark ? AppColors.darkSurface : AppColors.gray50,
+                      tileColor: isDark
+                          ? AppColors.darkSurface
+                          : AppColors.gray50,
                     ),
                   ],
                 ),
@@ -167,7 +180,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     await DatabaseHelper.instance.createPlan(
                       Plan(
                         name: nameController.text.trim(),
-                        totalTarget: double.tryParse(targetController.text.trim()) ?? 0.0,
+                        totalTarget:
+                            double.tryParse(targetController.text.trim()) ??
+                            0.0,
                         targetDate: DateFormat('yyyy-MM-dd').format(targetDate),
                         currentSaved: 0.0,
                       ),
@@ -188,7 +203,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
   void _showEditPlanDialog(Plan plan) {
     final nameController = TextEditingController(text: plan.name);
-    final targetController = TextEditingController(text: plan.totalTarget.toStringAsFixed(0));
+    final targetController = TextEditingController(
+      text: plan.totalTarget.toStringAsFixed(0),
+    );
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -203,7 +220,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
             ),
             title: Text(
               'Edit Sinking Fund',
-              style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: SingleChildScrollView(
               child: Form(
@@ -214,7 +233,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     CustomInputField(
                       controller: nameController,
                       label: 'Goal Name',
-                      validator: (value) => (value == null || value.trim().isEmpty)
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
                           ? 'Please enter a goal name'
                           : null,
                     ),
@@ -223,7 +243,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       controller: targetController,
                       label: 'Target Amount',
                       prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter target amount';
@@ -243,7 +265,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 onPressed: () => _confirmDeletePlan(plan),
                 child: const Text(
                   'Delete',
-                  style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               TextButton(
@@ -259,7 +284,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       Plan(
                         id: plan.id,
                         name: nameController.text.trim(),
-                        totalTarget: double.tryParse(targetController.text.trim()) ?? 0.0,
+                        totalTarget:
+                            double.tryParse(targetController.text.trim()) ??
+                            0.0,
                         targetDate: plan.targetDate,
                         currentSaved: plan.currentSaved,
                       ),
@@ -301,7 +328,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
             },
             child: const Text(
               'Delete & Unlock',
-              style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -396,7 +426,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                           ],
                         ),
                         Text(
-                          AppFormatters.currency((contrib['amount'] as num?)?.toDouble() ?? 0.0),
+                          AppFormatters.currency(
+                            (contrib['amount'] as num?)?.toDouble() ?? 0.0,
+                          ),
                           style: AppTypography.titleMedium.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.emerald700,
@@ -474,7 +506,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       controller: amountController,
                       label: 'Amount to Lock',
                       prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       prefixIcon: Icons.lock_rounded,
                       autofocus: true,
                     ),
@@ -489,15 +523,21 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<int>(
-                      value: selectedAccountId,
-                      dropdownColor: isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+                      initialValue: selectedAccountId,
+                      dropdownColor: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.white,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
+                        fillColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
                         border: OutlineInputBorder(
                           borderRadius: AppBorderRadius.mediumBorder,
                           borderSide: BorderSide(
-                            color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -509,11 +549,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
                           .map(
                             (acc) => DropdownMenuItem(
                               value: acc.id,
-                              child: Text('${acc.name} (Balance: ₹${acc.balance.toStringAsFixed(0)})'),
+                              child: Text(
+                                '${acc.name} (Balance: ₹${acc.balance.toStringAsFixed(0)})',
+                              ),
                             ),
                           )
                           .toList(),
-                      onChanged: (val) => setStateSheet(() => selectedAccountId = val),
+                      onChanged: (val) =>
+                          setStateSheet(() => selectedAccountId = val),
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
@@ -522,8 +565,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       height: AppComponentSizes.buttonHeightLarge,
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (selectedAccountId == null || amountController.text.isEmpty) return;
-                          final amount = double.tryParse(amountController.text) ?? 0.0;
+                          if (selectedAccountId == null ||
+                              amountController.text.isEmpty)
+                            return;
+                          final amount =
+                              double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) return;
 
                           await DatabaseHelper.instance.lockFunds(
@@ -544,7 +590,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
                             borderRadius: AppBorderRadius.mediumBorder,
                           ),
                         ),
-                        child: const Text('Confirm Lock Allocation', style: AppTypography.labelLarge),
+                        child: const Text(
+                          'Confirm Lock Allocation',
+                          style: AppTypography.labelLarge,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
@@ -561,7 +610,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
   void _showPaymentDialog(Plan plan) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accounts = await DatabaseHelper.instance.readAllAccounts();
-    final amountController = TextEditingController(text: plan.currentSaved.toStringAsFixed(0));
+    final amountController = TextEditingController(
+      text: plan.currentSaved.toStringAsFixed(0),
+    );
     int? selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
 
     if (!mounted) return;
@@ -618,7 +669,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       controller: amountController,
                       label: 'Payment Amount',
                       prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       prefixIcon: Icons.payment_rounded,
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -632,15 +685,21 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<int>(
-                      value: selectedAccountId,
-                      dropdownColor: isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+                      initialValue: selectedAccountId,
+                      dropdownColor: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.white,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
+                        fillColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
                         border: OutlineInputBorder(
                           borderRadius: AppBorderRadius.mediumBorder,
                           borderSide: BorderSide(
-                            color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -652,11 +711,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
                           .map(
                             (acc) => DropdownMenuItem(
                               value: acc.id,
-                              child: Text('${acc.name} (Balance: ₹${acc.balance.toStringAsFixed(0)})'),
+                              child: Text(
+                                '${acc.name} (Balance: ₹${acc.balance.toStringAsFixed(0)})',
+                              ),
                             ),
                           )
                           .toList(),
-                      onChanged: (val) => setStateSheet(() => selectedAccountId = val),
+                      onChanged: (val) =>
+                          setStateSheet(() => selectedAccountId = val),
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
@@ -665,8 +727,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       height: AppComponentSizes.buttonHeightLarge,
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (selectedAccountId == null || amountController.text.isEmpty) return;
-                          final amount = double.tryParse(amountController.text) ?? 0.0;
+                          if (selectedAccountId == null ||
+                              amountController.text.isEmpty)
+                            return;
+                          final amount =
+                              double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) return;
 
                           try {
@@ -682,7 +747,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Payment completed and funds released!'),
+                                  content: Text(
+                                    'Payment completed and funds released!',
+                                  ),
                                   backgroundColor: AppColors.emerald700,
                                 ),
                               );
@@ -705,7 +772,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
                             borderRadius: AppBorderRadius.mediumBorder,
                           ),
                         ),
-                        child: const Text('Confirm Payment', style: AppTypography.labelLarge),
+                        child: const Text(
+                          'Confirm Payment',
+                          style: AppTypography.labelLarge,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
@@ -722,7 +792,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final totalProgress = _totalTarget > 0 ? (_totalLocked / _totalTarget) : 0.0;
+    final totalProgress = _totalTarget > 0
+        ? (_totalLocked / _totalTarget)
+        : 0.0;
 
     return Scaffold(
       body: _isLoading
@@ -746,7 +818,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     children: [
                       Text(
                         'Active Sinking Funds',
-                        style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         '${_plans.length} Goals',
@@ -769,7 +843,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                               Icon(
                                 Icons.savings_outlined,
                                 size: 48,
-                                color: isDark ? AppColors.gray600 : AppColors.gray400,
+                                color: isDark
+                                    ? AppColors.gray600
+                                    : AppColors.gray400,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               Text(
@@ -783,7 +859,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                                 'Create sinking funds for future planned expenses like insurance, repairs, or vacations.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
                                 ),
                               ),
                             ],
@@ -839,13 +917,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   vertical: AppSpacing.xxs,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.12),
+                  color: AppColors.warning.withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.pillBorder,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.lock_rounded, size: 12, color: AppColors.warning),
+                    const Icon(
+                      Icons.lock_rounded,
+                      size: 12,
+                      color: AppColors.warning,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Reserved for Goals',
@@ -874,8 +956,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
             child: LinearProgressIndicator(
               value: totalProgress.clamp(0.0, 1.0),
               minHeight: 10,
-              backgroundColor: isDark ? AppColors.darkBorder : AppColors.gray200,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.emerald600),
+              backgroundColor: isDark
+                  ? AppColors.darkBorder
+                  : AppColors.gray200,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.emerald600,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -904,8 +990,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _buildPlanCard(Plan plan, bool isDark) {
-    final progress = plan.totalTarget > 0 ? (plan.currentSaved / plan.totalTarget) : 0.0;
-    final remaining = (plan.totalTarget - plan.currentSaved).clamp(0.0, double.infinity);
+    final progress = plan.totalTarget > 0
+        ? (plan.currentSaved / plan.totalTarget)
+        : 0.0;
+    final remaining = (plan.totalTarget - plan.currentSaved).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -918,7 +1009,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AppColors.emerald500.withOpacity(0.12),
+                  color: AppColors.emerald500.withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.mediumBorder,
                 ),
                 child: const Icon(
@@ -948,7 +1039,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         color: progress >= 1.0
                             ? AppColors.emerald600
                             : (isDark ? AppColors.gray400 : AppColors.gray600),
-                        fontWeight: progress >= 1.0 ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: progress >= 1.0
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ],
@@ -985,8 +1078,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     minHeight: 8,
-                    backgroundColor: isDark ? AppColors.darkBorder : AppColors.gray200,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.emerald600),
+                    backgroundColor: isDark
+                        ? AppColors.darkBorder
+                        : AppColors.gray200,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.emerald600,
+                    ),
                   ),
                 ),
               ),

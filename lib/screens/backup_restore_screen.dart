@@ -286,7 +286,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     ? AppColors.darkSurfaceElevated
                     : AppColors.emerald50,
                 border: Border.all(
-                  color: AppColors.emerald500.withOpacity(0.3),
+                  color: AppColors.emerald500.withValues(alpha: 0.3),
                 ),
                 borderRadius: AppBorderRadius.mediumBorder,
               ),
@@ -349,7 +349,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -375,7 +375,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 Text(
                   'Your financial data never leaves this device. No servers, trackers, or cloud subscriptions.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                     height: 1.3,
                   ),
@@ -533,7 +533,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       leading: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.12),
+          color: iconColor.withValues(alpha: 0.12),
           borderRadius: AppBorderRadius.smallBorder,
         ),
         child: Icon(icon, color: iconColor, size: 20),
@@ -571,7 +571,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AppColors.emerald500.withOpacity(0.12),
+                  color: AppColors.emerald500.withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.smallBorder,
                 ),
                 child: const Icon(
@@ -620,7 +620,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               label: const Text('Populate Sample Data'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDark
-                    ? AppColors.emerald900.withOpacity(0.6)
+                    ? AppColors.emerald900.withValues(alpha: 0.6)
                     : AppColors.emerald50,
                 foregroundColor: isDark
                     ? AppColors.emerald300
@@ -648,7 +648,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         borderRadius: AppBorderRadius.largeBorder,
         border: Border.all(
           color: isDark
-              ? AppColors.danger.withOpacity(0.4)
+              ? AppColors.danger.withValues(alpha: 0.4)
               : const Color(0xFFFECDD3),
           width: 1.5,
         ),
@@ -662,7 +662,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xs + 2),
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.15),
+                  color: AppColors.danger.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

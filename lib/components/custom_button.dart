@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/theme_constants.dart';
 
 enum ButtonVariant { primary, secondary, outlined, text, danger }
@@ -14,7 +15,7 @@ class CustomButton extends StatelessWidget {
   final double? height;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.variant = ButtonVariant.primary,
@@ -23,7 +24,7 @@ class CustomButton extends StatelessWidget {
     this.isEnabled = true,
     this.width,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +35,16 @@ class CustomButton extends StatelessWidget {
 
     switch (variant) {
       case ButtonVariant.primary:
-        backgroundColor = isEnabled ? AppColors.emerald700 : (isDark ? AppColors.gray700 : AppColors.gray300);
+        backgroundColor = isEnabled
+            ? AppColors.emerald700
+            : (isDark ? AppColors.gray700 : AppColors.gray300);
         textColor = Colors.white;
         borderColor = Colors.transparent;
         break;
       case ButtonVariant.secondary:
-        backgroundColor = isDark ? AppColors.emerald900.withOpacity(0.6) : AppColors.emerald50;
+        backgroundColor = isDark
+            ? AppColors.emerald900.withValues(alpha: 0.6)
+            : AppColors.emerald50;
         textColor = isDark ? AppColors.emerald300 : AppColors.emerald800;
         borderColor = isDark ? AppColors.emerald700 : AppColors.emerald200;
         break;
@@ -97,8 +102,12 @@ class CustomButton extends StatelessWidget {
           foregroundColor: textColor,
           surfaceTintColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          disabledBackgroundColor: isDark ? AppColors.gray800 : AppColors.gray300,
-          disabledForegroundColor: isDark ? AppColors.gray600 : AppColors.gray500,
+          disabledBackgroundColor: isDark
+              ? AppColors.gray800
+              : AppColors.gray300,
+          disabledForegroundColor: isDark
+              ? AppColors.gray600
+              : AppColors.gray500,
           shape: RoundedRectangleBorder(
             borderRadius: AppBorderRadius.mediumBorder,
             side: BorderSide(color: borderColor, width: 1.5),

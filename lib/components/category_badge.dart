@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/theme_constants.dart';
 
 class CategoryBadge extends StatelessWidget {
@@ -8,12 +9,12 @@ class CategoryBadge extends StatelessWidget {
   final bool showIcon;
 
   const CategoryBadge({
-    Key? key,
+    super.key,
     required this.label,
     this.color,
     this.icon,
     this.showIcon = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +30,12 @@ class CategoryBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isDark
-            ? badgeColor.withOpacity(0.18)
-            : badgeColor.withOpacity(0.1),
+            ? badgeColor.withValues(alpha: 0.18)
+            : badgeColor.withValues(alpha: 0.1),
         border: Border.all(
           color: isDark
-              ? badgeColor.withOpacity(0.3)
-              : badgeColor.withOpacity(0.2),
+              ? badgeColor.withValues(alpha: 0.3)
+              : badgeColor.withValues(alpha: 0.2),
           width: 1,
         ),
         borderRadius: AppBorderRadius.pillBorder,

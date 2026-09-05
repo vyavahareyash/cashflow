@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/theme_constants.dart';
 
 class CustomCard extends StatelessWidget {
@@ -15,7 +16,7 @@ class CustomCard extends StatelessWidget {
   final Border? border;
 
   const CustomCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.margin,
@@ -27,13 +28,15 @@ class CustomCard extends StatelessWidget {
     this.shadow,
     this.borderRadius,
     this.border,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final defaultBg = isDark ? AppColors.darkSurface : AppColors.white;
-    final defaultBorderColor = isDark ? AppColors.darkBorder : AppColors.gray200;
+    final defaultBorderColor = isDark
+        ? AppColors.darkBorder
+        : AppColors.gray200;
     final radius = borderRadius ?? AppBorderRadius.largeBorder;
 
     Widget cardContent = Container(
@@ -45,7 +48,8 @@ class CustomCard extends StatelessWidget {
         boxShadow: shadow != null
             ? [shadow!]
             : (isDark ? [] : [AppShadows.level1]),
-        border: border ??
+        border:
+            border ??
             (borderLeftColor != null
                 ? Border(
                     left: BorderSide(
@@ -67,11 +71,7 @@ class CustomCard extends StatelessWidget {
     if (onTap != null) {
       return Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: radius,
-          child: cardContent,
-        ),
+        child: InkWell(onTap: onTap, borderRadius: radius, child: cardContent),
       );
     }
 
