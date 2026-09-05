@@ -183,7 +183,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: const [
-            Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 24),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.danger,
+              size: 24,
+            ),
             SizedBox(width: 8),
             Text('Reset All Data?'),
           ],
@@ -278,7 +282,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceElevated : AppColors.emerald50,
+                color: isDark
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.emerald50,
                 border: Border.all(
                   color: AppColors.emerald500.withOpacity(0.3),
                 ),
@@ -306,7 +312,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, bool isDark, {bool isDanger = false}) {
+  Widget _buildSectionHeader(
+    String title,
+    bool isDark, {
+    bool isDanger = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 4),
       child: Text(
@@ -326,10 +336,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF064E3B),
-            Color(0xFF047857),
-          ],
+          colors: [Color(0xFF064E3B), Color(0xFF047857)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -391,13 +398,33 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStorageStat('Accounts', '$_accountsCount', Icons.account_balance_rounded, isDark),
+          _buildStorageStat(
+            'Accounts',
+            '$_accountsCount',
+            Icons.account_balance_rounded,
+            isDark,
+          ),
           _buildDivider(isDark),
-          _buildStorageStat('Budgets', '$_categoriesCount', Icons.pie_chart_rounded, isDark),
+          _buildStorageStat(
+            'Budgets',
+            '$_categoriesCount',
+            Icons.pie_chart_rounded,
+            isDark,
+          ),
           _buildDivider(isDark),
-          _buildStorageStat('Goals', '$_plansCount', Icons.savings_rounded, isDark),
+          _buildStorageStat(
+            'Goals',
+            '$_plansCount',
+            Icons.savings_rounded,
+            isDark,
+          ),
           _buildDivider(isDark),
-          _buildStorageStat('Transactions', '$_transactionsCount', Icons.receipt_long_rounded, isDark),
+          _buildStorageStat(
+            'Transactions',
+            '$_transactionsCount',
+            Icons.receipt_long_rounded,
+            isDark,
+          ),
         ],
       ),
     );
@@ -411,16 +438,19 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  Widget _buildStorageStat(String label, String count, IconData icon, bool isDark) {
+  Widget _buildStorageStat(
+    String label,
+    String count,
+    IconData icon,
+    bool isDark,
+  ) {
     return Column(
       children: [
         Icon(icon, size: 20, color: AppColors.emerald600),
         const SizedBox(height: 4),
         Text(
           count,
-          style: AppTypography.titleLarge.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
         ),
         Text(
           label,
@@ -557,7 +587,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   children: [
                     Text(
                       'Load Sample Financial Data',
-                      style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       'Quickly test charts, budget pace, and goals',
@@ -587,8 +619,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               icon: const Icon(Icons.dataset_rounded, size: 18),
               label: const Text('Populate Sample Data'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? AppColors.emerald900.withOpacity(0.6) : AppColors.emerald50,
-                foregroundColor: isDark ? AppColors.emerald300 : AppColors.emerald800,
+                backgroundColor: isDark
+                    ? AppColors.emerald900.withOpacity(0.6)
+                    : AppColors.emerald50,
+                foregroundColor: isDark
+                    ? AppColors.emerald300
+                    : AppColors.emerald800,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: AppBorderRadius.mediumBorder,
@@ -611,7 +647,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         color: isDark ? const Color(0xFF200E11) : const Color(0xFFFFF1F2),
         borderRadius: AppBorderRadius.largeBorder,
         border: Border.all(
-          color: isDark ? AppColors.danger.withOpacity(0.4) : const Color(0xFFFECDD3),
+          color: isDark
+              ? AppColors.danger.withOpacity(0.4)
+              : const Color(0xFFFECDD3),
           width: 1.5,
         ),
       ),
@@ -659,7 +697,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             height: AppComponentSizes.buttonHeightMedium,
             child: ElevatedButton.icon(
               onPressed: _isProcessing ? null : _handleReset,
-              icon: const Icon(Icons.delete_forever_rounded, size: 18, color: Colors.white),
+              icon: const Icon(
+                Icons.delete_forever_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
               label: const Text(
                 'Reset All App Data',
                 style: TextStyle(
@@ -695,13 +737,23 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const Divider(height: 16),
           _buildInfoRow('Default Currency', '₹ INR (Indian Rupee)', isDark),
           const Divider(height: 16),
-          _buildInfoRow('Balance Logic', 'Usable = Total - Locked - Budget', isDark, isAccent: true),
+          _buildInfoRow(
+            'Balance Logic',
+            'Usable = Total - Locked - Budget',
+            isDark,
+            isAccent: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, bool isDark, {bool isAccent = false}) {
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    bool isDark, {
+    bool isAccent = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -715,7 +767,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           value,
           style: AppTypography.labelSmall.copyWith(
             fontWeight: FontWeight.bold,
-            color: isAccent ? AppColors.emerald700 : (isDark ? AppColors.darkText : AppColors.gray900),
+            color: isAccent
+                ? AppColors.emerald700
+                : (isDark ? AppColors.darkText : AppColors.gray900),
           ),
         ),
       ],

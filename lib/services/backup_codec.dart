@@ -63,13 +63,15 @@ class BackupCodec {
   static String transactionsCsv(List<Map<String, dynamic>> transactions) {
     final lines = <String>['Amount,Category,Account,Date,Note'];
     for (final transaction in transactions) {
-      lines.add([
-        transaction['amount'],
-        transaction['category_name'],
-        transaction['account_name'],
-        transaction['date'],
-        transaction['note'],
-      ].map(_escapeCsv).join(','));
+      lines.add(
+        [
+          transaction['amount'],
+          transaction['category_name'],
+          transaction['account_name'],
+          transaction['date'],
+          transaction['note'],
+        ].map(_escapeCsv).join(','),
+      );
     }
     return '${lines.join('\n')}\n';
   }

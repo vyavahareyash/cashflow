@@ -800,8 +800,9 @@ class DatabaseHelper {
         categories: categories.map(Map<String, dynamic>.from).toList(),
         transactions: transactions.map(Map<String, dynamic>.from).toList(),
         plannedSpends: plannedSpends.map(Map<String, dynamic>.from).toList(),
-        lockedAllocations:
-            lockedAllocations.map(Map<String, dynamic>.from).toList(),
+        lockedAllocations: lockedAllocations
+            .map(Map<String, dynamic>.from)
+            .toList(),
       );
 
       return await saveBackupBytes(
