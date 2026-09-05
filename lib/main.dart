@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/budget_screen.dart';
 import 'package:cashflow/screens/planner_screen.dart';
@@ -6,10 +7,12 @@ import 'package:cashflow/screens/accounts_screen.dart';
 import 'package:cashflow/screens/analytics_screen.dart';
 import 'package:cashflow/screens/backup_restore_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
+import 'package:cashflow/services/platform_database.dart';
 import 'package:cashflow/theme/theme_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await configurePlatformDatabase();
 
   final dbHelper = DatabaseHelper.instance;
   // Seed categories if DB is empty
@@ -49,6 +52,19 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Cashflow',
+      builder: (context, child) {
+        if (!kIsWeb) return child ?? const SizedBox.shrink();
+
+        return ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 390),
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        );
+      },
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -83,9 +99,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
                 fontWeight: FontWeight.bold,
               );
             }
-            return AppTypography.labelSmall.copyWith(
-              color: AppColors.gray500,
-            );
+            return AppTypography.labelSmall.copyWith(color: AppColors.gray500);
           }),
         ),
         dividerTheme: const DividerThemeData(
@@ -134,9 +148,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
                 fontWeight: FontWeight.bold,
               );
             }
-            return AppTypography.labelSmall.copyWith(
-              color: AppColors.gray400,
-            );
+            return AppTypography.labelSmall.copyWith(color: AppColors.gray400);
           }),
         ),
         dividerTheme: const DividerThemeData(
@@ -249,10 +261,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           const SizedBox(width: AppSpacing.xs),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,

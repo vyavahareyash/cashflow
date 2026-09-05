@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart' show ValueNotifier;
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -6,6 +8,8 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
+
+import 'package:cashflow/services/backup_platform.dart';
 
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
@@ -164,6 +168,8 @@ class DatabaseHelper {
 
   /// Exports the database file to a user-selected location.
   Future<String?> exportDatabase() async {
+    if (kIsWeb) return null;
+
     try {
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'money_tracker.db');
@@ -187,6 +193,8 @@ class DatabaseHelper {
 
   /// Imports a database file from a user-selected location.
   Future<bool> importDatabase() async {
+    if (kIsWeb) return false;
+
     try {
       // Change FilePickerResult to dynamic if the type is not found
       dynamic result = await FilePicker.pickFiles(type: FileType.any);
@@ -364,29 +372,60 @@ class DatabaseHelper {
       Account(name: 'Salary Account (HDFC)', balance: 85000.0, type: 'Bank'),
     );
     final savingsAccId = await createAccount(
-      Account(name: 'Emergency Savings (SBI)', balance: 120000.0, type: 'Savings'),
+      Account(
+        name: 'Emergency Savings (SBI)',
+        balance: 120000.0,
+        type: 'Savings',
+      ),
     );
     final walletAccId = await createAccount(
       Account(name: 'Cash Wallet', balance: 5400.0, type: 'Cash'),
     );
 
     // 2. Categories
-    final catGroceries = await createCategory(Category(name: 'Groceries', monthlyBudget: 15000));
-    final catDining = await createCategory(Category(name: 'Dining Out', monthlyBudget: 8000));
-    final catTransport = await createCategory(Category(name: 'Transport & Fuel', monthlyBudget: 5000));
-    final catUtilities = await createCategory(Category(name: 'Utilities & Bills', monthlyBudget: 10000));
-    final catShopping = await createCategory(Category(name: 'Shopping', monthlyBudget: 7000));
-    final catHealth = await createCategory(Category(name: 'Health & Medical', monthlyBudget: 4000));
+    final catGroceries = await createCategory(
+      Category(name: 'Groceries', monthlyBudget: 15000),
+    );
+    final catDining = await createCategory(
+      Category(name: 'Dining Out', monthlyBudget: 8000),
+    );
+    final catTransport = await createCategory(
+      Category(name: 'Transport & Fuel', monthlyBudget: 5000),
+    );
+    final catUtilities = await createCategory(
+      Category(name: 'Utilities & Bills', monthlyBudget: 10000),
+    );
+    final catShopping = await createCategory(
+      Category(name: 'Shopping', monthlyBudget: 7000),
+    );
+    final catHealth = await createCategory(
+      Category(name: 'Health & Medical', monthlyBudget: 4000),
+    );
 
     // 3. Sinking Funds / Plans
     final planInsurance = await createPlan(
-      Plan(name: 'Annual Car Insurance', totalTarget: 25000.0, targetDate: '2026-11-30', currentSaved: 0.0),
+      Plan(
+        name: 'Annual Car Insurance',
+        totalTarget: 25000.0,
+        targetDate: '2026-11-30',
+        currentSaved: 0.0,
+      ),
     );
     final planVacation = await createPlan(
-      Plan(name: 'Goa Vacation Fund', totalTarget: 40000.0, targetDate: '2026-12-25', currentSaved: 0.0),
+      Plan(
+        name: 'Goa Vacation Fund',
+        totalTarget: 40000.0,
+        targetDate: '2026-12-25',
+        currentSaved: 0.0,
+      ),
     );
     final planGadget = await createPlan(
-      Plan(name: 'New Laptop', totalTarget: 80000.0, targetDate: '2027-03-31', currentSaved: 0.0),
+      Plan(
+        name: 'New Laptop',
+        totalTarget: 80000.0,
+        targetDate: '2027-03-31',
+        currentSaved: 0.0,
+      ),
     );
 
     // Lock funds to plans
@@ -397,12 +436,48 @@ class DatabaseHelper {
     // 4. Sample Transactions
     final now = DateTime.now();
     final sampleTxs = [
-      TransactionModel(accountId: salaryAccId, categoryId: catGroceries, amount: 3250.0, date: now.subtract(const Duration(days: 1)).toIso8601String(), note: 'Supermarket weekly stock'),
-      TransactionModel(accountId: walletAccId, categoryId: catDining, amount: 850.0, date: now.subtract(const Duration(days: 2)).toIso8601String(), note: 'Lunch with team'),
-      TransactionModel(accountId: salaryAccId, categoryId: catTransport, amount: 2200.0, date: now.subtract(const Duration(days: 3)).toIso8601String(), note: 'Petrol fill up'),
-      TransactionModel(accountId: salaryAccId, categoryId: catUtilities, amount: 4800.0, date: now.subtract(const Duration(days: 5)).toIso8601String(), note: 'Electricity & Wifi bill'),
-      TransactionModel(accountId: salaryAccId, categoryId: catShopping, amount: 3100.0, date: now.subtract(const Duration(days: 8)).toIso8601String(), note: 'Weekend clothing'),
-      TransactionModel(accountId: walletAccId, categoryId: catHealth, amount: 650.0, date: now.subtract(const Duration(days: 10)).toIso8601String(), note: 'Pharmacy medicines'),
+      TransactionModel(
+        accountId: salaryAccId,
+        categoryId: catGroceries,
+        amount: 3250.0,
+        date: now.subtract(const Duration(days: 1)).toIso8601String(),
+        note: 'Supermarket weekly stock',
+      ),
+      TransactionModel(
+        accountId: walletAccId,
+        categoryId: catDining,
+        amount: 850.0,
+        date: now.subtract(const Duration(days: 2)).toIso8601String(),
+        note: 'Lunch with team',
+      ),
+      TransactionModel(
+        accountId: salaryAccId,
+        categoryId: catTransport,
+        amount: 2200.0,
+        date: now.subtract(const Duration(days: 3)).toIso8601String(),
+        note: 'Petrol fill up',
+      ),
+      TransactionModel(
+        accountId: salaryAccId,
+        categoryId: catUtilities,
+        amount: 4800.0,
+        date: now.subtract(const Duration(days: 5)).toIso8601String(),
+        note: 'Electricity & Wifi bill',
+      ),
+      TransactionModel(
+        accountId: salaryAccId,
+        categoryId: catShopping,
+        amount: 3100.0,
+        date: now.subtract(const Duration(days: 8)).toIso8601String(),
+        note: 'Weekend clothing',
+      ),
+      TransactionModel(
+        accountId: walletAccId,
+        categoryId: catHealth,
+        amount: 650.0,
+        date: now.subtract(const Duration(days: 10)).toIso8601String(),
+        note: 'Pharmacy medicines',
+      ),
     ];
 
     for (var tx in sampleTxs) {
@@ -411,7 +486,6 @@ class DatabaseHelper {
     }
     notifyDataChanged();
   }
-
 
   // --- PLANNER OPERATIONS ---
   Future<int> createPlan(Plan plan) async {
@@ -716,12 +790,10 @@ class DatabaseHelper {
 
       final jsonString = _jsonEncode(data);
 
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final jsonPath = join(documentsDir.path, 'cashflow_backup.json');
-      final jsonFile = File(jsonPath);
-      await jsonFile.writeAsString(jsonString);
-
-      return jsonFile.path;
+      return await saveBackupBytes(
+        'cashflow_backup.json',
+        utf8.encode(jsonString),
+      );
     } catch (e) {
       print('JSON export error: $e');
       return null;
@@ -731,11 +803,10 @@ class DatabaseHelper {
   /// Imports database from a JSON file.
   Future<bool> importDatabaseFromJSON() async {
     try {
-      dynamic result = await FilePicker.pickFiles(type: FileType.any);
-      if (result == null || result.files.single.path == null) return false;
+      final bytes = await pickBackupBytes();
+      if (bytes == null) return false;
 
-      final sourceFile = File(result.files.single.path!);
-      final jsonString = await sourceFile.readAsString();
+      final jsonString = utf8.decode(bytes);
       final data = _jsonDecode(jsonString);
 
       await close();
@@ -797,12 +868,10 @@ class DatabaseHelper {
             '${tx['amount']},${tx['category_name']},${tx['account_name']},${tx['date']},${tx['note'] ?? ''}\n';
       }
 
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final csvPath = join(documentsDir.path, 'cashflow_transactions.csv');
-      final csvFile = File(csvPath);
-      await csvFile.writeAsString(csv);
-
-      return csvFile.path;
+      return await saveBackupBytes(
+        'cashflow_transactions.csv',
+        utf8.encode(csv),
+      );
     } catch (e) {
       print('CSV export error: $e');
       return null;
@@ -811,11 +880,11 @@ class DatabaseHelper {
 
   // Helper methods for JSON encoding/decoding
   String _jsonEncode(Map<String, dynamic> data) {
-    return _mapToJson(data);
+    return jsonEncode(data);
   }
 
   Map<String, dynamic> _jsonDecode(String jsonString) {
-    return _parseJson(jsonString);
+    return Map<String, dynamic>.from(jsonDecode(jsonString) as Map);
   }
 
   String _mapToJson(Map<String, dynamic> map) {
