@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cashflow/services/database_helper.dart';
 
 import '../theme/theme_constants.dart';
@@ -438,24 +439,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          _buildSettingsTile(
-            icon: Icons.storage_rounded,
-            iconColor: AppColors.emerald700,
-            title: 'Export SQLite Database (.db)',
-            subtitle: 'Complete exact binary database backup',
-            onTap: _isProcessing ? null : _handleExport,
-            isDark: isDark,
-          ),
-          const Divider(height: 1),
-          _buildSettingsTile(
-            icon: Icons.restore_page_rounded,
-            iconColor: AppColors.info,
-            title: 'Import SQLite Database (.db)',
-            subtitle: 'Restore database from previous .db file',
-            onTap: _isProcessing ? null : _handleImport,
-            isDark: isDark,
-          ),
-          const Divider(height: 1),
+          if (!kIsWeb) ...[
+            _buildSettingsTile(
+              icon: Icons.storage_rounded,
+              iconColor: AppColors.emerald700,
+              title: 'Export SQLite Database (.db)',
+              subtitle: 'Complete exact binary database backup',
+              onTap: _isProcessing ? null : _handleExport,
+              isDark: isDark,
+            ),
+            const Divider(height: 1),
+            _buildSettingsTile(
+              icon: Icons.restore_page_rounded,
+              iconColor: AppColors.info,
+              title: 'Import SQLite Database (.db)',
+              subtitle: 'Restore database from previous .db file',
+              onTap: _isProcessing ? null : _handleImport,
+              isDark: isDark,
+            ),
+            const Divider(height: 1),
+          ],
           _buildSettingsTile(
             icon: Icons.data_object_rounded,
             iconColor: AppColors.purple,
