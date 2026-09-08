@@ -7,6 +7,7 @@ This directory contains the stable product, scope, architecture, and delivery re
 - [Project scope](PROJECT_SCOPE.md) — feature inventory and product boundaries.
 - [Product specification](PRODUCT_SPECIFICATION.md) — locked behavior, formulas, and product decisions.
 - [Implementation roadmap](IMPLEMENTATION_ROADMAP.md) — stable phases, sequencing, and acceptance principles.
+- [Development guide](development.md) — setup, common commands, emulator workflow, and screenshot capture.
 - [Schema redesign](architecture/SCHEMA_REDESIGN.md) — database v2 design and migration strategy.
 
 ## Live Execution

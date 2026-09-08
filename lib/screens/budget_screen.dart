@@ -50,7 +50,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     Map<int, double> spendingMap = {};
 
     for (var cat in categories) {
-      totalReserved += cat.monthlyBudget;
+      totalReserved += cat.monthlyBudget ?? 0.0;
       if (cat.id != null) {
         final spent = await DatabaseHelper.instance
             .getCategorySpendingForCurrentMonth(cat.id!);
@@ -76,7 +76,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
       text: isEditing ? category.name : '',
     );
     final budgetController = TextEditingController(
-      text: isEditing ? category.monthlyBudget.toStringAsFixed(0) : '',
+      text: isEditing && category.monthlyBudget != null
+          ? category.monthlyBudget!.toStringAsFixed(0)
+          : '',
     );
     final formKey = GlobalKey<FormState>();
 
@@ -90,7 +92,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             borderRadius: AppBorderRadius.xlargeBorder,
           ),
           title: Text(
-            isEditing ? 'Edit Category Budget' : 'Add Category Budget',
+            isEditing ? 'Edit Category' : 'Add Category',
             style: AppTypography.titleLarge.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -115,16 +117,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   CustomInputField(
                     controller: budgetController,
                     label: 'Monthly Budget Target',
-                    hint: 'e.g. 5000',
+                    hint: 'Optional, e.g. 5000',
                     prefixText: '₹ ',
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a budget amount';
-                      }
-                      if (double.tryParse(value) == null) {
+                      if (value != null &&
+                          value.trim().isNotEmpty &&
+                          double.tryParse(value.trim()) == null) {
                         return 'Please enter a valid number';
                       }
                       return null;
@@ -159,7 +160,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
                   final name = nameController.text.trim();
-                  final budget = double.parse(budgetController.text.trim());
+                  final budgetText = budgetController.text.trim();
+                  final budget = budgetText.isEmpty
+                      ? null
+                      : double.tryParse(budgetText);
 
                   if (isEditing) {
                     await DatabaseHelper.instance.updateCategory(
@@ -282,14 +286,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               ),
                               const SizedBox(height: AppSpacing.md),
                               Text(
-                                'No budget categories configured yet',
+                                'No categories configured yet',
                                 style: AppTypography.titleMedium.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(
-                                'Tap + below to add your monthly categories like Groceries, Rent, Transport.',
+                                'Tap + below to add categories like Groceries, Rent, or Transport.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
                                   color: isDark
@@ -318,7 +322,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
         backgroundColor: AppColors.emerald700,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Budget', style: AppTypography.labelLarge),
+        label: const Text('Add Category', style: AppTypography.labelLarge),
       ),
     );
   }
@@ -454,6 +458,51 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   Widget _buildBudgetItem(Category cat, double spent, bool isDark) {
     final budget = cat.monthlyBudget;
+    if (budget == null) {
+      final style = CategoryStyle.getStyle(cat.name);
+      return CustomCard(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: style.color.withValues(alpha: 0.12),
+                borderRadius: AppBorderRadius.mediumBorder,
+              ),
+              child: Icon(style.icon, color: style.color, size: 20),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                cat.name,
+                style: AppTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Text(
+              'Spent ₹${spent.toStringAsFixed(0)}',
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.darkText : AppColors.gray900,
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: isDark ? AppColors.gray400 : AppColors.gray600,
+              ),
+              padding: const EdgeInsets.only(left: AppSpacing.sm),
+              constraints: const BoxConstraints(),
+              onPressed: () => _showCategoryDialog(category: cat),
+            ),
+          ],
+        ),
+      );
+    }
+
     final progress = budget > 0 ? spent / budget : 0.0;
     final isOver = progress > 1.0;
     final remaining = (budget - spent).clamp(0.0, double.infinity);

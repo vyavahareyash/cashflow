@@ -48,4 +48,5 @@ See [SCHEMA_REDESIGN.md](architecture/SCHEMA_REDESIGN.md) for technical details.
 - [PROJECT_SCOPE.md](PROJECT_SCOPE.md) — All features
 - [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) — Sprint plan & issues map
 - [PRODUCT_SPECIFICATION.md](PRODUCT_SPECIFICATION.md) — Product decisions
+- [development.md](development.md) — Development setup, commands, and emulator workflow
 - [architecture/SCHEMA_REDESIGN.md](architecture/SCHEMA_REDESIGN.md) — Database v2 design
