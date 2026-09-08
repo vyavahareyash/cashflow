@@ -5,7 +5,7 @@ import '../services/database_helper.dart';
 import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
-import '../models/plan_model.dart';
+import '../models/goal_model.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
@@ -56,7 +56,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadAllData() async {
-    if (_accounts.isEmpty && _plans.isEmpty && _categories.isEmpty) {
+    if (_accounts.isEmpty && _goals.isEmpty && _categories.isEmpty) {
       setState(() => _isLoading = true);
     }
 
@@ -76,7 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     double totalBudget = 0;
     double totalSpent = 0;
     for (var cat in categoriesData) {
-      totalBudget += cat.monthlyBudget;
+      totalBudget += cat.monthlyBudget ?? 0;
       if (cat.id != null) {
         final spent = await db.getCategorySpendingForCurrentMonth(cat.id!);
         totalSpent += spent;
@@ -86,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) {
       setState(() {
         _accounts = accountsData;
-        _plans = plansData;
+        _goals = goalsData;
         _categories = categoriesData;
         _recentTransactions = transactionsData.take(5).toList();
         _totalBalance = totalPhysical;
@@ -592,7 +592,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (widget.onNavigateTab != null) widget.onNavigateTab!(2);
               },
               child: Text(
-                'View All (${_plans.length})',
+                'View All (${_goals.length})',
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.emerald600,
                   fontWeight: FontWeight.w700,
@@ -602,7 +602,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
-        if (_plans.isEmpty)
+        if (_goals.isEmpty)
           CustomCard(
             child: Center(
               child: Padding(
@@ -631,13 +631,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             height: 120,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _plans.length,
+              itemCount: _goals.length,
               separatorBuilder: (context, index) =>
                   const SizedBox(width: AppSpacing.md),
               itemBuilder: (context, index) {
-                final plan = _plans[index];
-                final planProgress = plan.totalTarget > 0
-                    ? (plan.currentSaved / plan.totalTarget)
+                final goal = _goals[index];
+                final goalProgress = goal.totalTarget > 0
+                    ? (goal.currentSaved / goal.totalTarget)
                     : 0.0;
                 return SizedBox(
                   width: 200,
@@ -656,7 +656,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                plan.name,
+                                goal.name,
                                 style: AppTypography.titleMedium.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -665,7 +665,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             Text(
-                              '${(planProgress * 100).toStringAsFixed(0)}%',
+                              '${(goalProgress * 100).toStringAsFixed(0)}%',
                               style: AppTypography.labelSmall.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.emerald600,
@@ -676,7 +676,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ClipRRect(
                           borderRadius: AppBorderRadius.pillBorder,
                           child: LinearProgressIndicator(
-                            value: planProgress.clamp(0.0, 1.0),
+                            value: goalProgress.clamp(0.0, 1.0),
                             minHeight: 6,
                             backgroundColor: isDark
                                 ? AppColors.darkBorder
@@ -698,7 +698,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             Text(
-                              '₹${plan.currentSaved.toStringAsFixed(0)} / ₹${plan.totalTarget.toStringAsFixed(0)}',
+                              '₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)}',
                               style: AppTypography.labelSmall.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),

@@ -17,7 +17,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   String _statusMessage = '';
   int _accountsCount = 0;
   int _categoriesCount = 0;
-  int _plansCount = 0;
+  int _goalsCount = 0;
   int _transactionsCount = 0;
 
   @override
@@ -38,7 +38,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         setState(() {
           _accountsCount = accounts.length;
           _categoriesCount = categories.length;
-          _plansCount = plans.length;
+          _goalsCount = goals.length;
           _transactionsCount = transactions.length;
         });
       }
@@ -414,7 +414,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildDivider(isDark),
           _buildStorageStat(
             'Goals',
-            '$_plansCount',
+            '$_goalsCount',
             Icons.savings_rounded,
             isDark,
           ),

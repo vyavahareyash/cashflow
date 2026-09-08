@@ -73,8 +73,8 @@ erDiagram
     accounts ||--o{ transactions : "source"
     accounts ||--o{ transactions : "destination"
     categories ||--o{ transactions : "categorizes"
-    planned_spends ||--o{ transactions : "linked to"
-    planned_spends ||--o{ locked_allocations : "has"
+    goals ||--o{ transactions : "linked to"
+    goals ||--o{ locked_allocations : "has"
     accounts ||--o{ locked_allocations : "holds"
 
     accounts {
@@ -99,7 +99,7 @@ erDiagram
         string note
         string type "expense|income|transfer|goal_lock|goal_unlock|goal_payment"
     }
-    planned_spends {
+    goals {
         int id PK
         string name
         double total_target
@@ -133,7 +133,7 @@ transactions (
   type                     -- NEW (expense|income|transfer|goal_lock|goal_unlock|goal_payment)
 )
 
-planned_spends (id, name, total_target, target_date, current_saved)
+goals (id, name, total_target, target_date, current_saved)
 
 locked_allocations (id, plan_id, account_id, amount)
 ```

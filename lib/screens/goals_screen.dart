@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/database_helper.dart';
-import '../models/plan_model.dart';
+import '../models/goal_model.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 
-class PlannerScreen extends StatefulWidget {
-  const PlannerScreen({super.key});
+class GoalsScreen extends StatefulWidget {
+  const GoalsScreen({super.key});
 
   @override
-  State<PlannerScreen> createState() => _PlannerScreenState();
+  State<GoalsScreen> createState() => _GoalsScreenState();
 }
 
-class _PlannerScreenState extends State<PlannerScreen> {
+class _GoalsScreenState extends State<GoalsScreen> {
   List<Goal> _goals = [];
   double _totalLocked = 0.0;
   double _totalTarget = 0.0;
@@ -41,20 +41,20 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Future<void> _loadData() async {
-    if (_plans.isEmpty) {
+    if (_goals.isEmpty) {
       setState(() => _isLoading = true);
     }
     final goals = await DatabaseHelper.instance.readAllGoals();
     final locked = await DatabaseHelper.instance.getTotalLockedAmount();
 
     double totalTarget = 0.0;
-    for (var p in plans) {
+    for (var p in goals) {
       totalTarget += p.totalTarget;
     }
 
     if (mounted) {
       setState(() {
-        _plans = plans;
+        _goals = goals;
         _totalLocked = locked;
         _totalTarget = totalTarget;
         _isLoading = false;
@@ -178,7 +178,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 onPressed: () async {
                   if (formKey.currentState!.validate()) {
                     await DatabaseHelper.instance.createGoal(
-                      Plan(
+                      Goal(
                         name: nameController.text.trim(),
                         totalTarget:
                             double.tryParse(targetController.text.trim()) ??
@@ -202,9 +202,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   void _showEditGoalDialog(Goal goal) {
-    final nameController = TextEditingController(text: plan.name);
+    final nameController = TextEditingController(text: goal.name);
     final targetController = TextEditingController(
-      text: plan.totalTarget.toStringAsFixed(0),
+      text: goal.totalTarget.toStringAsFixed(0),
     );
     final formKey = GlobalKey<FormState>();
 
@@ -281,14 +281,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 onPressed: () async {
                   if (formKey.currentState!.validate()) {
                     await DatabaseHelper.instance.updateGoal(
-                      Plan(
-                        id: plan.id,
+                      Goal(
+                        id: goal.id,
                         name: nameController.text.trim(),
                         totalTarget:
                             double.tryParse(targetController.text.trim()) ??
                             0.0,
-                        targetDate: plan.targetDate,
-                        currentSaved: plan.currentSaved,
+                        targetDate: goal.targetDate,
+                        currentSaved: goal.currentSaved,
                       ),
                     );
                     if (dialogCtx.mounted) {
@@ -311,7 +311,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Sinking Fund?'),
         content: Text(
-          'Deleting "${plan.name}" will unlock all saved funds (${AppFormatters.currency(plan.currentSaved)}) and return them back to their original physical accounts.',
+          'Deleting "${goal.name}" will unlock all saved funds (${AppFormatters.currency(goal.currentSaved)}) and return them back to their original physical accounts.',
         ),
         actions: [
           TextButton(
@@ -342,7 +342,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   void _showContributionLog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final contributions = await DatabaseHelper.instance.getGoalContributions(
-      plan.id!,
+      goal.id!,
     );
 
     if (!mounted) return;
@@ -373,14 +373,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Locked Allocations for ${plan.name}',
+                'Locked Allocations for ${goal.name}',
                 style: AppTypography.titleLarge.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Total saved: ${AppFormatters.currency(plan.currentSaved)} of ${AppFormatters.currency(plan.totalTarget)}',
+                'Total saved: ${AppFormatters.currency(goal.currentSaved)} of ${AppFormatters.currency(goal.totalTarget)}',
                 style: AppTypography.labelSmall.copyWith(
                   color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
@@ -488,7 +488,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Lock Funds for "${plan.name}"',
+                      'Lock Funds for "${goal.name}"',
                       style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -573,7 +573,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                           if (amount <= 0) return;
 
                           await DatabaseHelper.instance.lockFunds(
-                            plan.id!,
+                            goal.id!,
                             selectedAccountId!,
                             amount,
                           );
@@ -611,7 +611,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accounts = await DatabaseHelper.instance.readAllAccounts();
     final amountController = TextEditingController(
-      text: plan.currentSaved.toStringAsFixed(0),
+      text: goal.currentSaved.toStringAsFixed(0),
     );
     int? selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
 
@@ -651,7 +651,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Pay / Settle Bill for "${plan.name}"',
+                      'Pay / Settle Bill for "${goal.name}"',
                       style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -736,7 +736,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
                           try {
                             await DatabaseHelper.instance.payBill(
-                              plan.id!,
+                              goal.id!,
                               selectedAccountId!,
                               amount,
                             );
@@ -823,7 +823,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         ),
                       ),
                       Text(
-                        '${_plans.length} Goals',
+                        '${_goals.length} Goals',
                         style: AppTypography.labelSmall.copyWith(
                           color: isDark ? AppColors.gray400 : AppColors.gray600,
                         ),
@@ -833,7 +833,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   const SizedBox(height: AppSpacing.md),
 
                   // 3. GOALS LIST
-                  if (_plans.isEmpty)
+                  if (_goals.isEmpty)
                     CustomCard(
                       child: Center(
                         child: Padding(
@@ -856,7 +856,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(
-                                'Create sinking funds for future planned expenses like insurance, repairs, or vacations.',
+                                'Create sinking funds for future goalned expenses like insurance, repairs, or vacations.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
                                   color: isDark
@@ -990,10 +990,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _buildGoalCard(Goal goal, bool isDark) {
-    final progress = plan.totalTarget > 0
-        ? (plan.currentSaved / plan.totalTarget)
+    final progress = goal.totalTarget > 0
+        ? (goal.currentSaved / goal.totalTarget)
         : 0.0;
-    final remaining = (plan.totalTarget - plan.currentSaved).clamp(
+    final remaining = (goal.totalTarget - goal.currentSaved).clamp(
       0.0,
       double.infinity,
     );
@@ -1024,7 +1024,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plan.name,
+                      goal.name,
                       style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -1054,7 +1054,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
                 tooltip: 'Contribution Breakdown',
-                onPressed: () => _showContributionLog(plan),
+                onPressed: () => _showContributionLog(goal),
               ),
               IconButton(
                 icon: Icon(
@@ -1103,14 +1103,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Locked: ₹${plan.currentSaved.toStringAsFixed(0)}',
+                'Locked: ₹${goal.currentSaved.toStringAsFixed(0)}',
                 style: AppTypography.labelSmall.copyWith(
                   fontWeight: FontWeight.w600,
                   color: isDark ? AppColors.gray300 : AppColors.gray800,
                 ),
               ),
               Text(
-                'Target: ₹${plan.totalTarget.toStringAsFixed(0)}',
+                'Target: ₹${goal.totalTarget.toStringAsFixed(0)}',
                 style: AppTypography.labelSmall.copyWith(
                   color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
@@ -1128,7 +1128,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   icon: Icons.lock_outline_rounded,
                   variant: ButtonVariant.secondary,
                   height: AppComponentSizes.buttonHeightSmall,
-                  onPressed: () => _showContributionDialog(plan),
+                  onPressed: () => _showContributionDialog(goal),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -1138,7 +1138,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   icon: Icons.payment_rounded,
                   variant: ButtonVariant.outlined,
                   height: AppComponentSizes.buttonHeightSmall,
-                  onPressed: () => _showPaymentDialog(plan),
+                  onPressed: () => _showPaymentDialog(goal),
                 ),
               ),
             ],

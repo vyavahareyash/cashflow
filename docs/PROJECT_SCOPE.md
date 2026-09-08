@@ -133,10 +133,10 @@ Usable Balance = Physical Accounts
 ```
 accounts (id, name, balance, type)
 categories (id, name, monthly_budget [OPTIONAL])
-transactions (id, account_id, destination_account_id?, category_id?, plan_id?, 
+transactions (id, account_id, destination_account_id?, category_id?, goal_id?, 
               amount, date, note, type)
-planned_spends (id, name, total_target, target_date, current_saved)
-locked_allocations (id, plan_id, account_id, amount)
+goals (id, name, total_target, target_date, current_saved)
+locked_allocations (id, goal_id, account_id, amount)
 ```
 
 ### Transaction Types Supported

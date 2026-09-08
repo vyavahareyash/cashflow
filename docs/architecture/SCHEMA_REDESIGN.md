@@ -13,15 +13,15 @@
 accounts (id, name, balance, type)
 categories (id, name, monthly_budget) -- NOT NULL, must be made optional
 transactions (id, account_id, category_id, amount, date, note)
-planned_spends (id, name, total_target, target_date, current_saved)
-locked_allocations (id, plan_id, account_id, amount)
+goals (id, name, total_target, target_date, current_saved)
+locked_allocations (id, goal_id, account_id, amount)
 ```
 
 ### Models Defined
 - `Account` ✅
 - `Category` ❌ (but monthlyBudget is required, needs optional)
 - `TransactionModel` ❌ (missing `type` field)
-- `Plan` ✅
+- `Goal` ✅
 - `LockedAllocation` ✅
 
 ---
@@ -59,11 +59,11 @@ locked_allocations (id, plan_id, account_id, amount)
 - **Gap:** Transfer type cannot be fully represented
 - **Action:** Add optional `destination_account_id` field for transfers
 
-#### 4. **Transaction Plan References** — MEDIUM
-- **Current:** No way to link transactions to plans
-- **Product Spec:** Goal lock/unlock/payment transactions reference plans
-- **Gap:** Goal transactions not connected to plans; can't show history
-- **Action:** Add optional `plan_id` field for goal transactions
+#### 4. **Transaction Goal References** — MEDIUM
+- **Current:** No way to link transactions to goals
+- **Product Spec:** Goal lock/unlock/payment transactions reference goals
+- **Gap:** Goal transactions not connected to goals; can't show history
+- **Action:** Add optional `goal_id` field for goal transactions
 
 ---
 
@@ -82,10 +82,10 @@ ALTER TABLE transactions ADD COLUMN destination_account_id INTEGER DEFAULT NULL;
 -- Add foreign key: FOREIGN KEY (destination_account_id) REFERENCES accounts (id)
 ```
 
-#### Table: `transactions` — Add plan_id for goal-related transactions
+#### Table: `transactions` — Add goal_id for goal-related transactions
 ```sql
-ALTER TABLE transactions ADD COLUMN plan_id INTEGER DEFAULT NULL;
--- Add foreign key: FOREIGN KEY (plan_id) REFERENCES planned_spends (id)
+ALTER TABLE transactions ADD COLUMN goal_id INTEGER DEFAULT NULL;
+-- Add foreign key: FOREIGN KEY (goal_id) REFERENCES goals (id)
 ```
 
 #### Table: `categories` — Make budget optional
@@ -242,8 +242,8 @@ class Category {
 -- CORE TABLES (No major changes)
 accounts (id, name, balance, type)
 categories (id, name, monthly_budget) -- nullable now
-planned_spends (id, name, total_target, target_date, current_saved)
-locked_allocations (id, plan_id, account_id, amount)
+goals (id, name, total_target, target_date, current_saved)
+locked_allocations (id, goal_id, account_id, amount)
 
 -- ENHANCED TABLE
 transactions (
@@ -268,7 +268,7 @@ transactions (
 **Required Changes:**
 1. Add `type` field to transactions (critical)
 2. Add `destination_account_id` field to transactions (critical)
-3. Add `plan_id` field to transactions (critical)
+3. Add `goal_id` field to transactions (critical)
 4. Make `monthly_budget` nullable in categories (critical)
 
 **Impact:** Medium (non-breaking changes; migrations required for existing data)

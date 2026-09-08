@@ -3,7 +3,7 @@ class TransactionModel {
   final int accountId;
   final int? destinationAccountId;
   final int? categoryId;
-  final int? planId;
+  final int? goalId;
   final double amount;
   final String date;
   final String note;
@@ -14,7 +14,7 @@ class TransactionModel {
     required this.accountId,
     this.destinationAccountId,
     this.categoryId,
-    this.planId,
+    this.goalId,
     required this.amount,
     required this.date,
     required this.note,
@@ -27,7 +27,7 @@ class TransactionModel {
       accountId: map['account_id'],
       destinationAccountId: map['destination_account_id'],
       categoryId: map['category_id'],
-      planId: map['plan_id'],
+      goalId: map['goal_id'],
       amount: (map['amount'] as num).toDouble(),
       date: map['date'],
       note: map['note'] ?? '',
@@ -40,7 +40,7 @@ class TransactionModel {
       'account_id': accountId,
       'destination_account_id': destinationAccountId,
       'category_id': categoryId,
-      'plan_id': planId,
+      'goal_id': goalId,
       'amount': amount,
       'date': date,
       'note': note,

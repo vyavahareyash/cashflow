@@ -16,7 +16,7 @@
 ### Core Logic: Physical vs. Logical Balance
 The app differentiates between money actually held and money allocated for specific purposes:
 - **Physical Balance**: The actual sum of all funds in `accounts` (Bank/Cash).
-- **Logical Balance (Locked)**: Funds physically present but "tagged" for future expenses via `planned_spends` and `locked_allocations`.
+- **Logical Balance (Locked)**: Funds physically present but "tagged" for future expenses via `goals` and `locked_allocations`.
 - **Logical Balance (Reserved)**: Funds allocated to `categories` for the current month's budget.
 
 **Usable Balance Formula**:
@@ -31,7 +31,7 @@ The app differentiates between money actually held and money allocated for speci
 - `accounts`: Tracks physical fund locations.
 - `categories`: Defines monthly budget targets.
 - `transactions`: Logs spending/income linked to accounts and categories.
-- `planned_spends`: Future financial goals/obligations.
+- `goals`: Future financial goals/obligations.
 - `locked_allocations`: Bridge table linking a `plan_id` to an `account_id` to track where "locked" money is physically stored.
 
 ## Key Conventions

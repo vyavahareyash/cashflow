@@ -32,7 +32,7 @@ void main() {
 
     expect(
       transactionColumns.map((column) => column['name']).toList(),
-      containsAll(['type', 'destination_account_id', 'plan_id']),
+      containsAll(['type', 'destination_account_id', 'goal_id']),
     );
     expect(
       categoryColumns.map((column) => column['name']).toList(),
@@ -108,7 +108,7 @@ void main() {
     expect(transactions, hasLength(1));
     expect(transactions.first['type'], 'expense');
     expect(transactions.first['destination_account_id'], isNull);
-    expect(transactions.first['plan_id'], isNull);
+    expect(transactions.first['goal_id'], isNull);
     expect(transactions.first['category_id'], categoryId);
     expect(categories, hasLength(1));
     expect(categories.first['monthly_budget'], 1800.0);
@@ -116,7 +116,7 @@ void main() {
     final transactionColumns = await upgradedDb.rawQuery("PRAGMA table_info('transactions')");
     expect(
       transactionColumns.map((column) => column['name']).toList(),
-      containsAll(['type', 'destination_account_id', 'plan_id']),
+      containsAll(['type', 'destination_account_id', 'goal_id']),
     );
   });
 }
