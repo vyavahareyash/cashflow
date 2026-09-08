@@ -143,12 +143,10 @@ locked_allocations (id, goal_id, account_id, amount)
 ## 🎯 Core Formula (Locked)
 
 ```
-Usable Balance = (Sum of all Accounts) 
-               - (Total Locked for Goals)
-               - (Total Reserved for Monthly Budgets)
+Usable Balance = max(0, (Sum of all Accounts) - (Total Locked for Goals))
 ```
 
-This is the app's core "magic" — users should see this number prominently and understand how it's calculated.
+Monthly budgets are tracking limits, not cash reservations. They affect spending progress and warnings, while goal locks reduce usable cash. This is the app's core "magic" — users should see this number prominently and understand how it's calculated.
 
 ---
 

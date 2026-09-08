@@ -29,7 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _totalBalance = 0.0;
   double _lockedAmount = 0.0;
   double _usableBalance = 0.0;
-  double _totalBudgetReserved = 0.0;
+  double _totalBudgetLimit = 0.0;
   double _totalSpentThisMonth = 0.0;
 
   bool _isLoading = true;
@@ -92,7 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _totalBalance = totalPhysical;
         _lockedAmount = locked;
         _usableBalance = usable;
-        _totalBudgetReserved = totalBudget;
+        _totalBudgetLimit = totalBudget;
         _totalSpentThisMonth = totalSpent;
         _isLoading = false;
       });
@@ -229,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'After goal sinking funds & reserved budgets',
+            'After goal sinking funds; budgets remain tracking limits',
             style: AppTypography.labelSmall.copyWith(
               color: Colors.white.withValues(alpha: 0.75),
             ),
@@ -284,9 +284,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 _buildFormulaPill(
-                  'Reserved',
+                  'Monthly limit',
                   AppFormatters.compactCurrency(
-                    _totalBudgetReserved,
+                    _totalBudgetLimit,
                     isPrivate: _isPrivate,
                   ),
                   const Color(0xFF93C5FD), // Light blue
@@ -436,12 +436,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // --- MONTHLY BUDGET SNAPSHOT ---
   Widget _buildBudgetSnapshotCard(bool isDark) {
-    final remainingBudget = (_totalBudgetReserved - _totalSpentThisMonth).clamp(
+    final remainingBudget = (_totalBudgetLimit - _totalSpentThisMonth).clamp(
       0.0,
       double.infinity,
     );
-    final progress = _totalBudgetReserved > 0
-        ? (_totalSpentThisMonth / _totalBudgetReserved)
+    final progress = _totalBudgetLimit > 0
+        ? (_totalSpentThisMonth / _totalBudgetLimit)
         : 0.0;
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
@@ -557,7 +557,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     Text(
-                      '₹${remainingBudget.toStringAsFixed(0)} left of ₹${_totalBudgetReserved.toStringAsFixed(0)}',
+                      '₹${remainingBudget.toStringAsFixed(0)} left of ₹${_totalBudgetLimit.toStringAsFixed(0)}',
                       style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.emerald600,

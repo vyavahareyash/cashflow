@@ -1271,8 +1271,8 @@ class DatabaseHelper {
 
   // --- CORE CALCULATION LOGIC ---
 
-  /// Calculates the "Usable Balance" based on the formula:
-  /// Usable Balance = (Sum of all Accounts) - (Total Locked for Goals) - (Total Reserved for Monthly Budgets)
+  /// Calculates usable cash after excluding funds locked for goals.
+  /// Monthly budgets are tracking limits and do not reserve physical cash.
   Future<double> calculateUsableBalance() async {
     final db = await instance.database;
 
@@ -1289,14 +1289,7 @@ class DatabaseHelper {
     );
     double totalLocked = (lockedResult.first['total'] as num? ?? 0).toDouble();
 
-    // 3. Total reserved for monthly budgets (Sum of monthly_budget for all categories)
-    final budgetResult = await db.rawQuery(
-      'SELECT SUM(monthly_budget) as total FROM categories',
-    );
-    double totalReserved = (budgetResult.first['total'] as num? ?? 0)
-        .toDouble();
-
-    return totalPhysical - totalLocked - totalReserved;
+    return (totalPhysical - totalLocked).clamp(0.0, double.infinity);
   }
 
   /// Gets the total spent in a specific category for the current month.
