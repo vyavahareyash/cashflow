@@ -73,6 +73,46 @@ Completion criterion: GitHub contains the current status and execution history, 
 
 ## Choosing The Next Issue
 
+When the user asks for `next issue`, run this deterministic queue pass before reading an owning code path:
+
+1. Query GitHub open issues and open pull requests for `owner=vyavahareyash`, `repo=cashflow`.
+2. Build a candidate row for each issue with: number, title, priority label, sprint label, roadmap position, dependencies, downstream blockers, linked PR, and implementation status.
+3. Normalize historical `NEW-*` aliases to actual issue numbers and preserve both identifiers in the row.
+4. Remove candidates that are closed, covered by an open PR, explicitly blocked by an open dependency, superseded, or duplicated by another issue.
+5. Score the remaining rows in this order:
+	- P0 critical-path blocker: highest priority
+	- earlier roadmap sprint
+	- current sprint before later sprints
+	- number of downstream issues blocked
+	- completed dependencies
+	- lower issue number as the final tie-breaker
+6. Inspect comments and linked issues for the top two rows. An explicit repository comment such as “earliest unblocked” outranks an inferred roadmap position.
+7. Verify implementation overlap locally against acceptance-criteria terms and related files. Mark a candidate `missing`, `partial`, `implemented`, or `administrative-stale`; code similarity alone never closes an issue.
+8. Return exactly one primary recommendation and one fallback using this format:
+
+	```text
+	Primary: #<number> — <title>
+	Why now: <priority, sprint, dependency, and blocker evidence>
+	Dependencies: <complete/open/unknown>
+	Blocks: <issue numbers or none>
+	Code status: <missing/partial/implemented/administrative-stale>
+	Owning files: <paths>
+	Focused validation: <command>
+	Fallback: #<number> — <title>
+	Confidence: <high/medium/low>
+	```
+
+9. Stop after selection and ask whether to start implementation; do not edit code during queue discovery.
+
+Fallback rules when GitHub metadata is incomplete:
+
+1. Prefer an issue explicitly marked “earliest unblocked” by a repository owner.
+2. Otherwise prefer the earliest unblocked roadmap item.
+3. Otherwise prefer the lowest-numbered unblocked issue in the current sprint.
+4. If dependency or implementation status remains unknown, report the uncertainty and lower confidence instead of silently assuming readiness.
+
+Completion criterion: the primary issue has live GitHub evidence, no unresolved blocker, a checked alias/PR/implementation status, a named owning code path, and a focused validation command.
+
 Use this order:
 
 1. P0 blockers on the critical path.
