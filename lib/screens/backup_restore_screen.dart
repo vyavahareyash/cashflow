@@ -528,34 +528,37 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     required VoidCallback? onTap,
     required bool isDark,
   }) {
-    return ListTile(
-      onTap: onTap,
-      leading: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: iconColor.withValues(alpha: 0.12),
-          borderRadius: AppBorderRadius.smallBorder,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.12),
+            borderRadius: AppBorderRadius.smallBorder,
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
         ),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTypography.labelSmall.copyWith(
-          color: isDark ? AppColors.gray400 : AppColors.gray600,
+        title: Text(
+          title,
+          style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600),
         ),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        size: 20,
-        color: AppColors.gray400,
-      ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: 4,
+        subtitle: Text(
+          subtitle,
+          style: AppTypography.labelSmall.copyWith(
+            color: isDark ? AppColors.gray400 : AppColors.gray600,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          size: 20,
+          color: AppColors.gray400,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 4,
+        ),
       ),
     );
   }

@@ -465,6 +465,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'accounts-add-fab',
         onPressed: _showAddAccountDialog,
         backgroundColor: AppColors.emerald700,
         foregroundColor: Colors.white,

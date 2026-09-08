@@ -879,6 +879,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'goals-add-fab',
         onPressed: _showAddGoalDialog,
         backgroundColor: AppColors.emerald700,
         foregroundColor: Colors.white,

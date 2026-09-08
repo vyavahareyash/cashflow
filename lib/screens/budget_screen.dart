@@ -313,6 +313,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'budget-add-fab',
         onPressed: () => _showCategoryDialog(),
         backgroundColor: AppColors.emerald700,
         foregroundColor: Colors.white,

@@ -10,7 +10,7 @@ import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/services/platform_database.dart';
 import 'package:cashflow/theme/theme_constants.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configurePlatformDatabase();
 
