@@ -36,6 +36,14 @@ The app differentiates between money actually held and money allocated for speci
 
 ## Key Conventions
 
+## GitHub Work Tracking
+
+- GitHub issues are the source of truth for execution status, ownership, priorities, milestones, dependencies, and progress.
+- Use the repository issue form for new roadmap work; include scope, acceptance criteria, validation, and related issues or pull requests.
+- Use pull requests to link delivered work with `Closes #<issue>` or `Fixes #<issue>` only when the pull request fully satisfies that issue.
+- Treat `NEW-*` identifiers as temporary roadmap aliases during migration, not as GitHub issue numbers.
+- Do not add live status tables, issue counts, or dependency trackers to Markdown documentation; link to GitHub instead.
+
 - **Database Access**: All database calls must be `async/await`.
 - **Numeric Input**: Always use `double.tryParse()` for numeric inputs to ensure null safety and prevent crashes.
 - **UI Design**: 

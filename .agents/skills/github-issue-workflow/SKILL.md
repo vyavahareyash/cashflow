@@ -1,6 +1,6 @@
 ---
 name: github-issue-workflow
-description: Use when implementing a Cashflow GitHub issue, choosing the next issue, updating issue progress, or checking whether work remains aligned with the project docs. Read the roadmap and product specification first, follow dependency order, validate the change, and keep GitHub plus docs/GITHUB_ISSUES_TRACKING.md synchronized.
+description: Use when implementing a Cashflow GitHub issue, choosing the next issue, updating issue progress, or checking whether work remains aligned with the project docs. Read the roadmap and product specification first, follow dependency order, validate the change, and keep GitHub synchronized with the stable project docs.
 ---
 
 # Cashflow GitHub Issue Workflow
@@ -14,15 +14,14 @@ Resolve conflicts in this order:
 1. `docs/PRODUCT_SPECIFICATION.md` for locked product decisions.
 2. `docs/architecture/SCHEMA_REDESIGN.md` for database shape and migrations.
 3. `docs/IMPLEMENTATION_ROADMAP.md` for sprint sequence, scope, and acceptance criteria.
-4. `docs/GITHUB_ISSUES_TRACKING.md` for issue mapping and dependencies.
-5. The GitHub issue for the current task's concrete acceptance criteria.
-6. Existing code and tests for current behavior and local conventions.
+4. The GitHub issue for the current task's concrete acceptance criteria, status, and dependencies.
+5. Existing code and tests for current behavior and local conventions.
 
 When implementation reality disagrees with a plan, stop and record the discrepancy in the issue or relevant document before silently changing scope.
 
 ## Start Of Work
 
-1. Read the relevant sections of `docs/PRODUCT_SPECIFICATION.md`, `docs/IMPLEMENTATION_ROADMAP.md`, and `docs/GITHUB_ISSUES_TRACKING.md`.
+1. Read the relevant sections of `docs/PRODUCT_SPECIFICATION.md` and `docs/IMPLEMENTATION_ROADMAP.md`.
 2. Inspect the GitHub issue, its labels, dependencies, comments, and linked issues.
 3. Confirm the issue is the next unblocked task in dependency order. Work on a later issue only when its blockers are complete or explicitly waived.
 4. Inspect the owning code path, nearby tests, and repository instructions before editing.
@@ -65,13 +64,12 @@ Use the repository owner and name explicitly for GitHub API operations: `owner=v
 
 After completing an issue:
 
-1. Update the issue status, labels, and acceptance checklist on GitHub.
-2. Update the matching row in `docs/IMPLEMENTATION_ROADMAP.md`.
-3. Update the status, dependency, or sequence in `docs/GITHUB_ISSUES_TRACKING.md` when it changed.
-4. Update architecture or product docs only when a decision or supported behavior changed; preserve locked decisions unless the user explicitly approves a change.
-5. Check links and run `git diff --check`.
+1. Update the issue status, labels, acceptance checklist, dependencies, and progress comments on GitHub.
+2. Update `docs/IMPLEMENTATION_ROADMAP.md` only when stable scope or sequencing changed.
+3. Update architecture or product docs only when a decision or supported behavior changed; preserve locked decisions unless the user explicitly approves a change.
+4. Check links and run `git diff --check`.
 
-Completion criterion: GitHub, the roadmap, and issue tracking document describe the same status, scope, dependencies, and next step.
+Completion criterion: GitHub contains the current status and execution history, while the roadmap and other docs contain only stable scope and product decisions.
 
 ## Choosing The Next Issue
 

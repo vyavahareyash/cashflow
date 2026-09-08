@@ -1,0 +1,87 @@
+name: Roadmap work
+description: Propose or plan a scoped Cashflow work item
+title: ""
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a roadmap work item. GitHub is the source of truth for status, ownership, dependencies, and progress.
+
+  - type: input
+    id: roadmap-alias
+    attributes:
+      label: Roadmap alias
+      description: Optional historical alias, such as NEW-007.
+      placeholder: NEW-000
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Describe the smallest complete change needed.
+      placeholder: What should be added, changed, or removed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that make this issue complete.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Validation
+      description: Describe the tests, checks, or manual verification required.
+      placeholder: flutter test test/path/to_test.dart
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and related work
+      description: Link blockers, prerequisites, follow-ups, or related issues and pull requests.
+      placeholder: "Blocked by #123; follows #124"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 critical
+        - P1 high
+        - P2 medium
+        - P3 low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - database
+        - transactions
+        - budgets
+        - goals
+        - dashboard
+        - analytics
+        - documentation
+        - testing
+        - release
+        - accessibility
+        - performance
+    validations:
+      required: true
