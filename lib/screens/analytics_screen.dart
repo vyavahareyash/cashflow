@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
-import '../components/category_badge.dart';
+import 'history_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -14,27 +14,22 @@ class AnalyticsScreen extends StatefulWidget {
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProviderStateMixin {
+class _AnalyticsScreenState extends State<AnalyticsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // Analytics state
   Map<String, double> _categorySpending = {};
   Map<String, double> _monthlySpendings = {};
-  String _selectedMonth = '';
-  double _monthTotalSpending = 0.0;
-
-  // History state
-  List<Map<String, dynamic>> _transactions = [];
-  String _searchQuery = '';
-  String? _selectedCategoryFilter;
-
+  DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _endDate = DateTime.now();
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
+    final today = DateTime.now();
+    _startDate = DateTime(today.year, today.month, 1);
+    _endDate = today;
     _loadAllData();
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
@@ -53,77 +48,40 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   }
 
   Future<void> _loadAllData() async {
-    if (_transactions.isEmpty && _categorySpending.isEmpty) {
+    if (_categorySpending.isEmpty) {
       setState(() => _isLoading = true);
     }
 
     final db = DatabaseHelper.instance;
-    final categoryData = await db.getSpendingByCategoryForMonth(_selectedMonth);
+    final categoryData = await db.getSpendingByCategoryForDateRange(
+      startDate: _startDate,
+      endDate: _endDate,
+    );
     final monthlyData = await db.getMonthlySpendings(months: 6);
-    final monthTotal = await db.getTotalSpendingForMonth(_selectedMonth);
-    final transactionsData = await db.getTransactionHistory();
-
     if (mounted) {
       setState(() {
         _categorySpending = categoryData;
         _monthlySpendings = monthlyData;
-        _monthTotalSpending = monthTotal;
-        _transactions = transactionsData;
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _deleteTransaction(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Expense?'),
-        content: const Text(
-          'This will remove the transaction and refund the money back to the account balance.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Delete & Refund',
-              style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await DatabaseHelper.instance.deleteTransaction(id);
-      _loadAllData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transaction deleted & balance refunded!'),
-          backgroundColor: AppColors.emerald700,
-        ),
-      );
-    }
-  }
-
-  Future<void> _selectMonth() async {
+  Future<void> _selectDuration() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: DateTime.tryParse('$_selectedMonth-01') ?? now,
       firstDate: DateTime(2020),
       lastDate: now,
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
     );
 
     if (picked != null) {
       setState(() {
-        _selectedMonth = DateFormat('yyyy-MM').format(picked);
+        _startDate = picked.start;
+        _endDate = picked.end;
       });
-      _loadAllData();
+      await _loadAllData();
     }
   }
 
@@ -141,11 +99,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             indicatorColor: AppColors.emerald600,
             indicatorWeight: 3,
             labelColor: isDark ? AppColors.emerald400 : AppColors.emerald700,
-            unselectedLabelColor: isDark ? AppColors.gray400 : AppColors.gray600,
-            labelStyle: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
+            unselectedLabelColor: isDark
+                ? AppColors.gray400
+                : AppColors.gray600,
             tabs: const [
-              Tab(icon: Icon(Icons.receipt_long_rounded, size: 18), text: 'Activity Ledger'),
-              Tab(icon: Icon(Icons.pie_chart_rounded, size: 18), text: 'Analytics & Trends'),
+              Tab(
+                icon: Icon(Icons.receipt_long_rounded, size: 18),
+                text: 'Activity Ledger',
+              ),
+              Tab(
+                icon: Icon(Icons.pie_chart_rounded, size: 18),
+                text: 'Analytics & Trends',
+              ),
             ],
           ),
         ),
@@ -156,253 +121,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             )
           : TabBarView(
               controller: _tabController,
-              children: [
-                _buildLedgerTab(isDark),
-                _buildAnalyticsTab(isDark),
-              ],
+              children: [const HistoryScreen(), _buildAnalyticsTab(isDark)],
             ),
-    );
-  }
-
-  // ==========================================
-  // TAB 1: SEARCHABLE TRANSACTION LEDGER
-  // ==========================================
-  Widget _buildLedgerTab(bool isDark) {
-    // Filter transactions by search query and category
-    final filtered = _transactions.where((tx) {
-      final note = (tx['note'] as String? ?? '').toLowerCase();
-      final category = (tx['category_name'] as String? ?? '').toLowerCase();
-      final account = (tx['account_name'] as String? ?? '').toLowerCase();
-      final q = _searchQuery.toLowerCase();
-
-      final matchesQuery = q.isEmpty || note.contains(q) || category.contains(q) || account.contains(q);
-      final matchesCategory = _selectedCategoryFilter == null ||
-          tx['category_name'] == _selectedCategoryFilter;
-
-      return matchesQuery && matchesCategory;
-    }).toList();
-
-    // Group filtered by month
-    Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (var tx in filtered) {
-      final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
-      final monthKey = DateFormat('MMMM yyyy').format(date);
-      grouped.putIfAbsent(monthKey, () => []).add(tx);
-    }
-
-    final sortedMonths = grouped.keys.toList()
-      ..sort((a, b) {
-        final dateA = DateFormat('MMMM yyyy').parse(a);
-        final dateB = DateFormat('MMMM yyyy').parse(b);
-        return dateB.compareTo(dateA);
-      });
-
-    // Unique categories for filter chips
-    final uniqueCategories = _transactions
-        .map((e) => e['category_name'] as String?)
-        .where((e) => e != null)
-        .cast<String>()
-        .toSet()
-        .toList();
-
-    return RefreshIndicator(
-      onRefresh: _loadAllData,
-      color: AppColors.emerald700,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          // Search Bar
-          TextField(
-            onChanged: (val) => setState(() => _searchQuery = val),
-            style: AppTypography.bodyMedium,
-            decoration: InputDecoration(
-              hintText: 'Search by note, category, or account...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () => setState(() => _searchQuery = ''),
-                    )
-                  : null,
-              filled: true,
-              fillColor: isDark ? AppColors.darkSurface : AppColors.white,
-              border: OutlineInputBorder(
-                borderRadius: AppBorderRadius.mediumBorder,
-                borderSide: BorderSide(
-                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Category Filter Chips
-          if (uniqueCategories.isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('All'),
-                    selected: _selectedCategoryFilter == null,
-                    onSelected: (selected) {
-                      if (selected) setState(() => _selectedCategoryFilter = null);
-                    },
-                    selectedColor: AppColors.emerald700,
-                    labelStyle: TextStyle(
-                      color: _selectedCategoryFilter == null ? Colors.white : null,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  ...uniqueCategories.map((cat) {
-                    final isSelected = _selectedCategoryFilter == cat;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: AppSpacing.xs),
-                      child: ChoiceChip(
-                        label: Text(cat),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategoryFilter = selected ? cat : null;
-                          });
-                        },
-                        selectedColor: AppColors.emerald700,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : null,
-                          fontSize: 12,
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Grouped List
-          if (filtered.isEmpty)
-            CustomCard(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.search_off_rounded,
-                        size: 40,
-                        color: isDark ? AppColors.gray500 : AppColors.gray400,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'No transactions match your criteria',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: isDark ? AppColors.gray400 : AppColors.gray600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else
-            ...sortedMonths.map((month) {
-              final txs = grouped[month]!;
-              double monthSpent = 0;
-              for (var t in txs) {
-                monthSpent += (t['amount'] as num?)?.toDouble() ?? 0.0;
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          month,
-                          style: AppTypography.titleMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.emerald700,
-                          ),
-                        ),
-                        Text(
-                          'Total: ₹${monthSpent.toStringAsFixed(0)}',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ...txs.map((tx) {
-                    final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
-                    final categoryName = tx['category_name'] ?? 'General';
-                    final accountName = tx['account_name'] ?? 'Account';
-                    final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
-                    final note = tx['note'] as String?;
-
-                    return CustomCard(
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Row(
-                        children: [
-                          CategoryBadge(label: categoryName),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  note != null && note.isNotEmpty ? note : categoryName,
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  '$accountName • ${DateFormat('MMM dd, yyyy').format(date)}',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: isDark ? AppColors.gray400 : AppColors.gray600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '-${AppFormatters.currency(amount)}',
-                            style: AppTypography.titleMedium.copyWith(
-                              color: AppColors.danger,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.delete_outline_rounded,
-                              size: 18,
-                              color: isDark ? AppColors.gray500 : AppColors.gray400,
-                            ),
-                            onPressed: () => _deleteTransaction(tx['id']),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              );
-            }),
-
-          const SizedBox(height: AppSpacing.huge),
-        ],
-      ),
     );
   }
 
@@ -437,7 +157,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'No spending data logged for $_selectedMonth',
+                        'No spending data logged for the selected duration',
                         style: AppTypography.bodyMedium.copyWith(
                           color: isDark ? AppColors.gray400 : AppColors.gray600,
                         ),
@@ -450,8 +170,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
           const SizedBox(height: AppSpacing.lg),
 
           // Monthly Trends Chart
-          if (_monthlySpendings.isNotEmpty)
-            _buildMonthlyTrendsCard(isDark),
+          if (_monthlySpendings.isNotEmpty) _buildMonthlyTrendsCard(isDark),
           const SizedBox(height: AppSpacing.lg),
 
           // 2x2 Responsive Stats Grid (Overflow-proof)
@@ -471,32 +190,33 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Spending Period',
-                style: AppTypography.labelSmall.copyWith(
-                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Spending Period',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _selectedMonth,
-                style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          OutlinedButton.icon(
-            onPressed: _selectMonth,
-            icon: const Icon(Icons.calendar_month_rounded, size: 16),
-            label: const Text('Change Month'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.emerald700,
-              shape: RoundedRectangleBorder(
-                borderRadius: AppBorderRadius.mediumBorder,
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  '${DateFormat('MMM d, yyyy').format(_startDate)} - ${DateFormat('MMM d, yyyy').format(_endDate)}',
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
+          ),
+          IconButton(
+            tooltip: 'Change duration',
+            onPressed: _selectDuration,
+            icon: const Icon(Icons.date_range_rounded),
           ),
         ],
       ),
@@ -520,7 +240,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
       total += v;
     }
 
-    final sections = _categorySpending.entries.toList().asMap().entries.map((e) {
+    final sections = _categorySpending.entries.toList().asMap().entries.map((
+      e,
+    ) {
       final index = e.key;
       final entry = e.value;
       final percent = total > 0 ? (entry.value / total) * 100 : 0.0;
@@ -546,7 +268,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             children: [
               Text(
                 'Spending by Category',
-                style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 'Total: ${AppFormatters.currency(total)}',
@@ -638,7 +362,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
         children: [
           Text(
             'Monthly Spending Trends',
-            style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+            style: AppTypography.titleLarge.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           SizedBox(
@@ -664,7 +390,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                           AppFormatters.compactCurrency(value),
                           style: TextStyle(
                             fontSize: 9,
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
                           ),
                         );
                       },
@@ -681,7 +409,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                             m.length >= 7 ? m.substring(5) : m,
                             style: TextStyle(
                               fontSize: 10,
-                              color: isDark ? AppColors.gray400 : AppColors.gray600,
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
                             ),
                           );
                         }
@@ -689,8 +419,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                       },
                     ),
                   ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 lineBarsData: [
                   LineChartBarData(
