@@ -341,7 +341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Expanded(
           child: _buildActionButton(
-            label: 'Log Spend',
+            label: 'Log Transaction',
             icon: Icons.add_circle_rounded,
             color: AppColors.emerald600,
             isDark: isDark,
@@ -921,11 +921,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- LOG SPEND BOTTOM SHEET ---
+  // --- LOG TRANSACTION BOTTOM SHEET ---
   void _showTransactionSheet(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final amountController = TextEditingController();
     final noteController = TextEditingController();
+    String selectedType = 'expense';
     int? selectedAccountId = _accounts.isNotEmpty ? _accounts.first.id : null;
     int? selectedCategoryId = _categories.isNotEmpty
         ? _categories.first.id
@@ -965,36 +966,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Log New Expense',
+                      'Log Transaction',
                       style: AppTypography.headlineMedium.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Amount input
-                    CustomInputField(
-                      controller: amountController,
-                      label: 'Amount',
-                      prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      autofocus: true,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Category Selector
+                    // Transaction Type Selector
                     Text(
-                      'Category',
+                      'Type',
                       style: AppTypography.labelMedium.copyWith(
                         color: isDark ? AppColors.gray300 : AppColors.gray700,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedCategoryId,
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedType,
                       dropdownColor: isDark
                           ? AppColors.darkSurfaceElevated
                           : AppColors.white,
@@ -1016,29 +1005,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           vertical: AppSpacing.md,
                         ),
                       ),
-                      items: _categories
-                          .map(
-                            (cat) => DropdownMenuItem(
-                              value: cat.id,
-                              child: Row(
-                                children: [
-                                  CategoryBadge(
-                                    label: cat.name,
-                                    showIcon: true,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setStateSheet(() => selectedCategoryId = val),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'expense',
+                          child: Text('Expense'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'income',
+                          child: Text('Income'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setStateSheet(() => selectedType = val);
+                        }
+                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
 
+                    // Amount input
+                    CustomInputField(
+                      controller: amountController,
+                      label: 'Amount',
+                      prefixText: '₹ ',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Category Selector (expense only)
+                    if (selectedType == 'expense') ...[
+                      Text(
+                        'Category',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: isDark ? AppColors.gray300 : AppColors.gray700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      DropdownButtonFormField<int>(
+                        initialValue: selectedCategoryId,
+                        dropdownColor: isDark
+                            ? AppColors.darkSurfaceElevated
+                            : AppColors.white,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.gray50,
+                          border: OutlineInputBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                            borderSide: BorderSide(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.gray300,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.md,
+                          ),
+                        ),
+                        items: _categories
+                            .map(
+                              (cat) => DropdownMenuItem(
+                                value: cat.id,
+                                child: Row(
+                                  children: [
+                                    CategoryBadge(
+                                      label: cat.name,
+                                      showIcon: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) =>
+                            setStateSheet(() => selectedCategoryId = val),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
                     // Account Selector
                     Text(
-                      'From Account',
+                      selectedType == 'income' ? 'To Account' : 'From Account',
                       style: AppTypography.labelMedium.copyWith(
                         color: isDark ? AppColors.gray300 : AppColors.gray700,
                         fontWeight: FontWeight.w600,
@@ -1145,27 +1198,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (amountController.text.isEmpty ||
-                              selectedAccountId == null ||
-                              selectedCategoryId == null) {
+                              selectedAccountId == null) {
                             return;
                           }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) return;
 
-                          await DatabaseHelper.instance.insertTransaction(
-                            TransactionModel(
-                              accountId: selectedAccountId!,
-                              categoryId: selectedCategoryId!,
-                              amount: amount,
-                              date: _selectedDate.toIso8601String(),
-                              note: noteController.text.trim(),
-                            ),
-                          );
-                          await DatabaseHelper.instance.subtractFromAccount(
-                            selectedAccountId!,
-                            amount,
-                          );
+                          if (selectedType == 'income') {
+                            await DatabaseHelper.instance
+                                .createIncomeTransaction(
+                                  accountId: selectedAccountId!,
+                                  amount: amount,
+                                  date: _selectedDate.toIso8601String(),
+                                  note: noteController.text.trim(),
+                                );
+                          } else {
+                            if (selectedCategoryId == null) return;
+                            await DatabaseHelper.instance.insertTransaction(
+                              TransactionModel(
+                                accountId: selectedAccountId!,
+                                categoryId: selectedCategoryId!,
+                                amount: amount,
+                                date: _selectedDate.toIso8601String(),
+                                note: noteController.text.trim(),
+                              ),
+                            );
+                            await DatabaseHelper.instance.subtractFromAccount(
+                              selectedAccountId!,
+                              amount,
+                            );
+                          }
 
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
@@ -1179,8 +1242,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             borderRadius: AppBorderRadius.mediumBorder,
                           ),
                         ),
-                        child: const Text(
-                          'Save Expense',
+                        child: Text(
+                          selectedType == 'income'
+                              ? 'Save Income'
+                              : 'Save Expense',
                           style: AppTypography.labelLarge,
                         ),
                       ),
