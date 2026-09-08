@@ -31,7 +31,7 @@ MVP Core               Extended MVP              1.0 Release
 
 | Issue # | Title | Scope | Effort | Status |
 |---------|-------|-------|--------|--------|
-| NEW-001 | Schema v2: Add transaction type field | Add `type` field to transactions; add `destination_account_id`, `plan_id` | 1 day | ✅ DONE |
+| NEW-001 | Schema v2: Add transaction type field | Add `type` field to transactions; add `destination_account_id`, `goal_id` | 1 day | ✅ DONE |
 | NEW-002 | Schema v2: Make category budgets optional | Change `monthly_budget` to nullable | 0.5 day | ✅ DONE |
 | NEW-003 | Implement v1→v2 database migration | Auto-migration for existing users | 1 day | ✅ DONE |
 | NEW-004 | Update TransactionModel with 6 types | Dart model + toMap/fromMap | 0.5 day | ✅ DONE |
@@ -48,7 +48,7 @@ MVP Core               Extended MVP              1.0 Release
 | Issue # | Title | Scope | Effort | Status |
 |---------|-------|-------|--------|--------|
 | NEW-006 | Add DB helpers for 6 transaction types | createExpenseTransaction(), createIncomeTransaction(), etc. | 2 days | 🔴 NOT STARTED |
-| NEW-007 | Implement transaction history with type filtering | Query joins transactions + accounts + categories + plans | 1 day | 🔴 NOT STARTED |
+| NEW-007 | Implement transaction history with type filtering | Query joins transactions + accounts + categories + goals | 1 day | 🔴 NOT STARTED |
 | NEW-008 | Add budget monthly spend calculator | Query: sum(transactions) by category for current month | 0.5 day | 🔴 NOT STARTED |
 | NEW-009 | Implement usable balance calculation | Formula: accounts - locked - reserved | 1 day | 🔴 NOT STARTED |
 
@@ -116,7 +116,7 @@ MVP Core               Extended MVP              1.0 Release
 |---------|-------|-------|--------|--------|
 | NEW-017 | Implement income transaction flow | Create screen, DB helper, validation | 1.5 days | 🔴 NOT STARTED |
 | NEW-018 | Implement transfer transaction flow | Create screen, dual-account update, DB helper | 2 days | 🔴 NOT STARTED |
-| NEW-019 | Implement goal lock transaction flow | Create screen, plan selection, locked_allocations + transactions | 1.5 days | 🔴 NOT STARTED |
+| NEW-019 | Implement goal lock transaction flow | Create screen, goal selection, locked_allocations + transactions | 1.5 days | 🔴 NOT STARTED |
 | NEW-020 | Implement goal unlock transaction flow | Modal/screen for releasing locked money | 1 day | 🔴 NOT STARTED |
 | NEW-021 | Implement goal payment transaction flow | Mark goal as complete, archive | 1 day | 🔴 NOT STARTED |
 | NEW-022 | Update transaction history to show all types | Display type badges; show accounts for transfers | 1.5 days | 🔴 NOT STARTED |
@@ -132,7 +132,7 @@ MVP Core               Extended MVP              1.0 Release
 | Issue # | Title | Scope | Effort | Status |
 |---------|-------|-------|--------|--------|
 | #10 (Part A) | Calculate monthly contribution recommendation | Formula: (target - current) / months_left | 0.5 day | 🔴 NOT STARTED |
-| #10 (Part B) | Display recommendation in goal details | Show on planner screen | 0.5 day | 🔴 NOT STARTED |
+| #10 (Part B) | Display recommendation in goal details | Show on goals screen | 0.5 day | 🔴 NOT STARTED |
 | #10 (Part C) | Show goal contribution history | List of goal_lock transactions for this goal | 1 day | 🔴 NOT STARTED |
 | NEW-023 | Allow editing goal allocations | Modify locked amounts, unwind locks | 1.5 days | 🔴 NOT STARTED |
 | NEW-024 | Settings: Configure salary date | For contribution recommendation accuracy | 0.5 day | 🔴 NOT STARTED |
@@ -151,7 +151,7 @@ MVP Core               Extended MVP              1.0 Release
 | #8 (Part B) | Enable transaction delete | Delete transaction; refund to account | 0.5 day | 🔴 NOT STARTED |
 | #8 (Part C) | Add period filtering (month/year) | Filter UI; query by date range | 1 day | 🔴 NOT STARTED |
 | NEW-025 | Show totals per filtered period | Sum of all transactions in selected period | 0.5 day | 🔴 NOT STARTED |
-| #6 | Show goal locks in transaction history | goal_lock txs appear with plan details | 1 day | 🔴 NOT STARTED |
+| #6 | Show goal locks in transaction history | goal_lock txs appear with goal details | 1 day | 🔴 NOT STARTED |
 
 **Deliverable:** Full transaction ledger accessible; editable/deletable
 

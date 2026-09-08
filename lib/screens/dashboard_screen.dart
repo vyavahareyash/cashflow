@@ -229,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'After planned sinking funds & reserved budgets',
+            'After goal sinking funds & reserved budgets',
             style: AppTypography.labelSmall.copyWith(
               color: Colors.white.withValues(alpha: 0.75),
             ),

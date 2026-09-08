@@ -14,7 +14,7 @@ Cashflow will distinguish 6 transaction types:
 1. Expense     → Spending from a category; reduces account balance
 2. Income      → Money added to account; increases balance
 3. Transfer    → Move money between accounts (neutral total)
-4. Goal Lock   → Reserve money from account for a planned spend
+4. Goal Lock   → Reserve money from account for a goal
 5. Goal Unlock → Release reserved money back to usable balance
 6. Goal Payment → Mark a locked goal as paid/complete (move to history)
 ```
@@ -93,7 +93,7 @@ erDiagram
         int account_id FK
         int destination_account_id FK "nullable"
         int category_id FK "nullable"
-        int plan_id FK "nullable"
+        int goal_id FK "nullable"
         double amount
         string date
         string note
@@ -108,7 +108,7 @@ erDiagram
     }
     locked_allocations {
         int id PK
-        int plan_id FK
+        int goal_id FK
         int account_id FK
         double amount
     }
@@ -126,7 +126,7 @@ transactions (
   account_id, 
   destination_account_id,  -- NEW (for transfers)
   category_id,             -- NOW NULLABLE (not all txs have categories)
-  plan_id,                 -- NEW (for goal txs)
+  goal_id,                 -- NEW (for goal txs)
   amount, 
   date, 
   note, 
@@ -135,7 +135,7 @@ transactions (
 
 goals (id, name, total_target, target_date, current_saved)
 
-locked_allocations (id, plan_id, account_id, amount)
+locked_allocations (id, goal_id, account_id, amount)
 ```
 
 ---

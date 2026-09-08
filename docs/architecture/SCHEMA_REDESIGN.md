@@ -123,8 +123,8 @@ Future<void> _migrateV1toV2(Database db) async {
   // 2. Add destination_account_id for transfers
   await db.execute('ALTER TABLE transactions ADD COLUMN destination_account_id INTEGER DEFAULT NULL');
   
-  // 3. Add plan_id for goal transactions
-  await db.execute('ALTER TABLE transactions ADD COLUMN plan_id INTEGER DEFAULT NULL');
+  // 3. Add goal_id for goal transactions
+  await db.execute('ALTER TABLE transactions ADD COLUMN goal_id INTEGER DEFAULT NULL');
   
   // 4. Make category budget nullable (create new table, copy, drop old, rename)
   await db.execute('''
@@ -156,7 +156,7 @@ class TransactionModel {
   final int accountId;                    // Source account
   final int? destinationAccountId;        // For 'transfer' type
   final int? categoryId;                  // For 'expense' type only
-  final int? planId;                      // For goal lock/unlock types
+  final int? goalId;                      // For goal lock/unlock types
   final double amount;
   final String date;
   final String note;
@@ -167,7 +167,7 @@ class TransactionModel {
     required this.accountId,
     this.destinationAccountId,
     this.categoryId,
-    this.planId,
+    this.goalId,
     required this.amount,
     required this.date,
     required this.note,
@@ -180,7 +180,7 @@ class TransactionModel {
       accountId: map['account_id'],
       destinationAccountId: map['destination_account_id'],
       categoryId: map['category_id'],
-      planId: map['plan_id'],
+      goalId: map['goal_id'],
       amount: map['amount'],
       date: map['date'],
       note: map['note'],
@@ -193,7 +193,7 @@ class TransactionModel {
       'account_id': accountId,
       'destination_account_id': destinationAccountId,
       'category_id': categoryId,
-      'plan_id': planId,
+      'goal_id': goalId,
       'amount': amount,
       'date': date,
       'note': note,
@@ -251,7 +251,7 @@ transactions (
   account_id,                    -- Source account (FK)
   destination_account_id,        -- For transfers only (FK, nullable)
   category_id,                   -- For expenses only (FK, nullable)
-  plan_id,                       -- For goal locks (FK, nullable)
+  goal_id,                       -- For goal locks (FK, nullable)
   amount,
   date,
   note,

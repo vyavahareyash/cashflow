@@ -20,19 +20,19 @@ The app differentiates between money actually held and money allocated for speci
 - **Logical Balance (Reserved)**: Funds allocated to `categories` for the current month's budget.
 
 **Usable Balance Formula**:
-`Usable Balance = (Sum of all Accounts) - (Total Locked for Plans) - (Total Reserved for Monthly Budgets)`
+`Usable Balance = (Sum of all Accounts) - (Total Locked for Goals) - (Total Reserved for Monthly Budgets)`
 
 ### Project Structure
-- `lib/models/`: Data structures for Accounts, Categories, Transactions, Plans, and Locked Allocations.
+- `lib/models/`: Data structures for Accounts, Categories, Transactions, Goals, and Locked Allocations.
 - `lib/services/`: Contains `database_helper.dart` for SQLite (sqflite) SQLite CRUD operations.
-- `lib/screens/`: UI layer (Dashboard, Budget, Planner, Accounts, History).
+- `lib/screens/`: UI layer (Dashboard, Budget, Goals, Accounts, History).
 
 ### Data Schema (SQLite)
 - `accounts`: Tracks physical fund locations.
 - `categories`: Defines monthly budget targets.
 - `transactions`: Logs spending/income linked to accounts and categories.
 - `goals`: Future financial goals/obligations.
-- `locked_allocations`: Bridge table linking a `plan_id` to an `account_id` to track where "locked" money is physically stored.
+- `locked_allocations`: Bridge table linking a `goal_id` to an `account_id` to track where "locked" money is physically stored.
 
 ## Key Conventions
 
