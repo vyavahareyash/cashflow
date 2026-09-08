@@ -13,7 +13,7 @@ import 'package:cashflow/services/backup_codec.dart';
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/transaction_model.dart';
-import 'package:cashflow/models/plan_model.dart';
+import 'package:cashflow/models/goal_model.dart';
 import 'package:cashflow/models/locked_allocation_model.dart';
 
 class DatabaseHelper {
@@ -41,7 +41,7 @@ class DatabaseHelper {
       final db = await database;
       await db.transaction((txn) async {
         await txn.delete('locked_allocations');
-        await txn.delete('planned_spends');
+        await txn.delete('goals');
         await txn.delete('transactions');
         await txn.delete('categories');
         await txn.delete('accounts');
@@ -63,12 +63,146 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: _createDB,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _migrateV1toV2(db);
+        }
+      },
     );
+  }
+
+  Future<void> _migrateV1toV2(Database db) async {
+    final plannedSpendsExists = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'goals'",
+    );
+    if (plannedSpendsExists.isEmpty) {
+      await db.execute('''
+        CREATE TABLE goals (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          total_target REAL NOT NULL,
+          target_date TEXT NOT NULL,
+          current_saved REAL NOT NULL
+        )
+      ''');
+    }
+
+    final legacyTransactions = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'transactions'",
+    );
+
+    if (legacyTransactions.isNotEmpty) {
+      await db.execute('''
+        CREATE TABLE transactions_migration (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          account_id INTEGER NOT NULL,
+          destination_account_id INTEGER DEFAULT NULL,
+          category_id INTEGER DEFAULT NULL,
+          plan_id INTEGER DEFAULT NULL,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT,
+          type TEXT DEFAULT 'expense'
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO transactions_migration (
+          id,
+          account_id,
+          destination_account_id,
+          category_id,
+          plan_id,
+          amount,
+          date,
+          note,
+          type
+        )
+        SELECT
+          id,
+          account_id,
+          NULL,
+          category_id,
+          NULL,
+          amount,
+          date,
+          note,
+          'expense'
+        FROM transactions
+      ''');
+      await db.execute('DROP TABLE transactions');
+    }
+
+    final legacyCategories = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'categories'",
+    );
+
+    if (legacyCategories.isNotEmpty) {
+      await db.execute('''
+        CREATE TABLE categories_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          monthly_budget REAL DEFAULT NULL
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO categories_new (id, name, monthly_budget)
+        SELECT id, name, monthly_budget
+        FROM categories
+      ''');
+      await db.execute('DROP TABLE categories');
+      await db.execute('ALTER TABLE categories_new RENAME TO categories');
+    }
+
+    if (legacyTransactions.isNotEmpty) {
+      await db.execute('''
+        CREATE TABLE transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          account_id INTEGER NOT NULL,
+          destination_account_id INTEGER DEFAULT NULL,
+          category_id INTEGER DEFAULT NULL,
+          plan_id INTEGER DEFAULT NULL,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT,
+          type TEXT NOT NULL DEFAULT 'expense'
+            CHECK (type IN ('expense', 'income', 'transfer', 'goal_lock', 'goal_unlock', 'goal_payment')),
+          FOREIGN KEY (account_id) REFERENCES accounts (id),
+          FOREIGN KEY (destination_account_id) REFERENCES accounts (id),
+          FOREIGN KEY (category_id) REFERENCES categories (id),
+          FOREIGN KEY (plan_id) REFERENCES goals (id)
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO transactions (
+          id,
+          account_id,
+          destination_account_id,
+          category_id,
+          plan_id,
+          amount,
+          date,
+          note,
+          type
+        )
+        SELECT
+          id,
+          account_id,
+          destination_account_id,
+          category_id,
+          plan_id,
+          amount,
+          date,
+          note,
+          type
+        FROM transactions_migration
+      ''');
+      await db.execute('DROP TABLE transactions_migration');
+    }
   }
 
   // --- CREATE TABLES ---
@@ -88,7 +222,7 @@ class DatabaseHelper {
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        monthly_budget REAL NOT NULL
+        monthly_budget REAL DEFAULT NULL
       )
     ''');
 
@@ -97,18 +231,24 @@ class DatabaseHelper {
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER NOT NULL,
-        category_id INTEGER NOT NULL,
+        destination_account_id INTEGER DEFAULT NULL,
+        category_id INTEGER DEFAULT NULL,
+        plan_id INTEGER DEFAULT NULL,
         amount REAL NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
+        type TEXT NOT NULL DEFAULT 'expense'
+          CHECK (type IN ('expense', 'income', 'transfer', 'goal_lock', 'goal_unlock', 'goal_payment')),
         FOREIGN KEY (account_id) REFERENCES accounts (id),
-        FOREIGN KEY (category_id) REFERENCES categories (id)
+        FOREIGN KEY (destination_account_id) REFERENCES accounts (id),
+        FOREIGN KEY (category_id) REFERENCES categories (id),
+        FOREIGN KEY (plan_id) REFERENCES goals (id)
       )
     ''');
 
-    // 4. Planned Spends Table
+    // 4. Goals Table
     await db.execute('''
-      CREATE TABLE planned_spends (
+      CREATE TABLE goals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         total_target REAL NOT NULL,
@@ -124,7 +264,7 @@ class DatabaseHelper {
         plan_id INTEGER NOT NULL,
         account_id INTEGER NOT NULL,
         amount REAL NOT NULL,
-        FOREIGN KEY (plan_id) REFERENCES planned_spends (id),
+        FOREIGN KEY (plan_id) REFERENCES goals (id),
         FOREIGN KEY (account_id) REFERENCES accounts (id)
       )
     ''');
@@ -505,7 +645,7 @@ class DatabaseHelper {
   // --- PLANNER OPERATIONS ---
   Future<int> createPlan(Plan plan) async {
     final db = await instance.database;
-    final id = await db.insert('planned_spends', plan.toMap());
+    final id = await db.insert('goals', plan.toMap());
     notifyDataChanged();
     return id;
   }
@@ -513,7 +653,7 @@ class DatabaseHelper {
   Future<int> updatePlan(Plan plan) async {
     final db = await instance.database;
     final res = await db.update(
-      'planned_spends',
+      'goals',
       plan.toMap(),
       where: 'id = ?',
       whereArgs: [plan.id],
@@ -556,7 +696,7 @@ class DatabaseHelper {
       }
 
       // 3. Delete the plan itself
-      await txn.delete('planned_spends', where: 'id = ?', whereArgs: [planId]);
+      await txn.delete('goals', where: 'id = ?', whereArgs: [planId]);
 
       // 4. Delete all associated locked allocations
       await txn.delete(
@@ -568,15 +708,15 @@ class DatabaseHelper {
     notifyDataChanged();
   }
 
-  Future<List<Plan>> readAllPlans() async {
+  Future<List<Goal>> readAllGoals() async {
     final db = await instance.database;
-    final result = await db.query('planned_spends');
-    return result.map((json) => Plan.fromMap(json)).toList();
+    final result = await db.query('goals');
+    return result.map((json) => Goal.fromMap(json)).toList();
   }
 
   // Lock funds: This does TWO things:
   // 1. Adds a record to locked_allocations
-  // 2. Updates the current_saved amount in planned_spends
+  // 2. Updates the current_saved amount in goals
   Future<void> lockFunds(int planId, int accountId, double amount) async {
     final db = await instance.database;
 
@@ -589,14 +729,14 @@ class DatabaseHelper {
 
     // 2. Update the plan's total saved amount
     List<Map> planResult = await db.query(
-      'planned_spends',
+      'goals',
       where: 'id = ?',
       whereArgs: [planId],
     );
     double currentSaved = planResult.first['current_saved'];
 
     await db.update(
-      'planned_spends',
+      'goals',
       {'current_saved': currentSaved + amount},
       where: 'id = ?',
       whereArgs: [planId],
@@ -621,7 +761,7 @@ class DatabaseHelper {
       '''
       SELECT la.*, ps.name as plan_name 
       FROM locked_allocations la 
-      JOIN planned_spends ps ON la.plan_id = ps.id 
+      JOIN goals ps ON la.plan_id = ps.id 
       WHERE la.account_id = ?
     ''',
       [accountId],
@@ -695,9 +835,9 @@ class DatabaseHelper {
         );
       }
 
-      // 3. Update planned_spends total saved
+      // 3. Update goals total saved
       List<Map> planRes = await txn.query(
-        'planned_spends',
+        'goals',
         where: 'id = ?',
         whereArgs: [planId],
       );
@@ -708,13 +848,13 @@ class DatabaseHelper {
       if (newSaved <= 0) {
         // Plan is fully paid/consumed, delete it
         await txn.delete(
-          'planned_spends',
+          'goals',
           where: 'id = ?',
           whereArgs: [planId],
         );
       } else {
         await txn.update(
-          'planned_spends',
+          'goals',
           {'current_saved': newSaved},
           where: 'id = ?',
           whereArgs: [planId],
@@ -736,7 +876,7 @@ class DatabaseHelper {
   // --- CORE CALCULATION LOGIC ---
 
   /// Calculates the "Usable Balance" based on the formula:
-  /// Usable Balance = (Sum of all Accounts) - (Total Locked for Plans) - (Total Reserved for Monthly Budgets)
+  /// Usable Balance = (Sum of all Accounts) - (Total Locked for Goals) - (Total Reserved for Monthly Budgets)
   Future<double> calculateUsableBalance() async {
     final db = await instance.database;
 
@@ -794,7 +934,7 @@ class DatabaseHelper {
       final accounts = await db.query('accounts');
       final categories = await db.query('categories');
       final transactions = await db.query('transactions');
-      final plannedSpends = await db.query('planned_spends');
+      final plannedSpends = await db.query('goals');
       final lockedAllocations = await db.query('locked_allocations');
 
       final jsonString = BackupCodec.encode(
@@ -829,7 +969,7 @@ class DatabaseHelper {
 
       await db.transaction((txn) async {
         await txn.delete('locked_allocations');
-        await txn.delete('planned_spends');
+        await txn.delete('goals');
         await txn.delete('transactions');
         await txn.delete('categories');
         await txn.delete('accounts');
@@ -846,8 +986,8 @@ class DatabaseHelper {
           await txn.insert('transactions', transaction);
         }
         for (final plan
-            in data['planned_spends'] as List<Map<String, dynamic>>) {
-          await txn.insert('planned_spends', plan);
+            in data['goals'] as List<Map<String, dynamic>>) {
+          await txn.insert('goals', plan);
         }
         for (final lock
             in data['locked_allocations'] as List<Map<String, dynamic>>) {

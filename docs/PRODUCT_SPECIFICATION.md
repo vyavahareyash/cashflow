@@ -68,6 +68,52 @@ All critical features for a complete, user-ready app:
 
 ## 📊 Data Schema (Refined)
 
+```mermaid
+erDiagram
+    accounts ||--o{ transactions : "source"
+    accounts ||--o{ transactions : "destination"
+    categories ||--o{ transactions : "categorizes"
+    planned_spends ||--o{ transactions : "linked to"
+    planned_spends ||--o{ locked_allocations : "has"
+    accounts ||--o{ locked_allocations : "holds"
+
+    accounts {
+        int id PK
+        string name
+        double balance
+        string type
+    }
+    categories {
+        int id PK
+        string name
+        double monthly_budget "nullable"
+    }
+    transactions {
+        int id PK
+        int account_id FK
+        int destination_account_id FK "nullable"
+        int category_id FK "nullable"
+        int plan_id FK "nullable"
+        double amount
+        string date
+        string note
+        string type "expense|income|transfer|goal_lock|goal_unlock|goal_payment"
+    }
+    planned_spends {
+        int id PK
+        string name
+        double total_target
+        string target_date
+        double current_saved
+    }
+    locked_allocations {
+        int id PK
+        int plan_id FK
+        int account_id FK
+        double amount
+    }
+```
+
 ### Core Tables (UPDATED for v2)
 ```sql
 accounts (id, name, balance, type)

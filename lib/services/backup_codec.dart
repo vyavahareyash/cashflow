@@ -7,7 +7,7 @@ class BackupCodec {
     'accounts',
     'categories',
     'transactions',
-    'planned_spends',
+    'goals',
     'locked_allocations',
   ];
 
@@ -25,7 +25,7 @@ class BackupCodec {
       'accounts': accounts,
       'categories': categories,
       'transactions': transactions,
-      'planned_spends': plannedSpends,
+      'goals': goals,
       'locked_allocations': lockedAllocations,
     });
   }

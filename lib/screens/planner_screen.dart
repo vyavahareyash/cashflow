@@ -16,7 +16,7 @@ class PlannerScreen extends StatefulWidget {
 }
 
 class _PlannerScreenState extends State<PlannerScreen> {
-  List<Plan> _plans = [];
+  List<Goal> _goals = [];
   double _totalLocked = 0.0;
   double _totalTarget = 0.0;
   bool _isLoading = true;
@@ -44,7 +44,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     if (_plans.isEmpty) {
       setState(() => _isLoading = true);
     }
-    final plans = await DatabaseHelper.instance.readAllPlans();
+    final goals = await DatabaseHelper.instance.readAllGoals();
     final locked = await DatabaseHelper.instance.getTotalLockedAmount();
 
     double totalTarget = 0.0;
@@ -62,7 +62,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     }
   }
 
-  void _showAddPlanDialog() {
+  void _showAddGoalDialog() {
     final nameController = TextEditingController();
     final targetController = TextEditingController();
     DateTime targetDate = DateTime.now().add(const Duration(days: 90));
@@ -177,7 +177,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 width: 120,
                 onPressed: () async {
                   if (formKey.currentState!.validate()) {
-                    await DatabaseHelper.instance.createPlan(
+                    await DatabaseHelper.instance.createGoal(
                       Plan(
                         name: nameController.text.trim(),
                         totalTarget:
@@ -201,7 +201,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  void _showEditPlanDialog(Plan plan) {
+  void _showEditGoalDialog(Goal goal) {
     final nameController = TextEditingController(text: plan.name);
     final targetController = TextEditingController(
       text: plan.totalTarget.toStringAsFixed(0),
@@ -262,7 +262,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () => _confirmDeletePlan(plan),
+                onPressed: () => _confirmDeleteGoal(goal),
                 child: const Text(
                   'Delete',
                   style: TextStyle(
@@ -280,7 +280,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 width: 100,
                 onPressed: () async {
                   if (formKey.currentState!.validate()) {
-                    await DatabaseHelper.instance.updatePlan(
+                    await DatabaseHelper.instance.updateGoal(
                       Plan(
                         id: plan.id,
                         name: nameController.text.trim(),
@@ -305,7 +305,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  void _confirmDeletePlan(Plan plan) {
+  void _confirmDeleteGoal(Goal goal) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -320,7 +320,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
           ),
           TextButton(
             onPressed: () async {
-              await DatabaseHelper.instance.deletePlan(plan.id!);
+              await DatabaseHelper.instance.deleteGoal(goal.id!);
               if (ctx.mounted) {
                 Navigator.pop(ctx);
               }
@@ -339,9 +339,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  void _showContributionLog(Plan plan) async {
+  void _showContributionLog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final contributions = await DatabaseHelper.instance.getPlanContributions(
+    final contributions = await DatabaseHelper.instance.getGoalContributions(
       plan.id!,
     );
 
@@ -446,7 +446,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  void _showContributionDialog(Plan plan) async {
+  void _showContributionDialog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accounts = await DatabaseHelper.instance.readAllAccounts();
     final amountController = TextEditingController();
@@ -607,7 +607,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  void _showPaymentDialog(Plan plan) async {
+  void _showPaymentDialog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accounts = await DatabaseHelper.instance.readAllAccounts();
     final amountController = TextEditingController(
@@ -870,14 +870,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       ),
                     )
                   else
-                    ..._plans.map((plan) => _buildPlanCard(plan, isDark)),
+                    ..._goals.map((goal) => _buildGoalCard(goal, isDark)),
 
                   const SizedBox(height: AppSpacing.huge),
                 ],
               ),
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddPlanDialog,
+        onPressed: _showAddGoalDialog,
         backgroundColor: AppColors.emerald700,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
@@ -989,7 +989,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     );
   }
 
-  Widget _buildPlanCard(Plan plan, bool isDark) {
+  Widget _buildGoalCard(Goal goal, bool isDark) {
     final progress = plan.totalTarget > 0
         ? (plan.currentSaved / plan.totalTarget)
         : 0.0;
@@ -1062,8 +1062,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   size: 18,
                   color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
-                tooltip: 'Edit Plan',
-                onPressed: () => _showEditPlanDialog(plan),
+                tooltip: 'Edit Goal',
+                onPressed: () => _showEditGoalDialog(goal),
               ),
             ],
           ),

@@ -1,15 +1,17 @@
 class Category {
   final int? id;
   final String name;
-  final double monthlyBudget;
+  final double? monthlyBudget;
 
-  Category({this.id, required this.name, required this.monthlyBudget});
+  Category({this.id, required this.name, this.monthlyBudget});
 
   factory Category.fromMap(Map<String, dynamic> map) {
     return Category(
       id: map['id'],
       name: map['name'],
-      monthlyBudget: map['monthly_budget'],
+      monthlyBudget: map['monthly_budget'] == null
+          ? null
+          : (map['monthly_budget'] as num).toDouble(),
     );
   }
 

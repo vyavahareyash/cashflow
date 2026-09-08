@@ -31,11 +31,11 @@ MVP Core               Extended MVP              1.0 Release
 
 | Issue # | Title | Scope | Effort | Status |
 |---------|-------|-------|--------|--------|
-| NEW-001 | Schema v2: Add transaction type field | Add `type` field to transactions; add `destination_account_id`, `plan_id` | 1 day | 🔴 NOT STARTED |
-| NEW-002 | Schema v2: Make category budgets optional | Change `monthly_budget` to nullable | 0.5 day | 🔴 NOT STARTED |
-| NEW-003 | Implement v1→v2 database migration | Auto-migration for existing users | 1 day | 🔴 NOT STARTED |
-| NEW-004 | Update TransactionModel with 6 types | Dart model + toMap/fromMap | 0.5 day | 🔴 NOT STARTED |
-| NEW-005 | Update Category model (optional budget) | Dart model + nullable monthlyBudget | 0.5 day | 🔴 NOT STARTED |
+| NEW-001 | Schema v2: Add transaction type field | Add `type` field to transactions; add `destination_account_id`, `plan_id` | 1 day | ✅ DONE |
+| NEW-002 | Schema v2: Make category budgets optional | Change `monthly_budget` to nullable | 0.5 day | ✅ DONE |
+| NEW-003 | Implement v1→v2 database migration | Auto-migration for existing users | 1 day | ✅ DONE |
+| NEW-004 | Update TransactionModel with 6 types | Dart model + toMap/fromMap | 0.5 day | ✅ DONE |
+| NEW-005 | Update Category model (optional budget) | Dart model + nullable monthlyBudget | 0.5 day | ✅ DONE |
 
 **Deliverable:** Database v2, models ready, migrations tested
 

@@ -19,7 +19,7 @@ class LockedAllocation {
       planId: map['plan_id'],
       accountId: map['account_id'],
       amount: map['amount'],
-      planName: map['plan_name'] ?? 'Unknown Plan',
+      goalName: map['plan_name'] ?? 'Unknown Goal',
     );
   }
 }

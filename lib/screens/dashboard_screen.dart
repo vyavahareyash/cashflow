@@ -22,7 +22,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Account> _accounts = [];
-  List<Plan> _plans = [];
+  List<Goal> _goals = [];
   List<Category> _categories = [];
   List<Map<String, dynamic>> _recentTransactions = [];
 
@@ -64,7 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final accountsData = await db.readAllAccounts();
     final locked = await db.getTotalLockedAmount();
     final usable = await db.calculateUsableBalance();
-    final plansData = await db.readAllPlans();
+    final goalsData = await db.readAllGoals();
     final categoriesData = await db.readAllCategories();
     final transactionsData = await db.getTransactionHistory();
 
@@ -357,7 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isDark: isDark,
             onTap: () {
               if (widget.onNavigateTab != null) {
-                widget.onNavigateTab!(2); // Navigate to Plans
+                widget.onNavigateTab!(2); // Navigate to Goals
               }
             },
           ),

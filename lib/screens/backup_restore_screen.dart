@@ -31,7 +31,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final db = DatabaseHelper.instance;
       final accounts = await db.readAllAccounts();
       final categories = await db.readAllCategories();
-      final plans = await db.readAllPlans();
+      final goals = await db.readAllGoals();
       final transactions = await db.getTransactionHistory();
 
       if (mounted) {

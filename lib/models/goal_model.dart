@@ -1,11 +1,11 @@
-class Plan {
+class Goal {
   final int? id;
   final String name;
   final double totalTarget;
   final String targetDate;
   final double currentSaved;
 
-  Plan({
+  Goal({
     this.id,
     required this.name,
     required this.totalTarget,
@@ -13,8 +13,8 @@ class Plan {
     required this.currentSaved,
   });
 
-  factory Plan.fromMap(Map<String, dynamic> map) {
-    return Plan(
+  factory Goal.fromMap(Map<String, dynamic> map) {
+    return Goal(
       id: map['id'],
       name: map['name'],
       totalTarget: map['total_target'],
