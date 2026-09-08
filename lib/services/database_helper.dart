@@ -427,6 +427,303 @@ class DatabaseHelper {
     return id;
   }
 
+  Future<int> createExpenseTransaction({
+    required int accountId,
+    required int categoryId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    return _createTransaction(
+      accountId: accountId,
+      categoryId: categoryId,
+      amount: amount,
+      date: date,
+      note: note,
+      type: 'expense',
+      updateAccount: -amount,
+    );
+  }
+
+  Future<int> createIncomeTransaction({
+    required int accountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    return _createTransaction(
+      accountId: accountId,
+      amount: amount,
+      date: date,
+      note: note,
+      type: 'income',
+      updateAccount: amount,
+    );
+  }
+
+  Future<int> createTransferTransaction({
+    required int sourceAccountId,
+    required int destinationAccountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    _validateAmount(amount);
+    if (sourceAccountId == destinationAccountId) {
+      throw ArgumentError('Transfer accounts must be different');
+    }
+
+    final db = await instance.database;
+    final id = await db.transaction((txn) async {
+      await _requireAccount(txn, sourceAccountId);
+      await _requireAccount(txn, destinationAccountId);
+      await _adjustAccountBalance(txn, sourceAccountId, -amount);
+      await _adjustAccountBalance(txn, destinationAccountId, amount);
+      return txn.insert('transactions', {
+        'account_id': sourceAccountId,
+        'destination_account_id': destinationAccountId,
+        'category_id': null,
+        'goal_id': null,
+        'amount': amount,
+        'date': date,
+        'note': note,
+        'type': 'transfer',
+      });
+    });
+    notifyDataChanged();
+    return id;
+  }
+
+  Future<int> createGoalLockTransaction({
+    required int goalId,
+    required int accountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+    final id = await db.transaction((txn) async {
+      await _requireAccount(txn, accountId);
+      await _requireGoal(txn, goalId);
+      await txn.insert('locked_allocations', {
+        'goal_id': goalId,
+        'account_id': accountId,
+        'amount': amount,
+      });
+      await txn.rawUpdate(
+        'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+        [amount, goalId],
+      );
+      return txn.insert('transactions', {
+        'account_id': accountId,
+        'destination_account_id': null,
+        'category_id': null,
+        'goal_id': goalId,
+        'amount': amount,
+        'date': date,
+        'note': note,
+        'type': 'goal_lock',
+      });
+    });
+    notifyDataChanged();
+    return id;
+  }
+
+  Future<int> createGoalUnlockTransaction({
+    required int goalId,
+    required int accountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+    final id = await db.transaction((txn) async {
+      await _requireAccount(txn, accountId);
+      await _requireGoal(txn, goalId);
+      final lock = await _requireLockedAllocation(txn, goalId, accountId);
+      final lockedAmount = (lock['amount'] as num).toDouble();
+      if (lockedAmount < amount) {
+        throw StateError('Insufficient locked funds');
+      }
+      await _reduceLockedAllocation(txn, lock, amount);
+      await txn.rawUpdate(
+        'UPDATE goals SET current_saved = current_saved - ? WHERE id = ?',
+        [amount, goalId],
+      );
+      return txn.insert('transactions', {
+        'account_id': accountId,
+        'destination_account_id': null,
+        'category_id': null,
+        'goal_id': goalId,
+        'amount': amount,
+        'date': date,
+        'note': note,
+        'type': 'goal_unlock',
+      });
+    });
+    notifyDataChanged();
+    return id;
+  }
+
+  Future<int> createGoalPaymentTransaction({
+    required int goalId,
+    required int accountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+    final id = await db.transaction((txn) async {
+      await _requireAccount(txn, accountId);
+      await _requireGoal(txn, goalId);
+      final lock = await _requireLockedAllocation(txn, goalId, accountId);
+      final lockedAmount = (lock['amount'] as num).toDouble();
+      if (lockedAmount < amount) {
+        throw StateError('Insufficient locked funds');
+      }
+      await _adjustAccountBalance(txn, accountId, -amount);
+      await _reduceLockedAllocation(txn, lock, amount);
+      await txn.rawUpdate(
+        'UPDATE goals SET current_saved = current_saved - ? WHERE id = ?',
+        [amount, goalId],
+      );
+      return txn.insert('transactions', {
+        'account_id': accountId,
+        'destination_account_id': null,
+        'category_id': null,
+        'goal_id': goalId,
+        'amount': amount,
+        'date': date,
+        'note': note,
+        'type': 'goal_payment',
+      });
+    });
+    notifyDataChanged();
+    return id;
+  }
+
+  Future<int> _createTransaction({
+    required int accountId,
+    int? categoryId,
+    required double amount,
+    required String date,
+    required String note,
+    required String type,
+    required double updateAccount,
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+    final id = await db.transaction((txn) async {
+      await _requireAccount(txn, accountId);
+      if (categoryId != null) {
+        await _requireCategory(txn, categoryId);
+      }
+      await _adjustAccountBalance(txn, accountId, updateAccount);
+      return txn.insert('transactions', {
+        'account_id': accountId,
+        'destination_account_id': null,
+        'category_id': categoryId,
+        'goal_id': null,
+        'amount': amount,
+        'date': date,
+        'note': note,
+        'type': type,
+      });
+    });
+    notifyDataChanged();
+    return id;
+  }
+
+  void _validateAmount(double amount) {
+    if (!amount.isFinite || amount <= 0) {
+      throw ArgumentError('Amount must be greater than zero');
+    }
+  }
+
+  Future<void> _requireAccount(Transaction txn, int accountId) async {
+    final result = await txn.query(
+      'accounts',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [accountId],
+    );
+    if (result.isEmpty) throw StateError('Account not found: $accountId');
+  }
+
+  Future<void> _requireCategory(Transaction txn, int categoryId) async {
+    final result = await txn.query(
+      'categories',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [categoryId],
+    );
+    if (result.isEmpty) throw StateError('Category not found: $categoryId');
+  }
+
+  Future<void> _requireGoal(Transaction txn, int goalId) async {
+    final result = await txn.query(
+      'goals',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [goalId],
+    );
+    if (result.isEmpty) throw StateError('Goal not found: $goalId');
+  }
+
+  Future<Map<String, Object?>> _requireLockedAllocation(
+    Transaction txn,
+    int goalId,
+    int accountId,
+  ) async {
+    final result = await txn.query(
+      'locked_allocations',
+      where: 'goal_id = ? AND account_id = ?',
+      whereArgs: [goalId, accountId],
+      limit: 1,
+    );
+    if (result.isEmpty) {
+      throw StateError('No locked funds found for this goal and account');
+    }
+    return Map<String, Object?>.from(result.first);
+  }
+
+  Future<void> _adjustAccountBalance(
+    Transaction txn,
+    int accountId,
+    double adjustment,
+  ) async {
+    await txn.rawUpdate(
+      'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+      [adjustment, accountId],
+    );
+  }
+
+  Future<void> _reduceLockedAllocation(
+    Transaction txn,
+    Map<String, Object?> lock,
+    double amount,
+  ) async {
+    final lockId = lock['id'];
+    final currentAmount = (lock['amount'] as num).toDouble();
+    if (currentAmount == amount) {
+      await txn.delete(
+        'locked_allocations',
+        where: 'id = ?',
+        whereArgs: [lockId],
+      );
+    } else {
+      await txn.update(
+        'locked_allocations',
+        {'amount': currentAmount - amount},
+        where: 'id = ?',
+        whereArgs: [lockId],
+      );
+    }
+  }
+
   /// Fetches all transactions with their associated account and category names.
   Future<List<Map<String, dynamic>>> getTransactionHistory() async {
     final db = await instance.database;
@@ -858,11 +1155,7 @@ class DatabaseHelper {
 
       if (newSaved <= 0) {
         // Goal is fully paid/consumed, delete it
-        await txn.delete(
-          'goals',
-          where: 'id = ?',
-          whereArgs: [goalId],
-        );
+        await txn.delete('goals', where: 'id = ?', whereArgs: [goalId]);
       } else {
         await txn.update(
           'goals',
@@ -1001,8 +1294,7 @@ class DatabaseHelper {
             in data['transactions'] as List<Map<String, dynamic>>) {
           await txn.insert('transactions', transaction);
         }
-        for (final goal
-            in data['goals'] as List<Map<String, dynamic>>) {
+        for (final goal in data['goals'] as List<Map<String, dynamic>>) {
           await txn.insert('goals', goal);
         }
         for (final lock
