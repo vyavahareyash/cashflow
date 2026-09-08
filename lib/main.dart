@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/budget_screen.dart';
-import 'package:cashflow/screens/planner_screen.dart';
+import 'package:cashflow/screens/goals_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
 import 'package:cashflow/screens/analytics_screen.dart';
 import 'package:cashflow/screens/backup_restore_screen.dart';
@@ -193,7 +193,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final List<Widget> screens = [
       DashboardScreen(onNavigateTab: _onItemTapped),
       const BudgetScreen(),
-      const PlannerScreen(),
+      const GoalsScreen(),
       const AccountsScreen(),
       const AnalyticsScreen(),
     ];

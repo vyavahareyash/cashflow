@@ -7,7 +7,7 @@ class BackupCodec {
     'accounts',
     'categories',
     'transactions',
-    'planned_spends',
+    'goals',
     'locked_allocations',
   ];
 
@@ -15,7 +15,7 @@ class BackupCodec {
     required List<Map<String, dynamic>> accounts,
     required List<Map<String, dynamic>> categories,
     required List<Map<String, dynamic>> transactions,
-    required List<Map<String, dynamic>> plannedSpends,
+    required List<Map<String, dynamic>> goals,
     required List<Map<String, dynamic>> lockedAllocations,
   }) {
     return jsonEncode({
@@ -25,7 +25,7 @@ class BackupCodec {
       'accounts': accounts,
       'categories': categories,
       'transactions': transactions,
-      'planned_spends': plannedSpends,
+      'goals': goals,
       'locked_allocations': lockedAllocations,
     });
   }

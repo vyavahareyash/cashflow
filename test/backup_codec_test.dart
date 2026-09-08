@@ -11,7 +11,7 @@ void main() {
       transactions: [
         {'id': 9, 'note': 'Dinner, "team"\nFriday'},
       ],
-      plannedSpends: [],
+      goals: [],
       lockedAllocations: [],
     );
 
@@ -34,7 +34,7 @@ void main() {
     expect(decoded['accounts'], [
       {'id': 1},
     ]);
-    expect(decoded['planned_spends'], isEmpty);
+    expect(decoded['goals'], isEmpty);
   });
 
   test('escapes CSV fields containing commas, quotes, and newlines', () {

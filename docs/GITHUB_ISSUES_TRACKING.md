@@ -27,10 +27,10 @@ Sequence: #13 → #11 → NEW-001 → NEW-002 → NEW-003 → NEW-004 → #12 �
 
 | Issue | Title | Effort | Blocker | Created? |
 |-------|-------|--------|---------|----------|
-| NEW-001 | Schema v2: Add transaction type field | 1 day | YES | ❌ FAILED |
+| NEW-001 | Schema v2: Add transaction type field | 1 day | YES | ✅ #15 |
 | NEW-002 | Schema v2: Add destination_account_id | 0.5 day | YES | ✅ #16 |
-| NEW-003 | Schema v2: Add plan_id for goals | 0.5 day | YES | ❌ FAILED |
-| NEW-004 | Schema v2: Make category budgets optional | 0.5 day | YES | ❌ FAILED |
+| NEW-003 | Schema v2: Add plan_id for goals | 0.5 day | YES | ✅ #15 |
+| NEW-004 | Schema v2: Make category budgets optional | 0.5 day | YES | ✅ #15 |
 | NEW-005 | Implement v1→v2 database migration | 1 day | YES | ✅ #15 |
 
 ### Sprint 1.2: Database Helpers & CRUD (Week 1.5)

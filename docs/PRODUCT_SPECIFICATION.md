@@ -14,7 +14,7 @@ Cashflow will distinguish 6 transaction types:
 1. Expense     → Spending from a category; reduces account balance
 2. Income      → Money added to account; increases balance
 3. Transfer    → Move money between accounts (neutral total)
-4. Goal Lock   → Reserve money from account for a planned spend
+4. Goal Lock   → Reserve money from account for a goal
 5. Goal Unlock → Release reserved money back to usable balance
 6. Goal Payment → Mark a locked goal as paid/complete (move to history)
 ```
@@ -68,6 +68,52 @@ All critical features for a complete, user-ready app:
 
 ## 📊 Data Schema (Refined)
 
+```mermaid
+erDiagram
+    accounts ||--o{ transactions : "source"
+    accounts ||--o{ transactions : "destination"
+    categories ||--o{ transactions : "categorizes"
+    goals ||--o{ transactions : "linked to"
+    goals ||--o{ locked_allocations : "has"
+    accounts ||--o{ locked_allocations : "holds"
+
+    accounts {
+        int id PK
+        string name
+        double balance
+        string type
+    }
+    categories {
+        int id PK
+        string name
+        double monthly_budget "nullable"
+    }
+    transactions {
+        int id PK
+        int account_id FK
+        int destination_account_id FK "nullable"
+        int category_id FK "nullable"
+        int goal_id FK "nullable"
+        double amount
+        string date
+        string note
+        string type "expense|income|transfer|goal_lock|goal_unlock|goal_payment"
+    }
+    goals {
+        int id PK
+        string name
+        double total_target
+        string target_date
+        double current_saved
+    }
+    locked_allocations {
+        int id PK
+        int goal_id FK
+        int account_id FK
+        double amount
+    }
+```
+
 ### Core Tables (UPDATED for v2)
 ```sql
 accounts (id, name, balance, type)
@@ -80,16 +126,16 @@ transactions (
   account_id, 
   destination_account_id,  -- NEW (for transfers)
   category_id,             -- NOW NULLABLE (not all txs have categories)
-  plan_id,                 -- NEW (for goal txs)
+  goal_id,                 -- NEW (for goal txs)
   amount, 
   date, 
   note, 
   type                     -- NEW (expense|income|transfer|goal_lock|goal_unlock|goal_payment)
 )
 
-planned_spends (id, name, total_target, target_date, current_saved)
+goals (id, name, total_target, target_date, current_saved)
 
-locked_allocations (id, plan_id, account_id, amount)
+locked_allocations (id, goal_id, account_id, amount)
 ```
 
 ---

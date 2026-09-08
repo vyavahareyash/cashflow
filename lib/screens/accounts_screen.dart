@@ -652,7 +652,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        '• ${lock.planName}',
+                        '• ${lock.goalName}',
                         style: AppTypography.labelSmall,
                         overflow: TextOverflow.ellipsis,
                       ),

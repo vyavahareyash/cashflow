@@ -13,15 +13,15 @@
 accounts (id, name, balance, type)
 categories (id, name, monthly_budget) -- NOT NULL, must be made optional
 transactions (id, account_id, category_id, amount, date, note)
-planned_spends (id, name, total_target, target_date, current_saved)
-locked_allocations (id, plan_id, account_id, amount)
+goals (id, name, total_target, target_date, current_saved)
+locked_allocations (id, goal_id, account_id, amount)
 ```
 
 ### Models Defined
 - `Account` ✅
 - `Category` ❌ (but monthlyBudget is required, needs optional)
 - `TransactionModel` ❌ (missing `type` field)
-- `Plan` ✅
+- `Goal` ✅
 - `LockedAllocation` ✅
 
 ---
@@ -59,11 +59,11 @@ locked_allocations (id, plan_id, account_id, amount)
 - **Gap:** Transfer type cannot be fully represented
 - **Action:** Add optional `destination_account_id` field for transfers
 
-#### 4. **Transaction Plan References** — MEDIUM
-- **Current:** No way to link transactions to plans
-- **Product Spec:** Goal lock/unlock/payment transactions reference plans
-- **Gap:** Goal transactions not connected to plans; can't show history
-- **Action:** Add optional `plan_id` field for goal transactions
+#### 4. **Transaction Goal References** — MEDIUM
+- **Current:** No way to link transactions to goals
+- **Product Spec:** Goal lock/unlock/payment transactions reference goals
+- **Gap:** Goal transactions not connected to goals; can't show history
+- **Action:** Add optional `goal_id` field for goal transactions
 
 ---
 
@@ -82,10 +82,10 @@ ALTER TABLE transactions ADD COLUMN destination_account_id INTEGER DEFAULT NULL;
 -- Add foreign key: FOREIGN KEY (destination_account_id) REFERENCES accounts (id)
 ```
 
-#### Table: `transactions` — Add plan_id for goal-related transactions
+#### Table: `transactions` — Add goal_id for goal-related transactions
 ```sql
-ALTER TABLE transactions ADD COLUMN plan_id INTEGER DEFAULT NULL;
--- Add foreign key: FOREIGN KEY (plan_id) REFERENCES planned_spends (id)
+ALTER TABLE transactions ADD COLUMN goal_id INTEGER DEFAULT NULL;
+-- Add foreign key: FOREIGN KEY (goal_id) REFERENCES goals (id)
 ```
 
 #### Table: `categories` — Make budget optional
@@ -123,8 +123,8 @@ Future<void> _migrateV1toV2(Database db) async {
   // 2. Add destination_account_id for transfers
   await db.execute('ALTER TABLE transactions ADD COLUMN destination_account_id INTEGER DEFAULT NULL');
   
-  // 3. Add plan_id for goal transactions
-  await db.execute('ALTER TABLE transactions ADD COLUMN plan_id INTEGER DEFAULT NULL');
+  // 3. Add goal_id for goal transactions
+  await db.execute('ALTER TABLE transactions ADD COLUMN goal_id INTEGER DEFAULT NULL');
   
   // 4. Make category budget nullable (create new table, copy, drop old, rename)
   await db.execute('''
@@ -156,7 +156,7 @@ class TransactionModel {
   final int accountId;                    // Source account
   final int? destinationAccountId;        // For 'transfer' type
   final int? categoryId;                  // For 'expense' type only
-  final int? planId;                      // For goal lock/unlock types
+  final int? goalId;                      // For goal lock/unlock types
   final double amount;
   final String date;
   final String note;
@@ -167,7 +167,7 @@ class TransactionModel {
     required this.accountId,
     this.destinationAccountId,
     this.categoryId,
-    this.planId,
+    this.goalId,
     required this.amount,
     required this.date,
     required this.note,
@@ -180,7 +180,7 @@ class TransactionModel {
       accountId: map['account_id'],
       destinationAccountId: map['destination_account_id'],
       categoryId: map['category_id'],
-      planId: map['plan_id'],
+      goalId: map['goal_id'],
       amount: map['amount'],
       date: map['date'],
       note: map['note'],
@@ -193,7 +193,7 @@ class TransactionModel {
       'account_id': accountId,
       'destination_account_id': destinationAccountId,
       'category_id': categoryId,
-      'plan_id': planId,
+      'goal_id': goalId,
       'amount': amount,
       'date': date,
       'note': note,
@@ -242,8 +242,8 @@ class Category {
 -- CORE TABLES (No major changes)
 accounts (id, name, balance, type)
 categories (id, name, monthly_budget) -- nullable now
-planned_spends (id, name, total_target, target_date, current_saved)
-locked_allocations (id, plan_id, account_id, amount)
+goals (id, name, total_target, target_date, current_saved)
+locked_allocations (id, goal_id, account_id, amount)
 
 -- ENHANCED TABLE
 transactions (
@@ -251,7 +251,7 @@ transactions (
   account_id,                    -- Source account (FK)
   destination_account_id,        -- For transfers only (FK, nullable)
   category_id,                   -- For expenses only (FK, nullable)
-  plan_id,                       -- For goal locks (FK, nullable)
+  goal_id,                       -- For goal locks (FK, nullable)
   amount,
   date,
   note,
@@ -268,7 +268,7 @@ transactions (
 **Required Changes:**
 1. Add `type` field to transactions (critical)
 2. Add `destination_account_id` field to transactions (critical)
-3. Add `plan_id` field to transactions (critical)
+3. Add `goal_id` field to transactions (critical)
 4. Make `monthly_budget` nullable in categories (critical)
 
 **Impact:** Medium (non-breaking changes; migrations required for existing data)
