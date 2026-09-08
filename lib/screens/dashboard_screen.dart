@@ -644,8 +644,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: CustomCard(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     onTap: () {
-                      if (widget.onNavigateTab != null)
+                      if (widget.onNavigateTab != null) {
                         widget.onNavigateTab!(2);
+                      }
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

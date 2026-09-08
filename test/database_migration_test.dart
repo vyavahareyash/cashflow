@@ -1,7 +1,6 @@
 import 'package:cashflow/services/database_helper.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {

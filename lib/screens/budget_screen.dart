@@ -6,7 +6,6 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
-import '../components/category_badge.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});

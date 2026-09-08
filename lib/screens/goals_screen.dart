@@ -566,8 +566,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (selectedAccountId == null ||
-                              amountController.text.isEmpty)
+                              amountController.text.isEmpty) {
                             return;
+                          }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) return;
@@ -728,8 +729,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (selectedAccountId == null ||
-                              amountController.text.isEmpty)
+                              amountController.text.isEmpty) {
                             return;
+                          }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) return;
