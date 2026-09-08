@@ -33,7 +33,7 @@ Build the testable database operations used by the UI:
 - Atomic helpers for all six transaction types.
 - Transaction history queries with type and period filtering.
 - Monthly category spending calculations.
-- Usable balance calculation: physical accounts minus locked funds minus reserved monthly budgets.
+- Usable balance calculation: physical accounts minus locked goal funds, clamped at zero; monthly budgets remain tracking limits.
 
 The transaction-helper work is tracked in [issue #18](https://github.com/vyavahareyash/cashflow/issues/18) and delivered for review in [PR #19](https://github.com/vyavahareyash/cashflow/pull/19).
 
@@ -41,13 +41,13 @@ The transaction-helper work is tracked in [issue #18](https://github.com/vyavaha
 
 - Allow categories without a monthly budget.
 - Complete the dashboard show/hide behavior.
-- Present physical, locked, reserved, and usable balances accurately.
+- Present physical, goal-locked, monthly budget, and usable balances accurately.
 
 ### Sprint 1.4: Dashboard and Analytics
 
 - Replace mock budget progress with transaction-backed values.
 - Show category spending, trends, and goal progress from real data.
-- Keep calculations consistent with the locked product specification.
+- Keep calculations consistent with the tracking-only budget model and locked product specification.
 
 ### Sprint 1.5: Phase 1 Stability
 

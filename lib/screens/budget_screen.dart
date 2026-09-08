@@ -17,7 +17,7 @@ class BudgetScreen extends StatefulWidget {
 class _BudgetScreenState extends State<BudgetScreen> {
   List<Category> _categories = [];
   Map<int, double> _spending = {};
-  double _totalReserved = 0.0;
+  double _totalBudgetLimit = 0.0;
   double _totalSpent = 0.0;
   bool _isLoading = true;
 
@@ -45,12 +45,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
       setState(() => _isLoading = true);
     }
     final categories = await DatabaseHelper.instance.readAllCategories();
-    double totalReserved = 0;
+    double totalBudgetLimit = 0;
     double totalSpent = 0;
     Map<int, double> spendingMap = {};
 
     for (var cat in categories) {
-      totalReserved += cat.monthlyBudget ?? 0.0;
+      totalBudgetLimit += cat.monthlyBudget ?? 0.0;
       if (cat.id != null) {
         final spent = await DatabaseHelper.instance
             .getCategorySpendingForCurrentMonth(cat.id!);
@@ -63,7 +63,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
       setState(() {
         _categories = categories;
         _spending = spendingMap;
-        _totalReserved = totalReserved;
+        _totalBudgetLimit = totalBudgetLimit;
         _totalSpent = totalSpent;
         _isLoading = false;
       });
@@ -225,10 +225,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final totalProgress = _totalReserved > 0
-        ? (_totalSpent / _totalReserved)
+    final totalProgress = _totalBudgetLimit > 0
+        ? (_totalSpent / _totalBudgetLimit)
         : 0.0;
-    final remainingTotal = (_totalReserved - _totalSpent).clamp(
+    final remainingTotal = (_totalBudgetLimit - _totalSpent).clamp(
       0.0,
       double.infinity,
     );
@@ -380,7 +380,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            AppFormatters.currency(_totalReserved),
+            AppFormatters.currency(_totalBudgetLimit),
             style: AppTypography.displayLarge.copyWith(
               fontWeight: FontWeight.w800,
               color: isDark ? AppColors.darkText : AppColors.gray900,

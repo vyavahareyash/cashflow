@@ -25,6 +25,73 @@ void main() {
     await deleteDatabase(path);
   });
 
+  test('returns zero when no physical or locked funds exist', () async {
+    final db = DatabaseHelper.instance;
+
+    expect(await db.calculateUsableBalance(), 0.0);
+  });
+
+  test('subtracts locked funds but not tracking-only budgets', () async {
+    final db = DatabaseHelper.instance;
+    final sourceId = await db.createAccount(
+      Account(name: 'Checking', balance: 100.0, type: 'Bank'),
+    );
+    final destinationId = await db.createAccount(
+      Account(name: 'Savings', balance: 50.0, type: 'Bank'),
+    );
+    final budgetedCategoryId = await db.createCategory(
+      Category(name: 'Food', monthlyBudget: 30.0),
+    );
+    await db.createCategory(Category(name: 'Flexible'));
+    final goalId = await db.createGoal(
+      Goal(
+        name: 'Emergency fund',
+        totalTarget: 200.0,
+        targetDate: '2027-01-01',
+        currentSaved: 0.0,
+      ),
+    );
+
+    await db.createTransferTransaction(
+      sourceAccountId: sourceId,
+      destinationAccountId: destinationId,
+      amount: 25.0,
+      date: '2026-09-08',
+    );
+    await db.createGoalLockTransaction(
+      goalId: goalId,
+      accountId: destinationId,
+      amount: 40.0,
+      date: '2026-09-08',
+    );
+
+    expect(await db.calculateUsableBalance(), 110.0);
+    expect(
+      (await db.readAllAccounts()).fold<double>(
+        0.0,
+        (total, account) => total + account.balance,
+      ),
+      150.0,
+    );
+    expect(
+      await db.getCategorySpendingForCurrentMonth(budgetedCategoryId),
+      0.0,
+    );
+  });
+
+  test('keeps budget limits out of usable cash', () async {
+    final db = DatabaseHelper.instance;
+    await db.createAccount(
+      Account(name: 'Checking', balance: 100.0, type: 'Bank'),
+    );
+    final categoryId = await db.createCategory(
+      Category(name: 'Rent', monthlyBudget: 150.0),
+    );
+    expect(await db.calculateUsableBalance(), 100.0);
+    expect((await db.readAllAccounts()).single.balance, 100.0);
+    expect(await db.getCategorySpendingForCurrentMonth(categoryId), 0.0);
+  });
+
   test(
     'creates expense and income transactions with balance updates',
     () async {

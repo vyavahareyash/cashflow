@@ -742,7 +742,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const Divider(height: 16),
           _buildInfoRow(
             'Balance Logic',
-            'Usable = Total - Locked - Budget',
+            'Usable = Total - Locked goals',
             isDark,
             isAccent: true,
           ),
