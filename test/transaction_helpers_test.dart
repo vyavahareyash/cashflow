@@ -156,6 +156,59 @@ void main() {
     expect(transaction['destination_account_id'], destinationId);
   });
 
+  test('rejects transfers between the same account without mutation', () async {
+    final db = DatabaseHelper.instance;
+    final accountId = await db.createAccount(
+      Account(name: 'Checking', balance: 100.0, type: 'Bank'),
+    );
+
+    await expectLater(
+      db.createTransferTransaction(
+        sourceAccountId: accountId,
+        destinationAccountId: accountId,
+        amount: 40.0,
+        date: '2026-09-08',
+      ),
+      throwsArgumentError,
+    );
+
+    expect((await db.readAllAccounts()).single.balance, 100.0);
+    expect((await (await db.database).query('transactions')), isEmpty);
+  });
+
+  test('rejects invalid transfer amounts without mutation', () async {
+    final db = DatabaseHelper.instance;
+    final sourceId = await db.createAccount(
+      Account(name: 'Checking', balance: 100.0, type: 'Bank'),
+    );
+    final destinationId = await db.createAccount(
+      Account(name: 'Savings', balance: 25.0, type: 'Bank'),
+    );
+
+    for (final amount in [0.0, -10.0]) {
+      await expectLater(
+        db.createTransferTransaction(
+          sourceAccountId: sourceId,
+          destinationAccountId: destinationId,
+          amount: amount,
+          date: '2026-09-08',
+        ),
+        throwsArgumentError,
+      );
+    }
+
+    final accounts = await db.readAllAccounts();
+    expect(
+      accounts.firstWhere((account) => account.id == sourceId).balance,
+      100.0,
+    );
+    expect(
+      accounts.firstWhere((account) => account.id == destinationId).balance,
+      25.0,
+    );
+    expect((await (await db.database).query('transactions')), isEmpty);
+  });
+
   test('creates, unlocks, and pays a goal allocation atomically', () async {
     final db = DatabaseHelper.instance;
     final accountId = await db.createAccount(

@@ -36,6 +36,14 @@ The app differentiates between money actually held and money allocated for speci
 
 ## Key Conventions
 
+## Testing
+
+- Start new tests by following the nearest passing test pattern, especially `test/income_flow_test.dart` for isolated SQLite flows.
+- Keep database invariants and rollback behavior in plain async `test()` cases; use widget tests only for UI interaction and state presentation.
+- For screens with data listeners or background refresh, do not use unbounded `pumpAndSettle()`; use bounded pumps or an explicit condition with a timeout.
+- After adding or changing a test, run that test file immediately before adding more coverage. Do not keep a test that hangs or fails due to its harness; simplify the harness or move the assertion to the owning layer.
+- Every database test must close and delete its test database in both `setUp` and `tearDown` so tests remain isolated.
+
 ## GitHub Work Tracking
 
 - GitHub issues are the source of truth for execution status, ownership, priorities, milestones, dependencies, and progress.

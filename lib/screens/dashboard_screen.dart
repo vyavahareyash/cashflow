@@ -876,10 +876,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildTransactionItem(Map<String, dynamic> tx, bool isDark) {
     final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
-    final categoryName = tx['category_name'] ?? 'General';
+    final type = tx['type'] as String? ?? 'expense';
+    final isIncome = type == 'income';
+    final isTransfer = type == 'transfer';
+    final categoryName = isTransfer
+        ? 'Transfer'
+        : tx['category_name'] ?? 'General';
     final accountName = tx['account_name'] ?? 'Account';
+    final destinationAccountName = tx['destination_account_name'] as String?;
     final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
     final note = tx['note'] as String?;
+    final accountDescription = isTransfer && destinationAccountName != null
+        ? '$accountName → $destinationAccountName'
+        : accountName;
+    final amountPrefix = isIncome
+        ? '+'
+        : isTransfer
+        ? ''
+        : '-';
+    final amountColor = isIncome
+        ? AppColors.emerald700
+        : isTransfer
+        ? (isDark ? AppColors.gray300 : AppColors.gray700)
+        : AppColors.danger;
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -901,7 +920,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '$accountName • ${DateFormat('MMM dd').format(date)}',
+                  '$accountDescription • ${DateFormat('MMM dd').format(date)}',
                   style: AppTypography.labelSmall.copyWith(
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
@@ -910,9 +929,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           Text(
-            '-${AppFormatters.currency(amount, isPrivate: _isPrivate)}',
+            '$amountPrefix${AppFormatters.currency(amount, isPrivate: _isPrivate)}',
             style: AppTypography.titleMedium.copyWith(
-              color: AppColors.danger,
+              color: amountColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -928,6 +947,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final noteController = TextEditingController();
     String selectedType = 'expense';
     int? selectedAccountId = _accounts.isNotEmpty ? _accounts.first.id : null;
+    int? selectedDestinationAccountId = _accounts.length > 1
+        ? _accounts[1].id
+        : null;
     int? selectedCategoryId = _categories.isNotEmpty
         ? _categories.first.id
         : null;
@@ -1013,6 +1035,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         DropdownMenuItem(
                           value: 'income',
                           child: Text('Income'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'transfer',
+                          child: Text('Transfer'),
                         ),
                       ],
                       onChanged: (val) {
@@ -1136,6 +1162,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
 
+                    if (selectedType == 'transfer') ...[
+                      Text(
+                        'To Account',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: isDark ? AppColors.gray300 : AppColors.gray700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      DropdownButtonFormField<int>(
+                        initialValue: selectedDestinationAccountId,
+                        dropdownColor: isDark
+                            ? AppColors.darkSurfaceElevated
+                            : AppColors.white,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.gray50,
+                          border: OutlineInputBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                            borderSide: BorderSide(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.gray300,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.md,
+                          ),
+                        ),
+                        items: _accounts
+                            .map(
+                              (acc) => DropdownMenuItem(
+                                value: acc.id,
+                                child: Text(
+                                  '${acc.name} (₹${acc.balance.toStringAsFixed(0)})',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) => setStateSheet(
+                          () => selectedDestinationAccountId = val,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
                     // Note Input
                     CustomInputField(
                       controller: noteController,
@@ -1199,35 +1274,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onPressed: () async {
                           if (amountController.text.isEmpty ||
                               selectedAccountId == null) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Select an account and amount.'),
+                              ),
+                            );
                             return;
                           }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
-                          if (amount <= 0) return;
+                          if (amount <= 0) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Enter an amount greater than zero.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-                          if (selectedType == 'income') {
-                            await DatabaseHelper.instance
-                                .createIncomeTransaction(
+                          try {
+                            if (selectedType == 'income') {
+                              await DatabaseHelper.instance
+                                  .createIncomeTransaction(
+                                    accountId: selectedAccountId!,
+                                    amount: amount,
+                                    date: _selectedDate.toIso8601String(),
+                                    note: noteController.text.trim(),
+                                  );
+                            } else if (selectedType == 'transfer') {
+                              if (selectedDestinationAccountId == null) {
+                                throw ArgumentError(
+                                  'Select a destination account.',
+                                );
+                              }
+                              await DatabaseHelper.instance
+                                  .createTransferTransaction(
+                                    sourceAccountId: selectedAccountId!,
+                                    destinationAccountId:
+                                        selectedDestinationAccountId!,
+                                    amount: amount,
+                                    date: _selectedDate.toIso8601String(),
+                                    note: noteController.text.trim(),
+                                  );
+                            } else {
+                              if (selectedCategoryId == null) {
+                                throw ArgumentError('Select a category.');
+                              }
+                              await DatabaseHelper.instance.insertTransaction(
+                                TransactionModel(
                                   accountId: selectedAccountId!,
+                                  categoryId: selectedCategoryId!,
                                   amount: amount,
                                   date: _selectedDate.toIso8601String(),
                                   note: noteController.text.trim(),
-                                );
-                          } else {
-                            if (selectedCategoryId == null) return;
-                            await DatabaseHelper.instance.insertTransaction(
-                              TransactionModel(
-                                accountId: selectedAccountId!,
-                                categoryId: selectedCategoryId!,
-                                amount: amount,
-                                date: _selectedDate.toIso8601String(),
-                                note: noteController.text.trim(),
-                              ),
-                            );
-                            await DatabaseHelper.instance.subtractFromAccount(
-                              selectedAccountId!,
-                              amount,
-                            );
+                                ),
+                              );
+                              await DatabaseHelper.instance.subtractFromAccount(
+                                selectedAccountId!,
+                                amount,
+                              );
+                            }
+                          } catch (error) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(error.toString())),
+                              );
+                            }
+                            return;
                           }
 
                           if (ctx.mounted) {
@@ -1245,6 +1360,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Text(
                           selectedType == 'income'
                               ? 'Save Income'
+                              : selectedType == 'transfer'
+                              ? 'Save Transfer'
                               : 'Save Expense',
                           style: AppTypography.labelLarge,
                         ),
