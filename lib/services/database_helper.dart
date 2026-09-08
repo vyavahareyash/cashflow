@@ -724,22 +724,62 @@ class DatabaseHelper {
     }
   }
 
-  /// Fetches all transactions with their associated account and category names.
-  Future<List<Map<String, dynamic>>> getTransactionHistory() async {
+  /// Fetches transactions with optional type and calendar-period filters.
+  Future<List<Map<String, dynamic>>> getTransactionHistory({
+    String? type,
+    int? month,
+    int? year,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final db = await instance.database;
+    final where = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (type != null) {
+      where.add('t.type = ?');
+      whereArgs.add(type);
+    }
+    if (month != null) {
+      where.add("CAST(strftime('%m', t.date) AS INTEGER) = ?");
+      whereArgs.add(month);
+    }
+    if (year != null) {
+      where.add("CAST(strftime('%Y', t.date) AS INTEGER) = ?");
+      whereArgs.add(year);
+    }
+    if (startDate != null) {
+      where.add('t.date >= ?');
+      whereArgs.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      where.add('t.date < ?');
+      whereArgs.add(endDate.add(const Duration(days: 1)).toIso8601String());
+    }
+
     return await db.rawQuery('''
       SELECT 
-        t.id, 
-        t.amount, 
-        t.date, 
-        t.note, 
-        a.name as account_name, 
-        c.name as category_name 
-        FROM transactions t
+        t.id,
+        t.account_id,
+        t.destination_account_id,
+        t.category_id,
+        t.goal_id,
+        t.amount,
+        t.date,
+        t.note,
+        t.type,
+        a.name AS account_name,
+        destination.name AS destination_account_name,
+        c.name AS category_name,
+        g.name AS goal_name
+      FROM transactions t
       JOIN accounts a ON t.account_id = a.id
-      JOIN categories c ON t.category_id = c.id
-      ORDER BY t.date DESC
-    ''');
+      LEFT JOIN accounts destination ON t.destination_account_id = destination.id
+      LEFT JOIN categories c ON t.category_id = c.id
+      LEFT JOIN goals g ON t.goal_id = g.id
+      ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'}
+      ORDER BY t.date DESC, t.id DESC
+    ''', whereArgs);
   }
 
   // Helper method to subtract money from an account
@@ -891,62 +931,114 @@ class DatabaseHelper {
       ),
     );
 
-    // Lock funds to goals
-    await lockFunds(goalInsurance, savingsAccId, 15000.0);
-    await lockFunds(goalVacation, salaryAccId, 20000.0);
-    await lockFunds(goalGadget, savingsAccId, 25000.0);
-
     // 4. Sample Transactions
     final now = DateTime.now();
-    final sampleTxs = [
-      TransactionModel(
-        accountId: salaryAccId,
-        categoryId: catGroceries,
-        amount: 3250.0,
-        date: now.subtract(const Duration(days: 1)).toIso8601String(),
-        note: 'Supermarket weekly stock',
-      ),
-      TransactionModel(
-        accountId: walletAccId,
-        categoryId: catDining,
-        amount: 850.0,
-        date: now.subtract(const Duration(days: 2)).toIso8601String(),
-        note: 'Lunch with team',
-      ),
-      TransactionModel(
-        accountId: salaryAccId,
-        categoryId: catTransport,
-        amount: 2200.0,
-        date: now.subtract(const Duration(days: 3)).toIso8601String(),
-        note: 'Petrol fill up',
-      ),
-      TransactionModel(
-        accountId: salaryAccId,
-        categoryId: catUtilities,
-        amount: 4800.0,
-        date: now.subtract(const Duration(days: 5)).toIso8601String(),
-        note: 'Electricity & Wifi bill',
-      ),
-      TransactionModel(
-        accountId: salaryAccId,
-        categoryId: catShopping,
-        amount: 3100.0,
-        date: now.subtract(const Duration(days: 8)).toIso8601String(),
-        note: 'Weekend clothing',
-      ),
-      TransactionModel(
-        accountId: walletAccId,
-        categoryId: catHealth,
-        amount: 650.0,
-        date: now.subtract(const Duration(days: 10)).toIso8601String(),
-        note: 'Pharmacy medicines',
-      ),
-    ];
+    final today = now.toIso8601String();
+    final recentDate = now.subtract(const Duration(days: 1)).toIso8601String();
+    final priorMonthDate = DateTime(
+      now.year,
+      now.month - 1,
+      20,
+    ).toIso8601String();
 
-    for (var tx in sampleTxs) {
-      await insertTransaction(tx);
-      await subtractFromAccount(tx.accountId, tx.amount);
-    }
+    await createIncomeTransaction(
+      accountId: salaryAccId,
+      amount: 95000.0,
+      date: today,
+      note: 'Monthly salary deposit',
+    );
+    await createExpenseTransaction(
+      accountId: salaryAccId,
+      categoryId: catGroceries,
+      amount: 3250.0,
+      date: recentDate,
+      note: 'Supermarket weekly stock',
+    );
+    await createExpenseTransaction(
+      accountId: walletAccId,
+      categoryId: catDining,
+      amount: 850.0,
+      date: now.subtract(const Duration(days: 2)).toIso8601String(),
+      note: 'Lunch with team',
+    );
+    await createExpenseTransaction(
+      accountId: salaryAccId,
+      categoryId: catTransport,
+      amount: 2200.0,
+      date: now.subtract(const Duration(days: 3)).toIso8601String(),
+      note: 'Petrol fill up',
+    );
+    await createExpenseTransaction(
+      accountId: salaryAccId,
+      categoryId: catUtilities,
+      amount: 4800.0,
+      date: now.subtract(const Duration(days: 5)).toIso8601String(),
+      note: 'Electricity & Wifi bill',
+    );
+    await createExpenseTransaction(
+      accountId: salaryAccId,
+      categoryId: catShopping,
+      amount: 3100.0,
+      date: now.subtract(const Duration(days: 8)).toIso8601String(),
+      note: 'Weekend clothing',
+    );
+    await createExpenseTransaction(
+      accountId: walletAccId,
+      categoryId: catHealth,
+      amount: 650.0,
+      date: now.subtract(const Duration(days: 10)).toIso8601String(),
+      note: 'Pharmacy medicines',
+    );
+    await createExpenseTransaction(
+      accountId: salaryAccId,
+      categoryId: catUtilities,
+      amount: 4100.0,
+      date: priorMonthDate,
+      note: 'Previous month utility bill',
+    );
+    await createTransferTransaction(
+      sourceAccountId: salaryAccId,
+      destinationAccountId: savingsAccId,
+      amount: 12000.0,
+      date: recentDate,
+      note: 'Monthly savings transfer',
+    );
+
+    await createGoalLockTransaction(
+      goalId: goalInsurance,
+      accountId: savingsAccId,
+      amount: 15000.0,
+      date: recentDate,
+      note: 'Reserve annual insurance money',
+    );
+    await createGoalLockTransaction(
+      goalId: goalVacation,
+      accountId: salaryAccId,
+      amount: 20000.0,
+      date: now.subtract(const Duration(days: 4)).toIso8601String(),
+      note: 'Reserve vacation fund',
+    );
+    await createGoalLockTransaction(
+      goalId: goalGadget,
+      accountId: savingsAccId,
+      amount: 25000.0,
+      date: now.subtract(const Duration(days: 6)).toIso8601String(),
+      note: 'Reserve laptop fund',
+    );
+    await createGoalUnlockTransaction(
+      goalId: goalVacation,
+      accountId: salaryAccId,
+      amount: 3000.0,
+      date: now.subtract(const Duration(days: 2)).toIso8601String(),
+      note: 'Release adjusted vacation allocation',
+    );
+    await createGoalPaymentTransaction(
+      goalId: goalInsurance,
+      accountId: savingsAccId,
+      amount: 5000.0,
+      date: today,
+      note: 'Pay annual car insurance',
+    );
     notifyDataChanged();
   }
 
@@ -1424,6 +1516,32 @@ class DatabaseHelper {
       map[row['name'] as String] = (row['total'] as num? ?? 0).toDouble();
     }
     return map;
+  }
+
+  Future<Map<String, double>> getSpendingByCategoryForDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final db = await instance.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT c.name, SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.id
+      WHERE t.date >= ? AND t.date < ?
+      GROUP BY t.category_id
+      ORDER BY total DESC
+    ''',
+      [
+        startDate.toIso8601String(),
+        endDate.add(const Duration(days: 1)).toIso8601String(),
+      ],
+    );
+
+    return {
+      for (final row in result)
+        row['name'] as String: (row['total'] as num? ?? 0).toDouble(),
+    };
   }
 
   /// Gets total spending for a specific month.

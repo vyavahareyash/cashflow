@@ -607,7 +607,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Populates sample HDFC & SBI accounts, categorized expenses (Groceries, Dining, Fuel, Utilities), and sinking fund goals.',
+            'Populates sample HDFC & SBI accounts, income, transfers, categorized expenses, goal activity, and history across multiple months.',
             style: AppTypography.bodyMedium.copyWith(
               color: isDark ? AppColors.gray300 : AppColors.gray700,
               fontSize: 13,
