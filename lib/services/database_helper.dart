@@ -1,4 +1,5 @@
 import 'dart:convert' show utf8;
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 import 'package:sqflite/sqflite.dart';
@@ -344,8 +345,13 @@ class DatabaseHelper {
       final backupFile = await file.copy(backupPath);
 
       return backupFile.path;
-    } catch (e) {
-      print('Export error: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Export error',
+        name: 'DatabaseHelper',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }
@@ -369,8 +375,13 @@ class DatabaseHelper {
       notifyDataChanged();
 
       return true;
-    } catch (e) {
-      print('Import error: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Import error',
+        name: 'DatabaseHelper',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -951,8 +962,13 @@ class DatabaseHelper {
         'cashflow_backup.json',
         utf8.encode(jsonString),
       );
-    } catch (e) {
-      print('JSON export error: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'JSON export error',
+        name: 'DatabaseHelper',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }
@@ -997,8 +1013,13 @@ class DatabaseHelper {
 
       notifyDataChanged();
       return true;
-    } catch (e) {
-      print('JSON import error: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'JSON import error',
+        name: 'DatabaseHelper',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -1015,8 +1036,13 @@ class DatabaseHelper {
         'cashflow_transactions.csv',
         utf8.encode(csv),
       );
-    } catch (e) {
-      print('CSV export error: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'CSV export error',
+        name: 'DatabaseHelper',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }
