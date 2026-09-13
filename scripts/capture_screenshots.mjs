@@ -133,12 +133,12 @@ const markers = [
         description: 'Dialog to add a new physical account with account name, starting balance, and account type.'
     },
     {
-        id: '15-analytics-activity-light',
-        name: 'Insights & Activity',
+        id: '15-activity-ledger-light',
+        name: 'Activity Ledger Tab',
         group: 'Insights',
         theme: 'light',
         type: 'screen',
-        description: 'Chronological transaction history with search, category filters, and monthly spend indicators.'
+        description: 'Activity Ledger tab displaying chronological transaction history with search, category badges, and filter controls.'
     },
     {
         id: '16-analytics-trends-light',
@@ -213,7 +213,15 @@ const markers = [
         description: 'Dark mode account card with expanded accordion displaying aggregated goal commitments.'
     },
     {
-        id: '25-analytics-trends-dark',
+        id: '25-activity-ledger-dark',
+        name: 'Activity Ledger Tab (Dark)',
+        group: 'Insights',
+        theme: 'dark',
+        type: 'screen',
+        description: 'Dark mode view of the chronological transaction activity ledger.'
+    },
+    {
+        id: '26-analytics-trends-dark',
         name: 'Monthly Spending Trends (Dark)',
         group: 'Insights',
         theme: 'dark',
@@ -221,7 +229,7 @@ const markers = [
         description: 'Dark mode analytics screen with interactive chart and expenditure distribution.'
     },
     {
-        id: '26-backup-restore-dark',
+        id: '27-backup-restore-dark',
         name: 'Settings & Data Backup (Dark)',
         group: 'Settings',
         theme: 'dark',
@@ -660,8 +668,9 @@ function renderHtmlGallery(data) {
         { title: 'Locked Allocations Breakdown Modal', light: '10-modal-lock-funds-light', dark: '22-modal-lock-funds-dark' },
         { title: 'Accounts Screen Overview', light: '12-accounts-light', dark: '23-accounts-dark' },
         { title: 'Account Card Dropdown (Expanded)', light: '13-accounts-dropdown-expanded-light', dark: '24-accounts-dropdown-expanded-dark' },
-        { title: 'Monthly Spending Trends Chart', light: '16-analytics-trends-light', dark: '25-analytics-trends-dark' },
-        { title: 'Settings & Data Backup', light: '17-backup-restore-light', dark: '26-backup-restore-dark' },
+        { title: 'Activity Ledger Tab', light: '15-activity-ledger-light', dark: '25-activity-ledger-dark' },
+        { title: 'Monthly Spending Trends Chart', light: '16-analytics-trends-light', dark: '26-analytics-trends-dark' },
+        { title: 'Settings & Data Backup', light: '17-backup-restore-light', dark: '27-backup-restore-dark' },
       ];
 
       pairs.forEach(pair => {

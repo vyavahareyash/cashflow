@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-13T14:02:31.356Z",
+  "generatedAt": "2026-09-13T14:11:13.842Z",
   "device": "emulator-5554",
-  "totalScreenshots": 26,
+  "totalScreenshots": 27,
   "markers": [
     {
       "id": "01-dashboard-light",
@@ -130,13 +130,13 @@
       "file": "14-modal-add-account-light.png"
     },
     {
-      "id": "15-analytics-activity-light",
-      "name": "Insights & Activity",
+      "id": "15-activity-ledger-light",
+      "name": "Activity Ledger Tab",
       "group": "Insights",
       "theme": "light",
       "type": "screen",
-      "description": "Chronological transaction history with search, category filters, and monthly spend indicators.",
-      "file": "15-analytics-activity-light.png"
+      "description": "Activity Ledger tab displaying chronological transaction history with search, category badges, and filter controls.",
+      "file": "15-activity-ledger-light.png"
     },
     {
       "id": "16-analytics-trends-light",
@@ -220,22 +220,31 @@
       "file": "24-accounts-dropdown-expanded-dark.png"
     },
     {
-      "id": "25-analytics-trends-dark",
+      "id": "25-activity-ledger-dark",
+      "name": "Activity Ledger Tab (Dark)",
+      "group": "Insights",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode view of the chronological transaction activity ledger.",
+      "file": "25-activity-ledger-dark.png"
+    },
+    {
+      "id": "26-analytics-trends-dark",
       "name": "Monthly Spending Trends (Dark)",
       "group": "Insights",
       "theme": "dark",
       "type": "chart",
       "description": "Dark mode analytics screen with interactive chart and expenditure distribution.",
-      "file": "25-analytics-trends-dark.png"
+      "file": "26-analytics-trends-dark.png"
     },
     {
-      "id": "26-backup-restore-dark",
+      "id": "27-backup-restore-dark",
       "name": "Settings & Data Backup (Dark)",
       "group": "Settings",
       "theme": "dark",
       "type": "screen",
       "description": "Dark mode settings and data backup screen.",
-      "file": "26-backup-restore-dark.png"
+      "file": "27-backup-restore-dark.png"
     }
   ]
 }

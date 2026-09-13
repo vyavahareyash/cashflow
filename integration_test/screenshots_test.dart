@@ -142,12 +142,18 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    // 15: Insights Activity List
+    // 15: Activity Ledger Tab (Light)
     await tester.tap(find.text('Insights'));
     await _waitForScreen(tester, 'Insights & Activity');
-    await _markScreen('15-analytics-activity-light');
+    await tester.tap(find.text('Activity Ledger'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    await _waitForText(tester, 'Transaction Ledger');
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _markScreen('15-activity-ledger-light');
 
-    // 16: Insights Spending Trends Chart
+    // 16: Insights Spending Trends Chart (Light)
     await tester.tap(find.text('Analytics & Trends'));
     await tester.pumpAndSettle(const Duration(milliseconds: 500));
     await _waitForText(tester, 'Monthly Spending Trends');
@@ -217,21 +223,30 @@ void main() {
     await tester.tap(darkLockedFundsToggle);
     await tester.pumpAndSettle();
 
-    // 25: Insights Spending Trends Chart (Dark)
+    // 25: Activity Ledger Tab (Dark)
     await tester.tap(find.text('Insights'));
     await _waitForScreen(tester, 'Insights & Activity');
+    await tester.tap(find.text('Activity Ledger'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    await _waitForText(tester, 'Transaction Ledger');
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _markScreen('25-activity-ledger-dark');
+
+    // 26: Insights Spending Trends Chart (Dark)
     await tester.tap(find.text('Analytics & Trends'));
     await tester.pumpAndSettle(const Duration(milliseconds: 500));
     await _waitForText(tester, 'Monthly Spending Trends');
     for (var frame = 0; frame < 5; frame++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await _markScreen('25-analytics-trends-dark');
+    await _markScreen('26-analytics-trends-dark');
 
-    // 26: Backup & Restore Screen (Dark)
+    // 27: Backup & Restore Screen (Dark)
     await tester.tap(find.byTooltip('Settings & Data Backup'));
     await _waitForScreen(tester, 'Settings & Data');
-    await _markScreen('26-backup-restore-dark');
+    await _markScreen('27-backup-restore-dark');
 
     // Return to main navigation screen
     await tester.pageBack();
