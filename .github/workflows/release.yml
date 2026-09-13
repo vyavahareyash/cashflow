@@ -31,7 +31,7 @@ jobs:
         run: flutter pub get
 
       - name: Run unit tests
-        run: flutter test
+        run: flutter test -j 1
 
       - name: Build Split APKs
         run: flutter build apk --split-per-abi
@@ -45,6 +45,7 @@ jobs:
       - name: Create Release and Upload APKs
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
           files: build/app/outputs/flutter-apk/*.apk
           name: "Cashflow ${{ github.ref_name }}"
           generate_release_notes: true
