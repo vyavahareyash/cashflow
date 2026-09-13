@@ -19,6 +19,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   late TabController _tabController;
   Map<String, double> _categorySpending = {};
   Map<String, double> _monthlySpendings = {};
+  bool _isYtd = false;
+  Map<String, double> _ytdCashflow = {};
   DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime _endDate = DateTime.now();
   bool _isLoading = true;
@@ -53,17 +55,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
 
     final db = DatabaseHelper.instance;
-    final categoryData = await db.getSpendingByCategoryForDateRange(
-      startDate: _startDate,
-      endDate: _endDate,
-    );
-    final monthlyData = await db.getMonthlySpendings(months: 6);
-    if (mounted) {
-      setState(() {
-        _categorySpending = categoryData;
-        _monthlySpendings = monthlyData;
-        _isLoading = false;
-      });
+    final now = DateTime.now();
+    if (_isYtd) {
+      final categoryData = await db.getYtdSpendingByCategory(year: now.year);
+      final monthlyData = await db.getYtdMonthlySpendings(year: now.year);
+      final cashflowData = await db.getYtdCashflowSummary(year: now.year);
+      if (mounted) {
+        setState(() {
+          _categorySpending = categoryData;
+          _monthlySpendings = monthlyData;
+          _ytdCashflow = cashflowData;
+          _isLoading = false;
+        });
+      }
+    } else {
+      final categoryData = await db.getSpendingByCategoryForDateRange(
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      final monthlyData = await db.getMonthlySpendings(months: 6);
+      if (mounted) {
+        setState(() {
+          _categorySpending = categoryData;
+          _monthlySpendings = monthlyData;
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -140,6 +157,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           _buildMonthSelectorCard(isDark),
           const SizedBox(height: AppSpacing.lg),
 
+          // YTD Cashflow Summary Card
+          if (_isYtd) ...[
+            _buildYtdSummaryCard(isDark),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+
           // Category Pie Chart
           if (_categorySpending.isNotEmpty)
             _buildCategoryDistributionCard(isDark)
@@ -183,43 +206,286 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   Widget _buildMonthSelectorCard(bool isDark) {
     return CustomCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkBorder : AppColors.gray100,
+              borderRadius: AppBorderRadius.smallBorder,
+            ),
+            child: Row(
               children: [
-                Text(
-                  'Spending Period',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                Expanded(
+                  child: InkWell(
+                    borderRadius: AppBorderRadius.smallBorder,
+                    onTap: () {
+                      if (_isYtd) {
+                        setState(() {
+                          _isYtd = false;
+                          _isLoading = true;
+                        });
+                        _loadAllData();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: !_isYtd
+                            ? AppColors.emerald700
+                            : Colors.transparent,
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Monthly Range',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: !_isYtd
+                              ? Colors.white
+                              : (isDark
+                                  ? AppColors.gray300
+                                  : AppColors.gray700),
+                          fontWeight:
+                              !_isYtd ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${DateFormat('MMM d, yyyy').format(_startDate)} - ${DateFormat('MMM d, yyyy').format(_endDate)}',
-                  style: AppTypography.titleLarge.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: InkWell(
+                    borderRadius: AppBorderRadius.smallBorder,
+                    onTap: () {
+                      if (!_isYtd) {
+                        setState(() {
+                          _isYtd = true;
+                          _isLoading = true;
+                        });
+                        _loadAllData();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _isYtd
+                            ? AppColors.emerald700
+                            : Colors.transparent,
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Year-to-Date (YTD)',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: _isYtd
+                              ? Colors.white
+                              : (isDark
+                                  ? AppColors.gray300
+                                  : AppColors.gray700),
+                          fontWeight:
+                              _isYtd ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          IconButton(
-            tooltip: 'Change duration',
-            onPressed: _selectDuration,
-            icon: const Icon(Icons.date_range_rounded),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isYtd ? 'Cumulative Period' : 'Spending Period',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _isYtd
+                          ? 'Jan 1, ${DateTime.now().year} - ${DateFormat('MMM d, yyyy').format(DateTime.now())}'
+                          : '${DateFormat('MMM d, yyyy').format(_startDate)} - ${DateFormat('MMM d, yyyy').format(_endDate)}',
+                      style: AppTypography.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (!_isYtd)
+                IconButton(
+                  tooltip: 'Change duration',
+                  onPressed: _selectDuration,
+                  icon: const Icon(Icons.date_range_rounded),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald600.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.pillBorder,
+                  ),
+                  child: Text(
+                    '${DateTime.now().year} YTD',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.emerald600,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildYtdSummaryCard(bool isDark) {
+    final inflow = _ytdCashflow['inflow'] ?? 0.0;
+    final outflow = _ytdCashflow['outflow'] ?? 0.0;
+    final netSavings = _ytdCashflow['netSavings'] ?? 0.0;
+    final savingsRate = _ytdCashflow['savingsRate'] ?? 0.0;
+    final isNetPositive = netSavings >= 0;
+
+    return CustomCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: AppColors.emerald500.withValues(alpha: 0.12),
+                      borderRadius: AppBorderRadius.smallBorder,
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: AppColors.emerald600,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'YTD Cashflow Summary',
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: (savingsRate >= 20
+                          ? AppColors.emerald600
+                          : (savingsRate >= 0
+                              ? AppColors.orange
+                              : AppColors.danger))
+                      .withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.pillBorder,
+                ),
+                child: Text(
+                  '${savingsRate.toStringAsFixed(1)}% Saved',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: savingsRate >= 20
+                        ? AppColors.emerald600
+                        : (savingsRate >= 0
+                            ? AppColors.orange
+                            : AppColors.danger),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: _buildYtdMetricItem(
+                  'Inflow',
+                  AppFormatters.currency(inflow),
+                  AppColors.emerald600,
+                  isDark,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _buildYtdMetricItem(
+                  'Outflow',
+                  AppFormatters.currency(outflow),
+                  AppColors.orange,
+                  isDark,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _buildYtdMetricItem(
+                  'Net Savings',
+                  AppFormatters.currency(netSavings),
+                  isNetPositive ? AppColors.emerald600 : AppColors.danger,
+                  isDark,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYtdMetricItem(
+    String label,
+    String value,
+    Color color,
+    bool isDark,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            color: isDark ? AppColors.gray400 : AppColors.gray600,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 

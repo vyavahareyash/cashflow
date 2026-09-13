@@ -115,4 +115,12 @@ class SalaryCycle {
       return 'Resets in $daysLeftInCycle days ($nextDateFmt)';
     }
   }
+
+  /// ISO date string (YYYY-MM-DD) for start of cycle.
+  String get startDateString =>
+      '${cycleStart.year}-${cycleStart.month.toString().padLeft(2, '0')}-${cycleStart.day.toString().padLeft(2, '0')}';
+
+  /// ISO date string (YYYY-MM-DD) for end of cycle (inclusive).
+  String get endDateString =>
+      '${cycleEnd.year}-${cycleEnd.month.toString().padLeft(2, '0')}-${cycleEnd.day.toString().padLeft(2, '0')}';
 }
