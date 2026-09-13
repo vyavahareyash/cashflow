@@ -34,6 +34,22 @@ class Goal {
     };
   }
 
+  Goal copyWith({
+    int? id,
+    String? name,
+    double? totalTarget,
+    String? targetDate,
+    double? currentSaved,
+  }) {
+    return Goal(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      totalTarget: totalTarget ?? this.totalTarget,
+      targetDate: targetDate ?? this.targetDate,
+      currentSaved: currentSaved ?? this.currentSaved,
+    );
+  }
+
   DateTime? get parsedTargetDate => DateTime.tryParse(targetDate);
 
   bool get isCompleted => totalTarget > 0 && currentSaved >= totalTarget;

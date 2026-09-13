@@ -379,6 +379,216 @@ class _AccountsScreenState extends State<AccountsScreen> {
     );
   }
 
+  void _showTransferDialog(Account sourceAccount) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final otherAccounts =
+        _accounts.where((a) => a.id != sourceAccount.id).toList();
+    if (otherAccounts.isEmpty) return;
+
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    int? destinationAccountId = otherAccounts.first.id;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.gray700 : AppColors.gray300,
+                          borderRadius: AppBorderRadius.pillBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Transfer from "${sourceAccount.name}"',
+                      style: AppTypography.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Move funds between your physical accounts. Balance: ${AppFormatters.currency(sourceAccount.balance)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    CustomInputField(
+                      controller: amountController,
+                      label: 'Amount to Transfer',
+                      prefixText: '₹ ',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefixIcon: Icons.swap_horiz_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    Text(
+                      'Destination Account',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: isDark ? AppColors.gray300 : AppColors.gray700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    DropdownButtonFormField<int>(
+                      initialValue: destinationAccountId,
+                      isExpanded: true,
+                      dropdownColor: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.white,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                      ),
+                      items: otherAccounts.map((acc) {
+                        return DropdownMenuItem<int>(
+                          value: acc.id,
+                          child: Text(
+                            '${acc.name} (${AppFormatters.currency(acc.balance)})',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setStateSheet(() => destinationAccountId = val);
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    CustomInputField(
+                      controller: noteController,
+                      label: 'Note (Optional)',
+                      hint: 'e.g. ATM withdrawal, savings transfer',
+                      prefixIcon: Icons.notes_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: AppComponentSizes.buttonHeightLarge,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (destinationAccountId == null ||
+                              amountController.text.trim().isEmpty) {
+                            return;
+                          }
+                          final amount =
+                              double.tryParse(amountController.text.trim()) ??
+                              0.0;
+                          if (amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter an amount > 0'),
+                              ),
+                            );
+                            return;
+                          }
+                          if (amount > sourceAccount.balance) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Cannot transfer more than account balance (${AppFormatters.currency(sourceAccount.balance)})',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          try {
+                            await DatabaseHelper.instance
+                                .createTransferTransaction(
+                              sourceAccountId: sourceAccount.id!,
+                              destinationAccountId: destinationAccountId!,
+                              amount: amount,
+                              date: DateTime.now().toIso8601String(),
+                              note: noteController.text.trim(),
+                            );
+                            if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+                            _refreshAccounts();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Transferred ${AppFormatters.currency(amount)} successfully!',
+                                  ),
+                                  backgroundColor: AppColors.emerald700,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Transfer failed: $e'),
+                                  backgroundColor: AppColors.danger,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.emerald700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                          ),
+                        ),
+                        child: const Text(
+                          'Complete Transfer',
+                          style: AppTypography.titleMedium,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -464,7 +674,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     ..._accounts.map((acc) => AccountCard(
                           account: acc,
                           locks: _accountLocks[acc.id] ?? [],
-                          isExpanded: acc.id != null && _expandedAccountIds.contains(acc.id),
+                          isExpanded: acc.id != null &&
+                              _expandedAccountIds.contains(acc.id),
                           onExpansionChanged: (expanded) {
                             if (acc.id != null) {
                               setState(() {
@@ -476,6 +687,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               });
                             }
                           },
+                          onTransfer: _accounts.length > 1
+                              ? () => _showTransferDialog(acc)
+                              : null,
                           onEdit: () => _showEditAccountDialog(acc),
                         )),
 
@@ -591,6 +805,7 @@ class AccountCard extends StatefulWidget {
   final Account account;
   final List<LockedAllocation> locks;
   final VoidCallback? onEdit;
+  final VoidCallback? onTransfer;
   final bool? isExpanded;
   final ValueChanged<bool>? onExpansionChanged;
 
@@ -599,6 +814,7 @@ class AccountCard extends StatefulWidget {
     required this.account,
     this.locks = const [],
     this.onEdit,
+    this.onTransfer,
     this.isExpanded,
     this.onExpansionChanged,
   });
@@ -715,6 +931,21 @@ class _AccountCardState extends State<AccountCard> {
                     ),
                 ],
               ),
+              if (widget.onTransfer != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.swap_horiz_rounded,
+                    size: 20,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  constraints: const BoxConstraints(
+                    minWidth: AppComponentSizes.minTouchTarget,
+                    minHeight: AppComponentSizes.minTouchTarget,
+                  ),
+                  tooltip: 'Transfer from this Account',
+                  onPressed: widget.onTransfer,
+                ),
               if (widget.onEdit != null)
                 IconButton(
                   icon: Icon(

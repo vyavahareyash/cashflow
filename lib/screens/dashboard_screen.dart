@@ -276,16 +276,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const Color(0xFFFDE68A), // Light amber
                   Icons.lock_clock_rounded,
                 ),
-                const Text(
-                  '-',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: Colors.white24,
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 ),
                 _buildFormulaPill(
-                  'Monthly limit',
+                  'Budget cap',
                   AppFormatters.compactCurrency(
                     _totalBudgetLimit,
                     isPrivate: _isPrivate,
