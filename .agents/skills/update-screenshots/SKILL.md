@@ -5,14 +5,22 @@ description: Use when the user asks to update, refresh, regenerate, or recapture
 
 # Update Screenshots
 
-Run the repository's current screenshot flow on the Android emulator. The flow uses Flutter integration-test semantics for navigation and readiness, and the host Node script uses `adb screencap` for PNG capture.
+Run the repository's current screenshot flow on the Android emulator. The flow uses Flutter integration-test semantics for navigation and readiness, and the host Node script uses `adb screencap` for sequential PNG capture across both Light and Dark modes.
 
 ## Workflow
 
 1. Inspect `integration_test/screenshots_test.dart` and `scripts/capture_screenshots.mjs` before changing the flow. Treat the awaited `_markScreen` calls in the integration test and the marker array in the Node script as one ordered contract.
-2. If the app or a screen changed, update the integration flow first: use current semantic labels, titles, tooltips, and content readiness signals; add, remove, or rename markers to match the requested screen set; then mirror that exact marker order in the Node script.
-3. Ensure an Android emulator is running. The default device is `emulator-5554`; use `ANDROID_DEVICE` when another emulator is required.
-4. Start from clean app data when screenshots must contain the standard demo dataset:
+2. The capture flow systematically tests two passes:
+   - **Pass 1 (Light Mode)**: captures all primary screens, input modals (Expense, Income, Transfer, Add/Edit Category, Add/Edit Goal, Lock Funds, Add Account), tab selections (e.g. Activity Ledger vs Analytics & Trends), and expanded component states (Account locked funds accordion).
+   - **Pass 2 (Dark Mode)**: toggles theme via tooltip `Toggle Theme` and captures corresponding screens, modals, and interaction states in dark high contrast.
+3. If the app or a screen changed, update the integration flow first:
+   - Use stable semantic finders (`find.text`, `find.textContaining`, `find.byTooltip`, `find.widgetWithText`).
+   - Use `find.textContaining` for cards or dialogs with dynamic numbers/currency.
+   - For pushed full-page routes (e.g. `BackupRestoreScreen`), unwind back to the root navigation shell via `await tester.pageBack()` before triggering theme toggles.
+   - For multi-tab screens (e.g. `Insights & Activity`), explicitly tap each destination tab (`find.text('Activity Ledger')`, `find.text('Analytics & Trends')`) and await distinct content.
+   - Mirror the exact marker name and order in `scripts/capture_screenshots.mjs`.
+4. Ensure an Android emulator is running (`emulator-5554` default; or specify `ANDROID_DEVICE`).
+5. Start from clean app data when screenshots must contain the standard demo dataset:
 
    ```sh
    export ANDROID_HOME=$HOME/Library/Android/sdk
@@ -20,7 +28,7 @@ Run the repository's current screenshot flow on the Android emulator. The flow u
    adb shell pm clear com.example.cashflow >/dev/null
    ```
 
-5. Run the capture script from the repository root:
+6. Run the capture script from the repository root:
 
    ```sh
    rm -f screenshots/*.png
@@ -28,7 +36,13 @@ Run the repository's current screenshot flow on the Android emulator. The flow u
    file screenshots/*.png
    ```
 
-6. Confirm the Flutter test reports `All tests passed`, the emitted marker sequence matches the host marker array, and every marker produces a valid PNG. Do not assume a fixed screenshot count; derive it from the current marker array.
+   To quickly regenerate `screenshots/manifest.json` and `screenshots/index.html` without re-running device tests, use:
+
+   ```sh
+   node scripts/capture_screenshots.mjs --html-only
+   ```
+
+7. Confirm the Flutter test reports `All tests passed`, the emitted marker sequence matches the host marker array, every marker produces a valid PNG (1080x2424 RGBA), and both `screenshots/manifest.json` and `screenshots/index.html` are generated.
 
 ## Data And Screen Changes
 
@@ -36,24 +50,31 @@ Sample data is loaded before the first screen marker when the capture flow requi
 
 For a new or modified screen, identify its stable semantic navigation control and a reliable readiness condition. A title, tab label, loaded content label, or absence of a loading indicator is preferable to a fixed delay. For a changed tab or nested view, add a separate marker when it needs its own screenshot.
 
-Use numbered, filesystem-safe marker names for output files, but do not rely on the current numbers or names in this document. The integration test and host script are the source of truth.
+Use numbered, filesystem-safe marker names for output files (`01-dashboard-light`, `15-activity-ledger-light`, `25-activity-ledger-dark`), but do not rely on hardcoded counts in documents; derive counts dynamically from the marker array.
 
 ## Readiness Rules
 
-- Navigate with semantic finders such as `find.text`, `find.byTooltip`, and `find.widgetWithText`; do not add coordinate-based adb taps.
-- After opening a screen, wait for its title and for loading indicators to disappear before marking it.
-- After tapping a tab or nested view, wait for its transition to settle and for its content to render before marking it; use extra pumped frames when charts or animations need them.
+- Navigate with semantic finders such as `find.text`, `find.textContaining`, `find.byTooltip`, and `find.widgetWithText`; do not add coordinate-based adb taps.
+- After opening a screen or modal, wait for its title and for loading indicators (`CircularProgressIndicator`) to disappear before marking it.
+- After tapping a tab or nested view, wait for its transition to settle (`pumpAndSettle`) and for its content to render before marking it; use extra pumped frames when charts or animations need them.
+- Ensure scrollable triggers are brought into the visible viewport with `tester.ensureVisible(...)` before tapping.
 - Keep `_markScreen` awaited. It intentionally leaves time for the host-side adb capture to finish before the Flutter test navigates again.
 - Keep the host marker list synchronized with the marker names in the integration test.
 
 ## Troubleshooting
 
-- If a control is offscreen, resolve the `Scrollable` ancestor from that control, drag it into view, call `pumpAndSettle`, and only then tap it.
-- If a marker times out, check that the corresponding marker is emitted after the required title/content readiness condition and that the host list contains the same name.
+- If a control is offscreen or partially obscured, call `tester.ensureVisible(finder)` or drag it into view, call `pumpAndSettle`, and only then tap it.
+- If a modal does not dismiss cleanly, verify whether it uses an explicit close button (`find.byTooltip('Close')`), `find.text('Cancel')`, or `tester.pageBack()`.
+- If ADB communication fails on macOS in sandboxed environments, run the capture command with sandbox bypass enabled to allow TCP socket access to ADB server (`tcp:5037`).
 - If capture appears to show the next screen, increase the awaited marker delay in `_markScreen` rather than adding host-side concurrent captures.
-- If a screen was renamed or added, search for all old and new marker names and update both sides of the marker contract.
+- If a marker was renamed or removed, clean up obsolete PNGs (`rm -f screenshots/*.png`) so no orphaned files pollute the review gallery.
 - If adb is not found, re-export `ANDROID_HOME` and prepend `$ANDROID_HOME/platform-tools` to `PATH`.
 
 ## Completion Criteria
 
-The task is complete only when the current requested screenshot set has been regenerated, the Flutter integration test passes, the marker order is synchronized between Dart and Node, and each expected screenshot is a valid PNG from the emulator.
+The task is complete only when:
+1. The requested screenshot set has been regenerated across Light and Dark passes.
+2. The Flutter integration test passes with zero failures.
+3. The marker order is synchronized between Dart and Node.
+4. Each expected screenshot is a valid PNG from the emulator (1080x2424 RGBA).
+5. `screenshots/manifest.json` and `screenshots/index.html` review gallery are generated and up to date.
