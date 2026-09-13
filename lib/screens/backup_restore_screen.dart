@@ -114,6 +114,25 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     }
   }
 
+  void _showFeedback(
+    String message, {
+    bool isError = false,
+    bool isSuccess = true,
+  }) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError
+            ? AppColors.danger
+            : (isSuccess ? AppColors.emerald700 : AppColors.gray700),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _handleExport() async {
     setState(() {
       _isProcessing = true;
@@ -122,12 +141,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     final path = await DatabaseHelper.instance.exportDatabase();
 
-    setState(() {
-      _isProcessing = false;
-      _statusMessage = path != null
-          ? 'Backup exported successfully to:\n$path'
-          : 'Export cancelled or failed';
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = path != null
+            ? 'Backup exported successfully to:\n$path'
+            : 'Export cancelled or failed';
+      });
+      _showFeedback(
+        path != null
+            ? 'Database exported successfully!'
+            : 'Export cancelled or failed',
+        isError: path == null,
+      );
+    }
     _loadStats();
   }
 
@@ -139,12 +166,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     final success = await DatabaseHelper.instance.importDatabase();
 
-    setState(() {
-      _isProcessing = false;
-      _statusMessage = success
-          ? 'Database imported successfully! Please refresh screens.'
-          : 'Import cancelled or failed';
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = success
+            ? 'Database imported successfully! Please refresh screens.'
+            : 'Import cancelled or failed';
+      });
+      _showFeedback(
+        success
+            ? 'Database imported successfully! Screens updated.'
+            : 'Import cancelled or failed',
+        isError: !success,
+      );
+    }
     _loadStats();
   }
 
@@ -156,12 +191,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     final path = await DatabaseHelper.instance.exportDatabaseAsJSON();
 
-    setState(() {
-      _isProcessing = false;
-      _statusMessage = path != null
-          ? 'JSON exported successfully to:\n$path'
-          : 'JSON export cancelled';
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = path != null
+            ? 'JSON exported successfully to:\n$path'
+            : 'JSON export cancelled';
+      });
+      _showFeedback(
+        path != null
+            ? 'JSON backup exported successfully!'
+            : 'JSON export cancelled',
+        isSuccess: path != null,
+      );
+    }
     _loadStats();
   }
 
@@ -173,12 +216,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     final success = await DatabaseHelper.instance.importDatabaseFromJSON();
 
-    setState(() {
-      _isProcessing = false;
-      _statusMessage = success
-          ? 'JSON imported successfully!'
-          : 'JSON import cancelled or failed';
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = success
+            ? 'JSON imported successfully!'
+            : 'JSON import cancelled or failed';
+      });
+      _showFeedback(
+        success
+            ? 'JSON data imported successfully!'
+            : 'JSON import cancelled or failed',
+        isError: !success,
+      );
+    }
     _loadStats();
   }
 
@@ -190,12 +241,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     final path = await DatabaseHelper.instance.exportTransactionsAsCSV();
 
-    setState(() {
-      _isProcessing = false;
-      _statusMessage = path != null
-          ? 'CSV exported successfully to:\n$path'
-          : 'CSV export cancelled';
-    });
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = path != null
+            ? 'CSV exported successfully to:\n$path'
+            : 'CSV export cancelled';
+      });
+      _showFeedback(
+        path != null
+            ? 'Transactions CSV exported successfully!'
+            : 'CSV export cancelled',
+        isSuccess: path != null,
+      );
+    }
     _loadStats();
   }
 
@@ -232,16 +291,22 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
       try {
         await DatabaseHelper.instance.seedSampleData();
-        setState(() {
-          _isProcessing = false;
-          _statusMessage = 'Sample finances populated successfully!';
-        });
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _statusMessage = 'Sample finances populated successfully!';
+          });
+          _showFeedback('Sample finances populated successfully!');
+        }
         _loadStats();
       } catch (e) {
-        setState(() {
-          _isProcessing = false;
-          _statusMessage = 'Failed to load sample data: $e';
-        });
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _statusMessage = 'Failed to load sample data: $e';
+          });
+          _showFeedback('Failed to load sample data: $e', isError: true);
+        }
       }
     }
   }
@@ -290,16 +355,22 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       try {
         await DatabaseHelper.instance.resetDatabase();
         await DatabaseHelper.instance.seedDatabase();
-        setState(() {
-          _isProcessing = false;
-          _statusMessage = 'Database reset successfully!';
-        });
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _statusMessage = 'Database reset successfully!';
+          });
+          _showFeedback('Database reset successfully!');
+        }
         _loadStats();
       } catch (e) {
-        setState(() {
-          _isProcessing = false;
-          _statusMessage = 'Reset failed: $e';
-        });
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _statusMessage = 'Reset failed: $e';
+          });
+          _showFeedback('Reset failed: $e', isError: true);
+        }
       }
     }
   }
@@ -338,23 +409,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildSectionHeader('Backup & Data Portability', isDark),
           const SizedBox(height: AppSpacing.xs),
           _buildBackupGroupCard(isDark),
-          const SizedBox(height: AppSpacing.xl),
-
-          // 4. DEMO DATA GENERATOR
-          _buildSectionHeader('Demo & Testing', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildDemoDataCard(isDark),
-          const SizedBox(height: AppSpacing.xxl),
-
-          // 5. DANGER ZONE
-          _buildSectionHeader('Danger Zone', isDark, isDanger: true),
-          const SizedBox(height: AppSpacing.xs),
-          _buildDangerZoneCard(isDark),
-          const SizedBox(height: AppSpacing.xl),
-
-          // Status message indicator
           if (_statusMessage.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
             Container(
+              key: const Key('backup_status_message_banner'),
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
                 color: isDark
@@ -374,8 +432,20 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
           ],
+          const SizedBox(height: AppSpacing.xl),
+
+          // 4. DEMO DATA GENERATOR
+          _buildSectionHeader('Demo & Testing', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildDemoDataCard(isDark),
+          const SizedBox(height: AppSpacing.xxl),
+
+          // 5. DANGER ZONE
+          _buildSectionHeader('Danger Zone', isDark, isDanger: true),
+          const SizedBox(height: AppSpacing.xs),
+          _buildDangerZoneCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
 
           // 6. APP INFO & SYSTEM FOOTER
           _buildSectionHeader('System & About', isDark),
@@ -1054,6 +1124,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           const Divider(height: 1),
+          if (_isProcessing)
+            const LinearProgressIndicator(
+              minHeight: 3,
+              backgroundColor: Colors.transparent,
+              color: AppColors.emerald600,
+            ),
           if (!kIsWeb) ...[
             _buildSettingsTile(
               icon: Icons.storage_rounded,

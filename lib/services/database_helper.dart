@@ -43,8 +43,8 @@ class DatabaseHelper {
       final db = await database;
       await db.transaction((txn) async {
         await txn.delete('locked_allocations');
-        await txn.delete('goals');
         await txn.delete('transactions');
+        await txn.delete('goals');
         await txn.delete('categories');
         await txn.delete('accounts');
         await txn.execute(
@@ -1841,8 +1841,8 @@ class DatabaseHelper {
 
       await db.transaction((txn) async {
         await txn.delete('locked_allocations');
-        await txn.delete('goals');
         await txn.delete('transactions');
+        await txn.delete('goals');
         await txn.delete('categories');
         await txn.delete('accounts');
 
@@ -1853,12 +1853,12 @@ class DatabaseHelper {
             in data['categories'] as List<Map<String, dynamic>>) {
           await txn.insert('categories', category);
         }
+        for (final goal in data['goals'] as List<Map<String, dynamic>>) {
+          await txn.insert('goals', goal);
+        }
         for (final transaction
             in data['transactions'] as List<Map<String, dynamic>>) {
           await txn.insert('transactions', transaction);
-        }
-        for (final goal in data['goals'] as List<Map<String, dynamic>>) {
-          await txn.insert('goals', goal);
         }
         for (final lock
             in data['locked_allocations'] as List<Map<String, dynamic>>) {
