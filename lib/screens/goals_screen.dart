@@ -567,22 +567,58 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         onPressed: () async {
                           if (selectedAccountId == null ||
                               amountController.text.isEmpty) {
+                            ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Select an account and amount.'),
+                              ),
+                            );
                             return;
                           }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
-                          if (amount <= 0) return;
-
-                          await DatabaseHelper.instance.lockFunds(
-                            goal.id!,
-                            selectedAccountId!,
-                            amount,
-                          );
-
-                          if (sheetCtx.mounted) {
-                            Navigator.pop(sheetCtx);
+                          if (amount <= 0) {
+                            ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Enter an amount greater than zero.',
+                                ),
+                              ),
+                            );
+                            return;
                           }
-                          _loadData();
+
+                          try {
+                            final selectedAcc = accounts.firstWhere(
+                              (a) => a.id == selectedAccountId,
+                              orElse: () =>
+                                  throw ArgumentError('Select an account.'),
+                            );
+                            if (amount > selectedAcc.balance) {
+                              throw ArgumentError(
+                                'Lock amount cannot exceed account balance (₹${selectedAcc.balance.toStringAsFixed(0)}).',
+                              );
+                            }
+
+                            await DatabaseHelper.instance
+                                .createGoalLockTransaction(
+                                  goalId: goal.id!,
+                                  accountId: selectedAccountId!,
+                                  amount: amount,
+                                  date: DateTime.now().toIso8601String(),
+                                  note: 'Locked for ${goal.name}',
+                                );
+
+                            if (sheetCtx.mounted) {
+                              Navigator.pop(sheetCtx);
+                            }
+                            _loadData();
+                          } catch (error) {
+                            if (sheetCtx.mounted) {
+                              ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                SnackBar(content: Text(error.toString())),
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.emerald700,
