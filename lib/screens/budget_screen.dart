@@ -45,6 +45,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
       setState(() => _isLoading = true);
     }
     final categories = await DatabaseHelper.instance.readAllCategories();
+    final monthlySpending =
+        await DatabaseHelper.instance.getMonthlySpendingByCategoryId();
     double totalBudgetLimit = 0;
     double totalSpent = 0;
     Map<int, double> spendingMap = {};
@@ -52,8 +54,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     for (var cat in categories) {
       totalBudgetLimit += cat.monthlyBudget ?? 0.0;
       if (cat.id != null) {
-        final spent = await DatabaseHelper.instance
-            .getCategorySpendingForCurrentMonth(cat.id!);
+        final spent = monthlySpending[cat.id!] ?? 0.0;
         spendingMap[cat.id!] = spent;
         totalSpent += spent;
       }
@@ -482,7 +483,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ),
             Text(
-              'Spent ₹${spent.toStringAsFixed(0)}',
+              'Spent ${AppFormatters.currency(spent)}',
               style: AppTypography.titleMedium.copyWith(
                 fontWeight: FontWeight.bold,
                 color: isDark ? AppColors.darkText : AppColors.gray900,

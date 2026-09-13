@@ -73,12 +73,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       totalPhysical += acc.balance;
     }
 
+    final categorySpendingMap = await db.getMonthlySpendingByCategoryId();
     double totalBudget = 0;
     double totalSpent = 0;
     for (var cat in categoriesData) {
       totalBudget += cat.monthlyBudget ?? 0;
       if (cat.id != null) {
-        final spent = await db.getCategorySpendingForCurrentMonth(cat.id!);
+        final spent = categorySpendingMap[cat.id!] ?? 0.0;
         totalSpent += spent;
       }
     }
