@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart';
 import 'package:cashflow/services/database_helper.dart';
 
 import '../models/salary_cycle.dart';
@@ -21,6 +22,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _goalsCount = 0;
   int _transactionsCount = 0;
   int _salaryDay = 1;
+  String? _lastBackupTimestamp;
 
   @override
   void initState() {
@@ -36,6 +38,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final goals = await db.readAllGoals();
       final transactions = await db.getTransactionHistory();
       final salaryDay = await db.getSalaryDay();
+      final lastBackup = await db.getLastBackupTimestamp();
 
       if (mounted) {
         setState(() {
@@ -44,9 +47,36 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _goalsCount = goals.length;
           _transactionsCount = transactions.length;
           _salaryDay = salaryDay;
+          _lastBackupTimestamp = lastBackup;
         });
       }
     } catch (_) {}
+  }
+
+  String _formatBackupFreshness(String? isoString) {
+    if (isoString == null || isoString.isEmpty) {
+      return 'Never backed up';
+    }
+    final dt = DateTime.tryParse(isoString);
+    if (dt == null) return 'Never backed up';
+
+    final now = DateTime.now();
+    final difference = now.difference(dt);
+
+    if (difference.inSeconds < 60) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      final mins = difference.inMinutes;
+      return '$mins ${mins == 1 ? "minute" : "minutes"} ago';
+    } else if (difference.inHours < 24 && now.day == dt.day) {
+      final hrs = difference.inHours;
+      return '$hrs ${hrs == 1 ? "hour" : "hours"} ago';
+    } else if (difference.inDays == 1 ||
+        (difference.inHours < 48 && now.day != dt.day)) {
+      return 'Yesterday at ${DateFormat("h:mm a").format(dt)}';
+    } else {
+      return DateFormat('MMM d, yyyy • h:mm a').format(dt);
+    }
   }
 
   String _getDaySuffix(int day) {
@@ -941,10 +971,89 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   // --- 3. BACKUP GROUP CARD ---
   Widget _buildBackupGroupCard(bool isDark) {
+    final freshnessText = _formatBackupFreshness(_lastBackupTimestamp);
+    final hasBackup =
+        _lastBackupTimestamp != null && _lastBackupTimestamp!.isNotEmpty;
+
     return CustomCard(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
+          // Backup Freshness Header
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: (hasBackup ? AppColors.emerald600 : AppColors.gray500)
+                  .withValues(alpha: isDark ? 0.12 : 0.08),
+              borderRadius: const BorderRadius.vertical(
+                top: AppBorderRadius.large,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  hasBackup ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                  size: 20,
+                  color: hasBackup
+                      ? AppColors.emerald600
+                      : (isDark ? AppColors.gray400 : AppColors.gray500),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Backup Status',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                          fontSize: 10,
+                        ),
+                      ),
+                      Text(
+                        hasBackup
+                            ? 'Last backup: $freshnessText'
+                            : 'No backups created yet',
+                        style: AppTypography.labelMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: hasBackup
+                              ? (isDark
+                                  ? AppColors.emerald400
+                                  : AppColors.emerald800)
+                              : (isDark ? AppColors.gray400 : AppColors.gray600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: (hasBackup ? AppColors.emerald600 : AppColors.gray500)
+                        .withValues(alpha: 0.15),
+                    borderRadius: AppBorderRadius.pillBorder,
+                  ),
+                  child: Text(
+                    hasBackup ? 'Active' : 'Unsaved',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: hasBackup
+                          ? AppColors.emerald600
+                          : (isDark ? AppColors.gray400 : AppColors.gray600),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
           if (!kIsWeb) ...[
             _buildSettingsTile(
               icon: Icons.storage_rounded,
