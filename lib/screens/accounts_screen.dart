@@ -722,6 +722,12 @@ class _AccountCardState extends State<AccountCard> {
                     size: 18,
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  constraints: const BoxConstraints(
+                    minWidth: AppComponentSizes.minTouchTarget,
+                    minHeight: AppComponentSizes.minTouchTarget,
+                  ),
+                  tooltip: 'Edit Account',
                   onPressed: widget.onEdit,
                 ),
             ],
@@ -771,67 +777,73 @@ class _AccountCardState extends State<AccountCard> {
                 ),
               ),
             ),
-            if (_isExpanded) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.gray800.withValues(alpha: 0.5)
-                      : AppColors.gray100.withValues(alpha: 0.6),
-                  borderRadius: AppBorderRadius.smallBorder,
-                  border: Border.all(
-                    color: isDark ? AppColors.gray700 : AppColors.gray200,
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  children: aggregatedLocks.map((lock) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.savings_outlined,
-                                  size: 14,
-                                  color: isDark
-                                      ? AppColors.gray400
-                                      : AppColors.gray600,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    lock.goalName,
-                                    style: AppTypography.labelSmall,
-                                    overflow: TextOverflow.ellipsis,
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: _isExpanded
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.gray800.withValues(alpha: 0.5)
+                              : AppColors.gray100.withValues(alpha: 0.6),
+                          borderRadius: AppBorderRadius.smallBorder,
+                          border: Border.all(
+                            color: isDark ? AppColors.gray700 : AppColors.gray200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: aggregatedLocks.map((lock) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.savings_outlined,
+                                          size: 14,
+                                          color: isDark
+                                              ? AppColors.gray400
+                                              : AppColors.gray600,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            lock.goalName,
+                                            style: AppTypography.labelSmall,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            AppFormatters.currency(lock.amount),
-                            style: AppTypography.labelSmall.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.warning,
-                            ),
-                          ),
-                        ],
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    AppFormatters.currency(lock.amount),
+                                    style: AppTypography.labelSmall.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.warning,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ],
       ),
     );
   }
 }
-

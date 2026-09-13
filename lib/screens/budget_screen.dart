@@ -580,28 +580,40 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   size: 18,
                   color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
-                padding: const EdgeInsets.only(left: AppSpacing.sm),
-                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                constraints: const BoxConstraints(
+                  minWidth: AppComponentSizes.minTouchTarget,
+                  minHeight: AppComponentSizes.minTouchTarget,
+                ),
+                tooltip: 'Edit Category',
                 onPressed: () => _showCategoryDialog(category: cat),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // Row 2: OVERFLOW-SAFE PROGRESS BAR WITH EXPANDED
+          // Row 2: OVERFLOW-SAFE PROGRESS BAR WITH ANIMATION
           Row(
             children: [
               Expanded(
                 child: ClipRRect(
                   borderRadius: AppBorderRadius.pillBorder,
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
-                    minHeight: 8,
-                    backgroundColor: isDark
-                        ? AppColors.darkBorder
-                        : AppColors.gray200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isOver ? AppColors.danger : style.color,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(
+                      begin: 0.0,
+                      end: progress.clamp(0.0, 1.0),
+                    ),
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, animatedVal, _) => LinearProgressIndicator(
+                      value: animatedVal,
+                      minHeight: 8,
+                      backgroundColor: isDark
+                          ? AppColors.darkBorder
+                          : AppColors.gray200,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isOver ? AppColors.danger : style.color,
+                      ),
                     ),
                   ),
                 ),

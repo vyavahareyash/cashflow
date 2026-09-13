@@ -269,10 +269,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ),
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.lg,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
                 child: Container(
@@ -285,11 +291,23 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                'Locked Allocations for ${goal.name}',
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Locked Allocations for ${goal.name}',
+                      style: AppTypography.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -366,8 +384,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 
@@ -1248,6 +1267,11 @@ class GoalCard extends StatelessWidget {
                     size: 20,
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  constraints: const BoxConstraints(
+                    minWidth: AppComponentSizes.minTouchTarget,
+                    minHeight: AppComponentSizes.minTouchTarget,
+                  ),
                   tooltip: 'Contribution Breakdown',
                   onPressed: onHistory,
                 ),
@@ -1257,6 +1281,11 @@ class GoalCard extends StatelessWidget {
                     Icons.edit_outlined,
                     size: 18,
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  constraints: const BoxConstraints(
+                    minWidth: AppComponentSizes.minTouchTarget,
+                    minHeight: AppComponentSizes.minTouchTarget,
                   ),
                   tooltip: 'Edit Goal',
                   onPressed: onEdit,

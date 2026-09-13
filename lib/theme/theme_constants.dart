@@ -190,8 +190,9 @@ class AppShadows {
 
 /// Component Sizes
 class AppComponentSizes {
+  static const double minTouchTarget = 48;
   static const double buttonHeightSmall = 36;
-  static const double buttonHeightMedium = 46;
+  static const double buttonHeightMedium = 48;
   static const double buttonHeightLarge = 54;
   static const double cardBorderMedium = 3;
 }
