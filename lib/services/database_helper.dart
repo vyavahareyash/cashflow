@@ -364,6 +364,7 @@ class DatabaseHelper {
       final documentsDir = await getApplicationDocumentsDirectory();
       final backupPath = join(documentsDir.path, 'cashflow_backup.db');
       final backupFile = await file.copy(backupPath);
+      await setLastBackupTimestamp(DateTime.now());
 
       return backupFile.path;
     } catch (e, stackTrace) {
@@ -1809,10 +1810,14 @@ class DatabaseHelper {
             .toList(),
       );
 
-      return await saveBackupBytes(
+      final path = await saveBackupBytes(
         'cashflow_backup.json',
         utf8.encode(jsonString),
       );
+      if (path != null) {
+        await setLastBackupTimestamp(DateTime.now());
+      }
+      return path;
     } catch (e, stackTrace) {
       developer.log(
         'JSON export error',
@@ -2167,6 +2172,17 @@ class DatabaseHelper {
   Future<void> setSalaryDay(int day) async {
     final clamped = day.clamp(1, 31);
     await setSetting('salary_day', clamped.toString());
+    notifyDataChanged();
+  }
+
+  /// Retrieves timestamp string (ISO-8601) of last successful backup export.
+  Future<String?> getLastBackupTimestamp() async {
+    return getSetting('last_backup_timestamp');
+  }
+
+  /// Persists timestamp of last successful backup export.
+  Future<void> setLastBackupTimestamp(DateTime timestamp) async {
+    await setSetting('last_backup_timestamp', timestamp.toIso8601String());
     notifyDataChanged();
   }
 }

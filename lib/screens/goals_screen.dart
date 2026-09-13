@@ -2340,6 +2340,19 @@ class GoalCard extends StatelessWidget {
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      border: isCompleted
+          ? Border.all(
+              color: AppColors.emerald500.withValues(alpha: isDark ? 0.6 : 0.8),
+              width: 1.5,
+            )
+          : null,
+      borderLeftColor: isCompleted ? AppColors.emerald500 : null,
+      borderLeftWidth: 4.0,
+      backgroundColor: isCompleted
+          ? (isDark
+              ? AppColors.emerald900.withValues(alpha: 0.12)
+              : AppColors.emerald50.withValues(alpha: 0.35))
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2607,6 +2620,38 @@ class GoalCard extends StatelessWidget {
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.danger,
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (isCompleted) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.emerald500.withValues(alpha: 0.12),
+                borderRadius: AppBorderRadius.mediumBorder,
+                border: Border.all(
+                  color: AppColors.emerald500.withValues(alpha: 0.25),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text('🎉', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'Ready to Settle • Sinking fund 100% funded',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.emerald400 : AppColors.emerald800,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
