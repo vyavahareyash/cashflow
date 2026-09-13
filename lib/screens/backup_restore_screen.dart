@@ -19,6 +19,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _categoriesCount = 0;
   int _goalsCount = 0;
   int _transactionsCount = 0;
+  int _salaryDay = 1;
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final categories = await db.readAllCategories();
       final goals = await db.readAllGoals();
       final transactions = await db.getTransactionHistory();
+      final salaryDay = await db.getSalaryDay();
 
       if (mounted) {
         setState(() {
@@ -40,9 +42,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _categoriesCount = categories.length;
           _goalsCount = goals.length;
           _transactionsCount = transactions.length;
+          _salaryDay = salaryDay;
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _updateSalaryDay(int newDay) async {
+    await DatabaseHelper.instance.setSalaryDay(newDay);
+    if (mounted) {
+      setState(() {
+        _salaryDay = newDay;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Salary payday set to day $newDay of the month'),
+          backgroundColor: AppColors.emerald700,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _handleExport() async {
@@ -253,7 +272,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildPrivacyHeroCard(isDark),
           const SizedBox(height: AppSpacing.xl),
 
-          // 2. LOCAL STORAGE SNAPSHOT
+          // 2. FINANCIAL & CYCLE PREFERENCES
+          _buildSectionHeader('Financial & Cycle Preferences', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildSalaryPreferencesCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
+
+          // 3. LOCAL STORAGE SNAPSHOT
           _buildSectionHeader('Storage & Record Count', isDark),
           const SizedBox(height: AppSpacing.xs),
           _buildStorageOverviewCard(isDark),
@@ -388,7 +413,82 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  // --- 2. STORAGE OVERVIEW CARD ---
+  // --- 2. SALARY & CYCLE PREFERENCES CARD ---
+  Widget _buildSalaryPreferencesCard(bool isDark) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald500.withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.emerald600,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Salary / Payday Date', style: AppTypography.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Anchor for goal savings pacing and budget cycle countdowns',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Monthly Payday',
+                style: AppTypography.labelLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              DropdownButton<int>(
+                key: const Key('salary_day_dropdown'),
+                value: _salaryDay,
+                underline: const SizedBox.shrink(),
+                borderRadius: AppBorderRadius.mediumBorder,
+                items: List.generate(31, (index) {
+                  final day = index + 1;
+                  return DropdownMenuItem<int>(
+                    value: day,
+                    child: Text('Day $day of month'),
+                  );
+                }),
+                onChanged: (val) {
+                  if (val != null) {
+                    _updateSalaryDay(val);
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 3. STORAGE OVERVIEW CARD ---
   Widget _buildStorageOverviewCard(bool isDark) {
     return CustomCard(
       padding: const EdgeInsets.symmetric(
