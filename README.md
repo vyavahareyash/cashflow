@@ -1,80 +1,126 @@
 # Cashflow
 
-Cashflow is a private, offline-first personal finance app that answers one practical question: **how much money can I actually spend right now?**
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
+[![Database](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)](https://sqlite.org)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline-success)](#private-by-default)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Track the money in your accounts, set monthly spending targets, and reserve money for future goals without needing a bank connection or an online account.
+Cashflow is a private, offline-first personal finance app built with Flutter. It solves the biggest problem with traditional budgeting apps by answering one practical question: **how much money can I actually spend right now without sabotaging my future goals?**
+
+Track real balances across cash and bank accounts, align budgets with your actual payday schedule, and reserve money in virtual envelopes for sinking funds—with zero bank credentials, zero cloud accounts, and zero tracking.
+
+---
 
 ## Download for Android
 
 [Download the latest APK: Cashflow v1.1.0](https://github.com/vyavahareyash/cashflow/releases/download/v1.1.0/app-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
 
-![Cashflow dashboard](screenshots/01-dashboard.png)
+<p align="center">
+  <img src="screenshots/01-dashboard.png" alt="Cashflow Dashboard" width="400">
+</p>
 
-## See your usable balance
+---
 
-Cashflow separates money you have from money that is already spoken for:
+## The Safe-to-Spend Balance
+
+Traditional apps confuse your physical bank balance with money you are actually free to spend. Cashflow separates money you hold from money that is already spoken for:
 
 ```text
-Usable balance = account money - goal locks - monthly budget reserves
+Usable Balance = Total Account Money - Locked Goal Allocations
 ```
 
-The dashboard keeps those numbers visible together, so you can make spending decisions with the full picture. Budgets are designed for tracking and awareness: going over a target shows you what happened rather than blocking the transaction.
+- **Total Physical Balance**: The real sum of money currently in your checking, savings, and cash accounts.
+- **Locked Goal Allocations**: Virtual envelope reserves earmarked for specific savings targets (e.g. emergency fund, vacation, tax bill).
+- **Monthly Budgets**: Flexible tracking targets for awareness. Expenses reduce your balance when they actually happen—preventing artificial double-counting of planned expenses.
 
-## What you can do
+---
 
-- Manage bank and cash accounts in one place.
-- Organize spending with categories and optional monthly budgets.
-- Record expenses and review your transaction history.
-- Set savings goals and lock money toward future expenses while it stays in its original account.
-- Review spending by category and follow trends over time.
-- Keep your data on your device and use local backup and restore tools.
+## Key Features
 
-## Explore the app
+- **Safe-to-Spend Dashboard**: Instantly see your true disposable balance alongside total physical assets and active goal locks.
+- **Privacy Mode**: Tap the eye icon to instantly mask all account balances, budgets, and transaction amounts (`$••••••`) when in public or recording screencasts.
+- **Custom Payday Cycles**: Support for custom salary cycle start days (e.g., 25th to 24th). Budgets and burn pace automatically adjust to your actual earning schedule.
+- **Daily Burn Pace Indicator**: Tracks your actual daily spending velocity against allowable daily budget to prevent mid-month budget exhaustion.
+- **Sinking Funds & Virtual Envelopes**: Lock money from any account toward goals without opening multiple bank accounts. Enjoy celebratory confetti flair when goals are achieved!
+- **Atomic Account Transfers**: Move funds between checking, savings, and cash with atomic dual-entry integrity that does not distort category expense reports.
+- **Deep Analytics & Trends**: Interactive category breakdowns, spending velocity over time, and net cashflow indicators.
+- **100% Offline & Private**: Zero external servers, zero analytics, zero bank logins. Local SQLite storage with full JSON and SQLite export/import backup tools.
+
+---
+
+## Explore the App
 
 <table>
-	<tr>
-		<td><img src="screenshots/02-budget.png" alt="Monthly budget screen"></td>
-		<td><img src="screenshots/03-goals.png" alt="Savings goals screen"></td>
-	</tr>
-	<tr>
-		<td align="center">Track monthly spending by category</td>
-		<td align="center">Plan future expenses with savings goals</td>
-	</tr>
-	<tr>
-		<td><img src="screenshots/04-accounts.png" alt="Accounts screen"></td>
-		<td><img src="screenshots/05-analytics.png" alt="Analytics screen"></td>
-	</tr>
-	<tr>
-		<td align="center">See balances across your accounts</td>
-		<td align="center">Understand where your money goes</td>
-	</tr>
-	<tr>
-		<td><img src="screenshots/06-analytics-trends.png" alt="Spending trends screen"></td>
-		<td><img src="screenshots/07-backup-restore.png" alt="Backup and restore screen"></td>
-	</tr>
-	<tr>
-		<td align="center">Spot changes in spending over time</td>
-		<td align="center">Back up and restore your local data</td>
-	</tr>
+  <tr>
+    <td><img src="screenshots/02-budget.png" alt="Monthly budget screen"></td>
+    <td><img src="screenshots/03-goals.png" alt="Savings goals screen"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Track spending by category & payday cycle</b></td>
+    <td align="center"><b>Lock virtual funds for savings goals</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/04-accounts.png" alt="Accounts screen"></td>
+    <td><img src="screenshots/05-analytics.png" alt="Analytics screen"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Manage cash & bank accounts with transfers</b></td>
+    <td align="center"><b>Analyze category distribution & cashflow</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/06-analytics-trends.png" alt="Spending trends screen"></td>
+    <td><img src="screenshots/07-backup-restore.png" alt="Backup and restore screen"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Review monthly trends & burn velocity</b></td>
+    <td align="center"><b>Export & restore portable JSON / SQLite backups</b></td>
+  </tr>
 </table>
 
-## Private by default
+---
 
-Cashflow stores your information locally in SQLite and works without an internet connection. No account or server is required for the offline experience, and your data stays on your device unless you choose to back it up or export it.
+## Documentation
 
-The app is being built for Android, iOS, and Web.
+Comprehensive guides and architectural specifications are available in the [`docs/`](docs/INDEX.md) directory:
 
-## For developers
+- [User Feature Guide](docs/user/FEATURE_GUIDE.md) — Comprehensive user manual for every feature and workflow.
+- [Calculations & Formulas](docs/user/CALCULATIONS.md) — Exact mathematical definitions for Usable Balance, Payday Cycles, and Daily Burn Pace.
+- [Onboarding & FAQ](docs/user/FAQ_AND_ONBOARDING.md) — 3-step setup guide and answers to common questions.
+- [System Architecture](docs/architecture/ARCHITECTURE.md) — Three-tier architecture, reactive state model, and SQLite schema ER diagram.
+- [Development Guide](docs/development.md) — Developer setup, command cheatsheet, emulator guide, and screenshot automation.
 
-This is a Flutter project. To run it locally:
+---
+
+## For Developers
+
+Cashflow is built with Flutter and SQLite.
+
+### Local Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/vyavahareyash/cashflow.git
+cd cashflow
+
+# Install Flutter dependencies
 flutter pub get
+
+# Run on connected device or emulator
 flutter run
 ```
 
-Run the test suite with:
+### Running Tests & Static Analysis
 
 ```bash
-flutter test
+# Run unit and widget tests (single concurrency required for SQLite test file safety)
+flutter test --concurrency=1
+
+# Run static analysis
+flutter analyze
 ```
+
+---
+
+## Private by Default
+
+Cashflow does not require an account, has zero network dependencies, and makes zero network requests. Your financial data stays strictly on your local device.
