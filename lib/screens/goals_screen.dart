@@ -202,106 +202,19 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   void _showEditGoalDialog(Goal goal) {
-    final nameController = TextEditingController(text: goal.name);
-    final targetController = TextEditingController(
-      text: goal.totalTarget.toStringAsFixed(0),
-    );
-    final formKey = GlobalKey<FormState>();
-
     showDialog(
       context: context,
-      builder: (dialogCtx) {
-        final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
-            backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: AppBorderRadius.xlargeBorder,
-            ),
-            title: Text(
-              'Edit Sinking Fund',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CustomInputField(
-                      controller: nameController,
-                      label: 'Goal Name',
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? 'Please enter a goal name'
-                          : null,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    CustomInputField(
-                      controller: targetController,
-                      label: 'Target Amount',
-                      prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter target amount';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => _confirmDeleteGoal(goal),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(
-                    color: AppColors.danger,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Cancel'),
-              ),
-              CustomButton(
-                label: 'Update',
-                width: 100,
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    await DatabaseHelper.instance.updateGoal(
-                      Goal(
-                        id: goal.id,
-                        name: nameController.text.trim(),
-                        totalTarget:
-                            double.tryParse(targetController.text.trim()) ??
-                            0.0,
-                        targetDate: goal.targetDate,
-                        currentSaved: goal.currentSaved,
-                      ),
-                    );
-                    if (dialogCtx.mounted) {
-                      Navigator.pop(dialogCtx);
-                    }
-                    _loadData();
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (dialogCtx) => EditGoalDialog(
+        goal: goal,
+        onDelete: () {
+          Navigator.pop(dialogCtx);
+          _confirmDeleteGoal(goal);
+        },
+        onUpdate: (updatedGoal) async {
+          await DatabaseHelper.instance.updateGoal(updatedGoal);
+          _loadData();
+        },
+      ),
     );
   }
 
@@ -383,6 +296,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 'Total saved: ${AppFormatters.currency(goal.currentSaved)} of ${AppFormatters.currency(goal.totalTarget)}',
                 style: AppTypography.labelSmall.copyWith(
                   color: isDark ? AppColors.gray400 : AppColors.gray600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Target Date: ${goal.formattedTargetDate} • ${goal.deadlineStatusText()}',
+                style: AppTypography.labelSmall.copyWith(
+                  color: goal.isOverdue()
+                      ? AppColors.danger
+                      : (isDark ? AppColors.gray400 : AppColors.gray600),
+                  fontWeight: goal.isOverdue()
+                      ? FontWeight.w600
+                      : FontWeight.normal,
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -1029,13 +954,207 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Widget _buildGoalCard(Goal goal, bool isDark) {
-    final progress = goal.totalTarget > 0
-        ? (goal.currentSaved / goal.totalTarget)
-        : 0.0;
-    final remaining = (goal.totalTarget - goal.currentSaved).clamp(
-      0.0,
-      double.infinity,
+    return GoalCard(
+      goal: goal,
+      onHistory: () => _showContributionLog(goal),
+      onEdit: () => _showEditGoalDialog(goal),
+      onLockFunds: () => _showContributionDialog(goal),
+      onPay: () => _showPaymentDialog(goal),
     );
+  }
+}
+
+class EditGoalDialog extends StatefulWidget {
+  final Goal goal;
+  final Future<void> Function(Goal updatedGoal) onUpdate;
+  final VoidCallback? onDelete;
+
+  const EditGoalDialog({
+    super.key,
+    required this.goal,
+    required this.onUpdate,
+    this.onDelete,
+  });
+
+  @override
+  State<EditGoalDialog> createState() => _EditGoalDialogState();
+}
+
+class _EditGoalDialogState extends State<EditGoalDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _targetController;
+  late DateTime _targetDate;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.goal.name);
+    _targetController = TextEditingController(
+      text: widget.goal.totalTarget.toStringAsFixed(0),
+    );
+    _targetDate =
+        widget.goal.parsedTargetDate ??
+        DateTime.now().add(const Duration(days: 90));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _targetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AlertDialog(
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      shape: RoundedRectangleBorder(borderRadius: AppBorderRadius.xlargeBorder),
+      title: Text(
+        'Edit Sinking Fund',
+        style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+      ),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomInputField(
+                controller: _nameController,
+                label: 'Goal Name',
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Please enter a goal name'
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              CustomInputField(
+                controller: _targetController,
+                label: 'Target Amount',
+                prefixText: '₹ ',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter target amount';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                ),
+                title: Text(
+                  'Target Date',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                ),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy').format(_targetDate),
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.emerald700,
+                ),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _targetDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (picked != null) {
+                    setState(() => _targetDate = picked);
+                  }
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppBorderRadius.mediumBorder,
+                  side: BorderSide(
+                    color: isDark ? AppColors.darkBorder : AppColors.gray300,
+                  ),
+                ),
+                tileColor: isDark ? AppColors.darkSurface : AppColors.gray50,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        if (widget.onDelete != null)
+          TextButton(
+            onPressed: widget.onDelete,
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        CustomButton(
+          label: 'Update',
+          width: 120,
+          onPressed: () async {
+            if (_formKey.currentState!.validate()) {
+              final updatedGoal = Goal(
+                id: widget.goal.id,
+                name: _nameController.text.trim(),
+                totalTarget:
+                    double.tryParse(_targetController.text.trim()) ?? 0.0,
+                targetDate: DateFormat('yyyy-MM-dd').format(_targetDate),
+                currentSaved: widget.goal.currentSaved,
+              );
+              await widget.onUpdate(updatedGoal);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class GoalCard extends StatelessWidget {
+  final Goal goal;
+  final VoidCallback? onHistory;
+  final VoidCallback? onEdit;
+  final VoidCallback? onLockFunds;
+  final VoidCallback? onPay;
+
+  const GoalCard({
+    super.key,
+    required this.goal,
+    this.onHistory,
+    this.onEdit,
+    this.onLockFunds,
+    this.onPay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final progress = goal.progress;
+    final remaining = goal.remainingAmount;
+    final isCompleted = goal.isCompleted;
+    final isOverdue = goal.isOverdue();
+    final pace = goal.recommendedMonthlyPace();
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -1086,24 +1205,26 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   ],
                 ),
               ),
-              IconButton(
-                icon: Icon(
-                  Icons.history_rounded,
-                  size: 20,
-                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+              if (onHistory != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.history_rounded,
+                    size: 20,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  tooltip: 'Contribution Breakdown',
+                  onPressed: onHistory,
                 ),
-                tooltip: 'Contribution Breakdown',
-                onPressed: () => _showContributionLog(goal),
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.edit_outlined,
-                  size: 18,
-                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+              if (onEdit != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  tooltip: 'Edit Goal',
+                  onPressed: onEdit,
                 ),
-                tooltip: 'Edit Goal',
-                onPressed: () => _showEditGoalDialog(goal),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1156,6 +1277,134 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Target Date & Deadline Badge Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 13,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Due ${goal.formattedTargetDate}',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isCompleted
+                      ? AppColors.emerald500.withValues(alpha: 0.15)
+                      : isOverdue
+                      ? AppColors.danger.withValues(alpha: 0.15)
+                      : (isDark
+                            ? AppColors.darkSurfaceElevated
+                            : AppColors.gray100),
+                  borderRadius: AppBorderRadius.pillBorder,
+                  border: Border.all(
+                    color: isCompleted
+                        ? AppColors.emerald500.withValues(alpha: 0.3)
+                        : isOverdue
+                        ? AppColors.danger.withValues(alpha: 0.3)
+                        : (isDark ? AppColors.darkBorder : AppColors.gray200),
+                    width: 0.5,
+                  ),
+                ),
+                child: Text(
+                  goal.deadlineStatusText(),
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isCompleted
+                        ? AppColors.emerald600
+                        : isOverdue
+                        ? AppColors.danger
+                        : (isDark ? AppColors.gray300 : AppColors.gray700),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Recommended Monthly Savings Pace or Overdue warning banner
+          if (!isCompleted && pace != null && pace > 0) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.emerald500.withValues(alpha: 0.08),
+                borderRadius: AppBorderRadius.mediumBorder,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.trending_up_rounded,
+                    size: 14,
+                    color: AppColors.emerald600,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Save ~${AppFormatters.currency(pace)}/mo to hit target on time',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark
+                            ? AppColors.emerald400
+                            : AppColors.emerald800,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (isOverdue) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.08),
+                borderRadius: AppBorderRadius.mediumBorder,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 14,
+                    color: AppColors.danger,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Target date passed — ₹${remaining.toStringAsFixed(0)} still needed',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
 
           // Action Buttons
@@ -1167,7 +1416,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   icon: Icons.lock_outline_rounded,
                   variant: ButtonVariant.secondary,
                   height: AppComponentSizes.buttonHeightSmall,
-                  onPressed: () => _showContributionDialog(goal),
+                  onPressed: onLockFunds ?? () {},
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -1177,7 +1426,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   icon: Icons.payment_rounded,
                   variant: ButtonVariant.outlined,
                   height: AppComponentSizes.buttonHeightSmall,
-                  onPressed: () => _showPaymentDialog(goal),
+                  onPressed: onPay ?? () {},
                 ),
               ),
             ],

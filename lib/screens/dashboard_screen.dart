@@ -640,7 +640,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ? (goal.currentSaved / goal.totalTarget)
                     : 0.0;
                 return SizedBox(
-                  width: 200,
+                  width: 210,
                   child: CustomCard(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     onTap: () {
@@ -690,14 +690,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Locked',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: isDark
-                                    ? AppColors.gray400
-                                    : AppColors.gray600,
+                            Expanded(
+                              child: Text(
+                                goal.deadlineStatusText(),
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: goal.isOverdue()
+                                      ? AppColors.danger
+                                      : (isDark
+                                            ? AppColors.gray400
+                                            : AppColors.gray600),
+                                  fontSize: 10,
+                                  fontWeight: goal.isOverdue()
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
                               '₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)}',
                               style: AppTypography.labelSmall.copyWith(
