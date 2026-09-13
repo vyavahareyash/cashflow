@@ -21,6 +21,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
   double _totalPhysical = 0.0;
   double _totalLocked = 0.0;
   bool _isLoading = true;
+  final Set<int> _expandedAccountIds = {};
 
   @override
   void initState() {
@@ -460,7 +461,23 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       ),
                     )
                   else
-                    ..._accounts.map((acc) => _buildAccountCard(acc, isDark)),
+                    ..._accounts.map((acc) => AccountCard(
+                          account: acc,
+                          locks: _accountLocks[acc.id] ?? [],
+                          isExpanded: acc.id != null && _expandedAccountIds.contains(acc.id),
+                          onExpansionChanged: (expanded) {
+                            if (acc.id != null) {
+                              setState(() {
+                                if (expanded) {
+                                  _expandedAccountIds.add(acc.id!);
+                                } else {
+                                  _expandedAccountIds.remove(acc.id!);
+                                }
+                              });
+                            }
+                          },
+                          onEdit: () => _showEditAccountDialog(acc),
+                        )),
 
                   const SizedBox(height: AppSpacing.huge),
                 ],
@@ -556,13 +573,86 @@ class _AccountsScreenState extends State<AccountsScreen> {
     );
   }
 
-  Widget _buildAccountCard(Account acc, bool isDark) {
-    final locks = _accountLocks[acc.id] ?? [];
-    double lockedInAcc = 0;
-    for (var l in locks) {
-      lockedInAcc += l.amount;
+}
+
+class AggregatedGoalLock {
+  final int goalId;
+  final String goalName;
+  final double amount;
+
+  const AggregatedGoalLock({
+    required this.goalId,
+    required this.goalName,
+    required this.amount,
+  });
+}
+
+class AccountCard extends StatefulWidget {
+  final Account account;
+  final List<LockedAllocation> locks;
+  final VoidCallback? onEdit;
+  final bool? isExpanded;
+  final ValueChanged<bool>? onExpansionChanged;
+
+  const AccountCard({
+    super.key,
+    required this.account,
+    this.locks = const [],
+    this.onEdit,
+    this.isExpanded,
+    this.onExpansionChanged,
+  });
+
+  static List<AggregatedGoalLock> aggregateLocks(List<LockedAllocation> locks) {
+    final Map<int, AggregatedGoalLock> map = {};
+    for (final lock in locks) {
+      if (map.containsKey(lock.goalId)) {
+        final existing = map[lock.goalId]!;
+        map[lock.goalId] = AggregatedGoalLock(
+          goalId: lock.goalId,
+          goalName:
+              existing.goalName.isNotEmpty ? existing.goalName : lock.goalName,
+          amount: existing.amount + lock.amount,
+        );
+      } else {
+        map[lock.goalId] = AggregatedGoalLock(
+          goalId: lock.goalId,
+          goalName: lock.goalName,
+          amount: lock.amount,
+        );
+      }
     }
+    return map.values.toList();
+  }
+
+  @override
+  State<AccountCard> createState() => _AccountCardState();
+}
+
+class _AccountCardState extends State<AccountCard> {
+  bool _internalExpanded = false;
+
+  bool get _isExpanded => widget.isExpanded ?? _internalExpanded;
+
+  void _toggleExpanded() {
+    final next = !_isExpanded;
+    if (widget.onExpansionChanged != null) {
+      widget.onExpansionChanged!(next);
+    } else {
+      setState(() {
+        _internalExpanded = next;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final acc = widget.account;
     final isBank = acc.type == 'Bank';
+    final aggregatedLocks = AccountCard.aggregateLocks(widget.locks);
+    final totalLocked =
+        widget.locks.fold<double>(0.0, (sum, l) => sum + l.amount);
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -615,9 +705,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (lockedInAcc > 0)
+                  if (totalLocked > 0)
                     Text(
-                      '₹${lockedInAcc.toStringAsFixed(0)} locked',
+                      '${AppFormatters.currency(totalLocked)} locked',
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.warning,
                         fontWeight: FontWeight.w600,
@@ -625,55 +715,123 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     ),
                 ],
               ),
-              IconButton(
-                icon: Icon(
-                  Icons.edit_outlined,
-                  size: 18,
-                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+              if (widget.onEdit != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  onPressed: widget.onEdit,
                 ),
-                onPressed: () => _showEditAccountDialog(acc),
-              ),
             ],
           ),
-          if (locks.isNotEmpty) ...[
+          if (aggregatedLocks.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             const Divider(height: 12),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Locked Funds in this account:',
-              style: AppTypography.labelSmall.copyWith(
-                color: isDark ? AppColors.gray400 : AppColors.gray600,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            ...locks.map((lock) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
+            InkWell(
+              key: Key('account_locked_funds_toggle_${acc.id ?? 0}'),
+              onTap: _toggleExpanded,
+              borderRadius: AppBorderRadius.smallBorder,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    const Icon(
+                      Icons.lock_outline_rounded,
+                      size: 16,
+                      color: AppColors.warning,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
                     Expanded(
                       child: Text(
-                        '• ${lock.goalName}',
-                        style: AppTypography.labelSmall,
-                        overflow: TextOverflow.ellipsis,
+                        'Locked Funds (${aggregatedLocks.length} ${aggregatedLocks.length == 1 ? "goal" : "goals"})',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     Text(
-                      AppFormatters.currency(lock.amount),
+                      AppFormatters.currency(totalLocked),
                       style: AppTypography.labelSmall.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.warning,
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    ),
                   ],
                 ),
-              );
-            }),
+              ),
+            ),
+            if (_isExpanded) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.gray800.withValues(alpha: 0.5)
+                      : AppColors.gray100.withValues(alpha: 0.6),
+                  borderRadius: AppBorderRadius.smallBorder,
+                  border: Border.all(
+                    color: isDark ? AppColors.gray700 : AppColors.gray200,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  children: aggregatedLocks.map((lock) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.savings_outlined,
+                                  size: 14,
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    lock.goalName,
+                                    style: AppTypography.labelSmall,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            AppFormatters.currency(lock.amount),
+                            style: AppTypography.labelSmall.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ],
         ],
       ),
     );
   }
 }
+
