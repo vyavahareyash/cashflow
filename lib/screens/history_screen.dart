@@ -557,6 +557,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
+                    if (isGoal && tx['goal_name'] != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald500.withValues(alpha: 0.1),
+                          borderRadius: AppBorderRadius.smallBorder,
+                          border: Border.all(
+                            color: AppColors.emerald500.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.savings_rounded,
+                              size: 18,
+                              color: AppColors.emerald700,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Goal: ${tx['goal_name']}',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.emerald700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     TextField(
                       key: const Key('edit_transaction_amount_field'),
                       controller: amountController,
@@ -774,11 +809,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final note = (tx['note'] as String? ?? '').toLowerCase();
       final category = (tx['category_name'] as String? ?? '').toLowerCase();
       final account = (tx['account_name'] as String? ?? '').toLowerCase();
+      final goal = (tx['goal_name'] as String? ?? '').toLowerCase();
       final q = _searchQuery.toLowerCase();
       return q.isEmpty ||
           note.contains(q) ||
           category.contains(q) ||
-          account.contains(q);
+          account.contains(q) ||
+          goal.contains(q);
     }).toList();
 
     double totalOutflow = 0;
@@ -1257,55 +1294,81 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 : '$accountName → $destinationName';
                             final label = _transactionLabel(type);
 
-                            return CustomCard(
-                              margin: const EdgeInsets.only(
-                                bottom: AppSpacing.sm,
-                              ),
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              child: Row(
-                                children: [
-                                  CategoryBadge(
-                                    label: type == 'expense'
-                                        ? categoryName
-                                        : label,
-                                    iconOnly: true,
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm + 2),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          note != null && note.isNotEmpty
-                                              ? note
-                                              : goalName ??
-                                                    (type == 'expense'
-                                                        ? categoryName
-                                                        : label),
-                                          style: AppTypography.bodyMedium
-                                              .copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          note != null && note.isNotEmpty
-                                              ? '${type == 'expense' ? categoryName : label} • $detail • ${DateFormat('MMM dd').format(date)}'
-                                              : '$detail • ${DateFormat('MMM dd').format(date)}',
-                                          style: AppTypography.labelSmall
-                                              .copyWith(
-                                                color: isDark
-                                                    ? AppColors.gray400
-                                                    : AppColors.gray600,
-                                              ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                    final isGoalTx = type == 'goal_lock' ||
+                                        type == 'goal_unlock' ||
+                                        type == 'goal_payment';
+                                    final dateFormatted =
+                                        DateFormat('MMM dd').format(date);
+                                    String tileTitle;
+                                    String tileSubtitle;
+
+                                    if (isGoalTx) {
+                                      final planDisplay = goalName ?? label;
+                                      if (note != null && note.isNotEmpty) {
+                                        tileTitle = note;
+                                        tileSubtitle =
+                                            '$label • Goal: $planDisplay • $detail • $dateFormatted';
+                                      } else {
+                                        tileTitle = planDisplay;
+                                        tileSubtitle =
+                                            '$label • $detail • $dateFormatted';
+                                      }
+                                    } else {
+                                      if (note != null && note.isNotEmpty) {
+                                        tileTitle = note;
+                                        tileSubtitle =
+                                            '${type == 'expense' ? categoryName : label} • $detail • $dateFormatted';
+                                      } else {
+                                        tileTitle = type == 'expense'
+                                            ? categoryName
+                                            : label;
+                                        tileSubtitle =
+                                            '$detail • $dateFormatted';
+                                      }
+                                    }
+
+                                    return CustomCard(
+                                      margin: const EdgeInsets.only(
+                                        bottom: AppSpacing.sm,
+                                      ),
+                                      padding: const EdgeInsets.all(AppSpacing.md),
+                                      child: Row(
+                                        children: [
+                                          CategoryBadge(
+                                            label: type == 'expense'
+                                                ? categoryName
+                                                : label,
+                                            iconOnly: true,
+                                          ),
+                                          const SizedBox(width: AppSpacing.sm + 2),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  tileTitle,
+                                                  style: AppTypography.bodyMedium
+                                                      .copyWith(
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  tileSubtitle,
+                                                  style: AppTypography.labelSmall
+                                                      .copyWith(
+                                                        color: isDark
+                                                            ? AppColors.gray400
+                                                            : AppColors.gray600,
+                                                      ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                   const SizedBox(width: AppSpacing.xs),
                                   Text(
                                     '${_isCredit(type)

@@ -768,11 +768,16 @@ class DatabaseHelper {
     int? year,
     DateTime? startDate,
     DateTime? endDate,
+    int? goalId,
   }) async {
     final db = await instance.database;
     final where = <String>[];
     final whereArgs = <Object?>[];
 
+    if (goalId != null) {
+      where.add('t.goal_id = ?');
+      whereArgs.add(goalId);
+    }
     if (type != null) {
       where.add('t.type = ?');
       whereArgs.add(type);
@@ -817,6 +822,11 @@ class DatabaseHelper {
       ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'}
       ORDER BY t.date DESC, t.id DESC
     ''', whereArgs);
+  }
+
+  /// Fetches transactions associated with a specific goal, ordered newest first.
+  Future<List<Map<String, dynamic>>> getGoalTransactions(int goalId) async {
+    return getTransactionHistory(goalId: goalId);
   }
 
   // Helper method to subtract money from an account
@@ -895,6 +905,46 @@ class DatabaseHelper {
         );
       }
     }
+  }
+
+  Future<void> _checkUsableFunds(
+    Transaction txn,
+    int accountId,
+    double requiredAmount,
+  ) async {
+    final account = await txn.query(
+      'accounts',
+      columns: ['id', 'balance'],
+      where: 'id = ?',
+      whereArgs: [accountId],
+    );
+    if (account.isEmpty) throw StateError('Account not found: $accountId');
+    final accountBalance = (account.first['balance'] as num).toDouble();
+    final lockedResult = await txn.rawQuery(
+      'SELECT SUM(amount) as total FROM locked_allocations WHERE account_id = ?',
+      [accountId],
+    );
+    final currentLocked =
+        (lockedResult.first['total'] as num? ?? 0).toDouble();
+    if (currentLocked + requiredAmount > accountBalance) {
+      throw StateError('Insufficient account funds to lock');
+    }
+  }
+
+  Future<double> _getLockedAmountForGoal(
+    Transaction txn,
+    int goalId,
+    int accountId,
+  ) async {
+    final res = await txn.query(
+      'locked_allocations',
+      columns: ['amount'],
+      where: 'goal_id = ? AND account_id = ?',
+      whereArgs: [goalId, accountId],
+      limit: 1,
+    );
+    if (res.isEmpty) return 0.0;
+    return (res.first['amount'] as num).toDouble();
   }
 
   /// Deletes a transaction and atomically reverses its effects on accounts, budgets, and goals.
@@ -1058,75 +1108,162 @@ class DatabaseHelper {
           break;
 
         case 'goal_lock':
-          if (goalId != null && oldAmount != amount) {
-            final diff = amount - oldAmount;
-            if (diff > 0) {
-              await _restoreLockedAllocation(txn, goalId, accountId, diff);
-              await txn.rawUpdate(
-                'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-                [diff, goalId],
-              );
+          if (goalId != null) {
+            if (oldAccountId == accountId) {
+              if (amount > oldAmount) {
+                final diff = amount - oldAmount;
+                await _checkUsableFunds(txn, accountId, diff);
+                await _restoreLockedAllocation(txn, goalId, accountId, diff);
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+                  [diff, goalId],
+                );
+              } else if (amount < oldAmount) {
+                final diff = oldAmount - amount;
+                await _reduceLockedAllocationByGoalAndAccount(
+                  txn,
+                  goalId,
+                  accountId,
+                  diff,
+                );
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+                  [diff, goalId],
+                );
+              }
             } else {
               await _reduceLockedAllocationByGoalAndAccount(
                 txn,
                 goalId,
-                accountId,
-                -diff,
+                oldAccountId,
+                oldAmount,
               );
-              await txn.rawUpdate(
-                'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-                [-diff, goalId],
-              );
+              await _checkUsableFunds(txn, accountId, amount);
+              await _restoreLockedAllocation(txn, goalId, accountId, amount);
+              final diff = amount - oldAmount;
+              if (diff != 0) {
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = MAX(0.0, current_saved + ?) WHERE id = ?',
+                  [diff, goalId],
+                );
+              }
             }
           }
           break;
 
         case 'goal_unlock':
-          if (goalId != null && oldAmount != amount) {
-            final diff = amount - oldAmount;
-            if (diff > 0) {
+          if (goalId != null) {
+            if (oldAccountId == accountId) {
+              if (amount > oldAmount) {
+                final diff = amount - oldAmount;
+                final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+                if (locked < diff) {
+                  throw StateError('Insufficient locked funds to unlock');
+                }
+                await _reduceLockedAllocationByGoalAndAccount(
+                  txn,
+                  goalId,
+                  accountId,
+                  diff,
+                );
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+                  [diff, goalId],
+                );
+              } else if (amount < oldAmount) {
+                final diff = oldAmount - amount;
+                await _checkUsableFunds(txn, accountId, diff);
+                await _restoreLockedAllocation(txn, goalId, accountId, diff);
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+                  [diff, goalId],
+                );
+              }
+            } else {
+              await _checkUsableFunds(txn, oldAccountId, oldAmount);
+              await _restoreLockedAllocation(txn, goalId, oldAccountId, oldAmount);
+              final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+              if (locked < amount) {
+                throw StateError('Insufficient locked funds on target account');
+              }
               await _reduceLockedAllocationByGoalAndAccount(
                 txn,
                 goalId,
                 accountId,
-                diff,
+                amount,
               );
-              await txn.rawUpdate(
-                'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-                [diff, goalId],
-              );
-            } else {
-              await _restoreLockedAllocation(txn, goalId, accountId, -diff);
-              await txn.rawUpdate(
-                'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-                [-diff, goalId],
-              );
+              final diff = oldAmount - amount;
+              if (diff != 0) {
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = MAX(0.0, current_saved + ?) WHERE id = ?',
+                  [diff, goalId],
+                );
+              }
             }
           }
           break;
 
         case 'goal_payment':
-          final balanceDelta = oldAmount - amount;
-          await _adjustAccountBalance(txn, accountId, balanceDelta);
-          if (goalId != null && oldAmount != amount) {
-            final diff = amount - oldAmount;
-            if (diff > 0) {
+          if (goalId != null) {
+            if (oldAccountId == accountId) {
+              final balanceDelta = oldAmount - amount;
+              await _adjustAccountBalance(txn, accountId, balanceDelta);
+              if (amount > oldAmount) {
+                final diff = amount - oldAmount;
+                final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+                if (locked < diff) {
+                  throw StateError('Insufficient locked funds for goal payment');
+                }
+                await _reduceLockedAllocationByGoalAndAccount(
+                  txn,
+                  goalId,
+                  accountId,
+                  diff,
+                );
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+                  [diff, goalId],
+                );
+              } else if (amount < oldAmount) {
+                final diff = oldAmount - amount;
+                await _restoreLockedAllocation(txn, goalId, accountId, diff);
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+                  [diff, goalId],
+                );
+              }
+            } else {
+              await _adjustAccountBalance(txn, oldAccountId, oldAmount);
+              await _restoreLockedAllocation(txn, goalId, oldAccountId, oldAmount);
+              final newAcc = await txn.query(
+                'accounts',
+                columns: ['balance'],
+                where: 'id = ?',
+                whereArgs: [accountId],
+              );
+              if (newAcc.isEmpty) throw StateError('Account not found: $accountId');
+              final newBal = (newAcc.first['balance'] as num).toDouble();
+              if (newBal < amount) {
+                throw StateError('Insufficient account funds for payment');
+              }
+              final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+              if (locked < amount) {
+                throw StateError('Insufficient locked funds on target account');
+              }
+              await _adjustAccountBalance(txn, accountId, -amount);
               await _reduceLockedAllocationByGoalAndAccount(
                 txn,
                 goalId,
                 accountId,
-                diff,
+                amount,
               );
-              await txn.rawUpdate(
-                'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-                [diff, goalId],
-              );
-            } else {
-              await _restoreLockedAllocation(txn, goalId, accountId, -diff);
-              await txn.rawUpdate(
-                'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-                [-diff, goalId],
-              );
+              final diff = oldAmount - amount;
+              if (diff != 0) {
+                await txn.rawUpdate(
+                  'UPDATE goals SET current_saved = MAX(0.0, current_saved + ?) WHERE id = ?',
+                  [diff, goalId],
+                );
+              }
             }
           }
           break;
@@ -1406,6 +1543,18 @@ class DatabaseHelper {
       );
     });
     notifyDataChanged();
+  }
+
+  Future<Goal?> readGoal(int id) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'goals',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return Goal.fromMap(result.first);
   }
 
   Future<List<Goal>> readAllGoals() async {

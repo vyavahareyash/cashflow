@@ -254,9 +254,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   void _showContributionLog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final contributions = await DatabaseHelper.instance.getGoalContributions(
-      goal.id!,
-    );
+    Goal currentGoal = goal;
+    List<Map<String, dynamic>> contributions =
+        await DatabaseHelper.instance.getGoalContributions(currentGoal.id!);
+    List<Map<String, dynamic>> transactions =
+        await DatabaseHelper.instance.getGoalTransactions(currentGoal.id!);
 
     if (!mounted) return;
 
@@ -267,127 +269,812 @@ class _GoalsScreenState extends State<GoalsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
-            left: AppSpacing.lg,
-            right: AppSpacing.lg,
-            top: AppSpacing.lg,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.gray700 : AppColors.gray300,
-                    borderRadius: AppBorderRadius.pillBorder,
-                  ),
-                ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> reloadModal() async {
+              final updatedGoal =
+                  await DatabaseHelper.instance.readGoal(currentGoal.id!);
+              final updatedContribs = await DatabaseHelper.instance
+                  .getGoalContributions(currentGoal.id!);
+              final updatedTxs = await DatabaseHelper.instance
+                  .getGoalTransactions(currentGoal.id!);
+              if (mounted) {
+                setModalState(() {
+                  if (updatedGoal != null) currentGoal = updatedGoal;
+                  contributions = updatedContribs;
+                  transactions = updatedTxs;
+                });
+              }
+            }
+
+            final progress = currentGoal.totalTarget > 0
+                ? (currentGoal.currentSaved / currentGoal.totalTarget)
+                : 0.0;
+            final percent = (progress * 100).clamp(0, 100).toInt();
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Locked Allocations for ${goal.name}',
-                      style: AppTypography.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
+              padding: EdgeInsets.only(
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.md,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.gray700 : AppColors.gray300,
+                          borderRadius: AppBorderRadius.pillBorder,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Total saved: ${AppFormatters.currency(goal.currentSaved)} of ${AppFormatters.currency(goal.totalTarget)}',
-                style: AppTypography.labelSmall.copyWith(
-                  color: isDark ? AppColors.gray400 : AppColors.gray600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Target Date: ${goal.formattedTargetDate} • ${goal.deadlineStatusText()}',
-                style: AppTypography.labelSmall.copyWith(
-                  color: goal.isOverdue()
-                      ? AppColors.danger
-                      : (isDark ? AppColors.gray400 : AppColors.gray600),
-                  fontWeight: goal.isOverdue()
-                      ? FontWeight.w600
-                      : FontWeight.normal,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              if (contributions.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Center(
-                    child: Text(
-                      'No funds have been locked into this goal yet.',
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                ...contributions.map((contrib) {
-                  return CustomCard(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.account_balance_rounded,
-                              color: AppColors.emerald700,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Text(
-                              contrib['account_name'] ?? 'Account',
-                              style: AppTypography.bodyLarge.copyWith(
-                                fontWeight: FontWeight.w600,
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.emerald500.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.savings_rounded,
+                            color: AppColors.emerald700,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                currentGoal.name,
+                                style: AppTypography.titleLarge.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Goal Contributions & Activity',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.pop(sheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Goal Status & Progress Summary Card
+                    CustomCard(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Saved',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${AppFormatters.currency(currentGoal.currentSaved)} / ${AppFormatters.currency(currentGoal.totalTarget)}',
+                                    style: AppTypography.titleMedium.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.emerald700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.emerald500
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: AppBorderRadius.smallBorder,
+                                ),
+                                child: Text(
+                                  '$percent% saved',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.emerald700,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          ClipRRect(
+                            borderRadius: AppBorderRadius.pillBorder,
+                            child: LinearProgressIndicator(
+                              value: progress.clamp(0.0, 1.0),
+                              minHeight: 6,
+                              backgroundColor: isDark
+                                  ? AppColors.gray800
+                                  : AppColors.gray200,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                AppColors.emerald600,
                               ),
                             ),
-                          ],
-                        ),
-                        Text(
-                          AppFormatters.currency(
-                            (contrib['amount'] as num?)?.toDouble() ?? 0.0,
                           ),
-                          style: AppTypography.titleMedium.copyWith(
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14,
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                currentGoal.formattedTargetDate,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                '•',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppColors.gray500
+                                      : AppColors.gray400,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                currentGoal.deadlineStatusText(),
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: currentGoal.isOverdue()
+                                      ? AppColors.danger
+                                      : (isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray600),
+                                  fontWeight: currentGoal.isOverdue()
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Section 1: Locked Allocations by Account
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 16,
+                          color: AppColors.emerald700,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Locked Funds by Account',
+                          style: AppTypography.labelLarge.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: AppColors.emerald700,
                           ),
                         ),
                       ],
                     ),
-                  );
-                }),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-          ),
-        ),
-      );
-    },
+                    const SizedBox(height: AppSpacing.xs),
+                    if (contributions.isEmpty)
+                      CustomCard(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Center(
+                          child: Text(
+                            'No funds currently locked for this goal.',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...contributions.map((contrib) {
+                        final amt =
+                            (contrib['amount'] as num?)?.toDouble() ?? 0.0;
+                        final pct = currentGoal.currentSaved > 0
+                            ? (amt / currentGoal.currentSaved * 100).toInt()
+                            : 0;
+                        return CustomCard(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.all(AppSpacing.xs),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.emerald500
+                                          .withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.account_balance_rounded,
+                                      color: AppColors.emerald700,
+                                      size: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        contrib['account_name'] ?? 'Account',
+                                        style:
+                                            AppTypography.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      if (pct > 0)
+                                        Text(
+                                          '$pct% of total saved',
+                                          style: AppTypography.labelSmall
+                                              .copyWith(
+                                            color: isDark
+                                                ? AppColors.gray400
+                                                : AppColors.gray600,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                AppFormatters.currency(amt),
+                                style: AppTypography.titleMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.emerald700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Section 2: Contribution & Activity History
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.history_rounded,
+                          size: 18,
+                          color: AppColors.emerald700,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Contribution & Activity History',
+                          style: AppTypography.labelLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    if (transactions.isEmpty)
+                      CustomCard(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 32,
+                                color: isDark
+                                    ? AppColors.gray600
+                                    : AppColors.gray400,
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'No transactions recorded for this goal yet.',
+                                style: AppTypography.labelMedium.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ...transactions.map((tx) {
+                        final type = tx['type'] as String? ?? 'goal_lock';
+                        final amt =
+                            (tx['amount'] as num?)?.toDouble() ?? 0.0;
+                        final dateStr = tx['date'] as String? ?? '';
+                        final date =
+                            DateTime.tryParse(dateStr) ?? DateTime.now();
+                        final note = tx['note'] as String? ?? '';
+                        final accName =
+                            tx['account_name'] as String? ?? 'Account';
+
+                        IconData icon;
+                        Color typeColor;
+                        String typeTitle;
+                        String prefix;
+
+                        switch (type) {
+                          case 'goal_unlock':
+                            icon = Icons.lock_open_rounded;
+                            typeColor = AppColors.warning;
+                            typeTitle = 'Unlocked Funds';
+                            prefix = '−';
+                            break;
+                          case 'goal_payment':
+                            icon = Icons.payments_rounded;
+                            typeColor = AppColors.info;
+                            typeTitle = 'Goal Settlement';
+                            prefix = '−';
+                            break;
+                          case 'goal_lock':
+                          default:
+                            icon = Icons.lock_rounded;
+                            typeColor = AppColors.emerald700;
+                            typeTitle = 'Locked Funds';
+                            prefix = '+';
+                            break;
+                        }
+
+                        return CustomCard(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                                decoration: BoxDecoration(
+                                  color: typeColor.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  icon,
+                                  color: typeColor,
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      typeTitle,
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$accName • ${DateFormat('MMM dd, yyyy').format(date)}',
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.gray400
+                                            : AppColors.gray600,
+                                      ),
+                                    ),
+                                    if (note.isNotEmpty)
+                                      Text(
+                                        note,
+                                        style:
+                                            AppTypography.labelSmall.copyWith(
+                                          fontStyle: FontStyle.italic,
+                                          color: isDark
+                                              ? AppColors.gray400
+                                              : AppColors.gray600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '$prefix${AppFormatters.currency(amt)}',
+                                    style: AppTypography.labelLarge.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: typeColor,
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined),
+                                        iconSize: 16,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 28,
+                                          minHeight: 28,
+                                        ),
+                                        tooltip: 'Edit',
+                                        onPressed: () => _editGoalTransaction(
+                                          sheetContext,
+                                          tx,
+                                          reloadModal,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                        ),
+                                        iconSize: 16,
+                                        color: AppColors.danger,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 28,
+                                          minHeight: 28,
+                                        ),
+                                        tooltip: 'Delete',
+                                        onPressed: () => _deleteGoalTransaction(
+                                          sheetContext,
+                                          tx,
+                                          reloadModal,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<void> _editGoalTransaction(
+    BuildContext parentContext,
+    Map<String, dynamic> tx,
+    Future<void> Function() onUpdated,
+  ) async {
+    final accounts = await DatabaseHelper.instance.readAllAccounts();
+    final amountNum = (tx['amount'] as num).toDouble();
+    final amountController = TextEditingController(
+      text: amountNum.truncateToDouble() == amountNum
+          ? amountNum.toStringAsFixed(0)
+          : amountNum.toStringAsFixed(2),
+    );
+    final noteController =
+        TextEditingController(text: tx['note'] as String? ?? '');
+    DateTime selectedDate =
+        DateTime.tryParse(tx['date'] as String? ?? '') ?? DateTime.now();
+    int selectedAccountId = tx['account_id'] as int;
+
+    if (!accounts.any((a) => a.id == selectedAccountId) &&
+        accounts.isNotEmpty) {
+      selectedAccountId = accounts.first.id!;
+    }
+
+    if (!parentContext.mounted) return;
+
+    await showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (editCtx) {
+        final isDark = Theme.of(editCtx).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (_, setEditState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+                bottom:
+                    MediaQuery.of(editCtx).viewInsets.bottom + AppSpacing.lg,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.white,
+                borderRadius: const BorderRadius.vertical(
+                  top: AppBorderRadius.xlarge,
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Edit Goal Allocation',
+                          style: AppTypography.titleLarge,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(editCtx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      key: const Key('edit_goal_transaction_amount_field'),
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount',
+                        prefixText: '₹ ',
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.calendar_today_rounded,
+                        color: AppColors.emerald600,
+                      ),
+                      title: const Text('Transaction Date'),
+                      subtitle:
+                          Text(DateFormat('yyyy-MM-dd').format(selectedDate)),
+                      trailing: const Icon(Icons.arrow_drop_down_rounded),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: editCtx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) {
+                          setEditState(() => selectedDate = picked);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    DropdownButtonFormField<int>(
+                      key: const Key(
+                        'edit_goal_transaction_account_dropdown',
+                      ),
+                      initialValue: selectedAccountId,
+                      decoration: const InputDecoration(
+                        labelText: 'Account',
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                      items: accounts.map((a) {
+                        return DropdownMenuItem<int>(
+                          value: a.id,
+                          child: Text(
+                            '${a.name} (${AppFormatters.compactCurrency(a.balance)})',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setEditState(() => selectedAccountId = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      key: const Key('edit_goal_transaction_note_field'),
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Note / Description',
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton(
+                      key: const Key('edit_goal_transaction_save_btn'),
+                      onPressed: () async {
+                        final parsed =
+                            double.tryParse(amountController.text.trim());
+                        if (parsed == null || parsed <= 0) {
+                          ScaffoldMessenger.of(editCtx).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please enter a valid amount greater than 0',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          await DatabaseHelper.instance.updateTransaction(
+                            id: tx['id'],
+                            amount: parsed,
+                            date: selectedDate.toIso8601String(),
+                            accountId: selectedAccountId,
+                            note: noteController.text.trim(),
+                          );
+                          if (editCtx.mounted) {
+                            Navigator.pop(editCtx);
+                          }
+                          await onUpdated();
+                          if (!parentContext.mounted) return;
+                          ScaffoldMessenger.of(parentContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Goal transaction updated successfully.',
+                              ),
+                              backgroundColor: AppColors.emerald700,
+                            ),
+                          );
+                        } catch (e) {
+                          if (editCtx.mounted) {
+                            ScaffoldMessenger.of(editCtx).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating transaction: $e'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.emerald700,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.md,
+                        ),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                      child: const Text(
+                        'Save Changes',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteGoalTransaction(
+    BuildContext parentContext,
+    Map<String, dynamic> tx,
+    Future<void> Function() onDeleted,
+  ) async {
+    final type = tx['type'] as String? ?? 'goal_lock';
+    final amount = (tx['amount'] as num).toDouble();
+    final accountName = tx['account_name'] as String? ?? 'Account';
+
+    String title;
+    String content;
+    String actionText;
+
+    switch (type) {
+      case 'goal_unlock':
+        title = 'Delete Goal Unlock?';
+        content =
+            'This will delete the unlock record and re-lock ${AppFormatters.currency(amount)} into the goal.';
+        actionText = 'Delete & Re-lock';
+        break;
+      case 'goal_payment':
+        title = 'Delete Goal Payment?';
+        content =
+            'This will refund ${AppFormatters.currency(amount)} to $accountName and restore the locked goal balance.';
+        actionText = 'Delete & Restore';
+        break;
+      case 'goal_lock':
+      default:
+        title = 'Delete Goal Lock?';
+        content =
+            'This will delete the lock record and release ${AppFormatters.currency(amount)} back to spendable funds in $accountName.';
+        actionText = 'Delete & Release';
+        break;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: parentContext,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            key: const Key('confirm_delete_goal_transaction_btn'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              actionText,
+              style: const TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await DatabaseHelper.instance.deleteTransaction(tx['id']);
+        await onDeleted();
+        if (!parentContext.mounted) return;
+        ScaffoldMessenger.of(parentContext).showSnackBar(
+          const SnackBar(
+            content: Text('Goal transaction deleted successfully.'),
+            backgroundColor: AppColors.emerald700,
+          ),
+        );
+      } catch (e) {
+        if (!parentContext.mounted) return;
+        ScaffoldMessenger.of(parentContext).showSnackBar(
+          SnackBar(content: Text('Error deleting transaction: $e')),
+        );
+      }
+    }
   }
 
   void _showContributionDialog(Goal goal) async {
@@ -625,7 +1312,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ),
       builder: (sheetCtx) {
         return StatefulBuilder(
-          builder: (context, setStateSheet) {
+          builder: (dialogCtx, setStateSheet) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -838,7 +1525,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ),
       builder: (sheetCtx) {
         return StatefulBuilder(
-          builder: (context, setStateSheet) {
+          builder: (dialogCtx, setStateSheet) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
