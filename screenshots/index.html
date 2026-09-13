@@ -1,322 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { execFile as nodeExecFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execFile = promisify(nodeExecFile);
-
-const root = new URL('..', import.meta.url).pathname;
-const output = `${root}/screenshots`;
-const adb = `${process.env.ANDROID_HOME ?? `${process.env.HOME}/Library/Android/sdk`}/platform-tools/adb`;
-const device = process.env.ANDROID_DEVICE ?? 'emulator-5554';
-
-await mkdir(output, { recursive: true });
-
-const run = (args) => execFile(adb, ['-s', device, ...args], { encoding: 'buffer' });
-
-async function capture(name) {
-    const { stdout } = await run(['exec-out', 'screencap', '-p']);
-    await writeFile(`${output}/${name}.png`, stdout);
-    console.log(`Saved ${output}/${name}.png (${stdout.length} bytes)`);
-}
-
-const markers = [
-    {
-        id: '01-dashboard-light',
-        name: 'Dashboard Overview',
-        group: 'Dashboard',
-        theme: 'light',
-        type: 'screen',
-        description: 'Main Dashboard overview showing Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.'
-    },
-    {
-        id: '02-modal-expense-light',
-        name: 'Log Transaction - Expense',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Bottom sheet modal to log an expense with amount, category picker, physical account selector, notes, and date.'
-    },
-    {
-        id: '03-modal-income-light',
-        name: 'Log Transaction - Income',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Bottom sheet modal configured for incoming revenue or salary credit with account selector.'
-    },
-    {
-        id: '04-modal-transfer-light',
-        name: 'Log Transaction - Transfer',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Bottom sheet modal for physical account-to-account funds transfer with source and destination selectors.'
-    },
-    {
-        id: '05-budget-light',
-        name: 'Monthly Budgets',
-        group: 'Budgets',
-        theme: 'light',
-        type: 'screen',
-        description: 'Monthly category budget tracking screen with overall spending summary and animated category progress bars.'
-    },
-    {
-        id: '06-modal-add-category-light',
-        name: 'Add Budget Category',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Dialog to define a new spending category name and optional monthly budget cap.'
-    },
-    {
-        id: '07-modal-edit-category-light',
-        name: 'Edit Budget Category',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Dialog to adjust category name or budget limits, complete with accessible touch targets and delete option.'
-    },
-    {
-        id: '08-goals-light',
-        name: 'Sinking Funds / Goals',
-        group: 'Goals',
-        theme: 'light',
-        type: 'screen',
-        description: 'Sinking funds screen displaying target dates, recommended monthly pace, and lock action buttons.'
-    },
-    {
-        id: '09-modal-add-goal-light',
-        name: 'Create Sinking Fund',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Dialog to create a savings goal with target amount and date picker.'
-    },
-    {
-        id: '10-modal-lock-funds-light',
-        name: 'Locked Allocations',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Bottom sheet breakdown showing which physical accounts are locking funds into the selected goal.'
-    },
-    {
-        id: '11-modal-edit-goal-light',
-        name: 'Edit Sinking Fund',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Dialog to edit target amount, due date, or delete the sinking fund.'
-    },
-    {
-        id: '12-accounts-light',
-        name: 'My Accounts',
-        group: 'Accounts',
-        theme: 'light',
-        type: 'screen',
-        description: 'Physical wealth accounts list with total physical balance, locked funds summary, and net liquidity.'
-    },
-    {
-        id: '13-accounts-dropdown-expanded-light',
-        name: 'Account Locked Funds Dropdown',
-        group: 'Accounts',
-        theme: 'light',
-        type: 'expanded_dropdown',
-        description: 'Bank account card with smooth accordion expanded, displaying aggregated locked funds per goal.'
-    },
-    {
-        id: '14-modal-add-account-light',
-        name: 'Add Account',
-        group: 'Modals',
-        theme: 'light',
-        type: 'modal',
-        description: 'Dialog to add a new physical account with account name, starting balance, and account type.'
-    },
-    {
-        id: '15-analytics-activity-light',
-        name: 'Insights & Activity',
-        group: 'Insights',
-        theme: 'light',
-        type: 'screen',
-        description: 'Chronological transaction history with search, category filters, and monthly spend indicators.'
-    },
-    {
-        id: '16-analytics-trends-light',
-        name: 'Monthly Spending Trends',
-        group: 'Insights',
-        theme: 'light',
-        type: 'chart',
-        description: 'Monthly spending interactive line/bar trend charts and category expenditure breakdown.'
-    },
-    {
-        id: '17-backup-restore-light',
-        name: 'Settings & Data Backup',
-        group: 'Settings',
-        theme: 'light',
-        type: 'screen',
-        description: 'Data management screen offering JSON export, import, sample data seeding, and database reset.'
-    },
-    {
-        id: '18-dashboard-dark',
-        name: 'Dashboard Overview (Dark)',
-        group: 'Dashboard',
-        theme: 'dark',
-        type: 'screen',
-        description: 'Dark mode view of the main dashboard with high-contrast emerald highlights.'
-    },
-    {
-        id: '19-modal-expense-dark',
-        name: 'Log Transaction - Expense (Dark)',
-        group: 'Modals',
-        theme: 'dark',
-        type: 'modal',
-        description: 'Dark mode bottom sheet modal to log an expense with dark surface elevation.'
-    },
-    {
-        id: '20-budget-dark',
-        name: 'Monthly Budgets (Dark)',
-        group: 'Budgets',
-        theme: 'dark',
-        type: 'screen',
-        description: 'Dark mode budgets screen with clear contrast on progress meters and category cards.'
-    },
-    {
-        id: '21-goals-dark',
-        name: 'Sinking Funds / Goals (Dark)',
-        group: 'Goals',
-        theme: 'dark',
-        type: 'screen',
-        description: 'Dark mode sinking funds screen with deadline status badges and progress indicators.'
-    },
-    {
-        id: '22-modal-lock-funds-dark',
-        name: 'Locked Allocations (Dark)',
-        group: 'Modals',
-        theme: 'dark',
-        type: 'modal',
-        description: 'Dark mode modal showing locked allocations per physical account.'
-    },
-    {
-        id: '23-accounts-dark',
-        name: 'My Accounts (Dark)',
-        group: 'Accounts',
-        theme: 'dark',
-        type: 'screen',
-        description: 'Dark mode accounts screen displaying account cards and liquidity metrics.'
-    },
-    {
-        id: '24-accounts-dropdown-expanded-dark',
-        name: 'Account Locked Funds Dropdown (Dark)',
-        group: 'Accounts',
-        theme: 'dark',
-        type: 'expanded_dropdown',
-        description: 'Dark mode account card with expanded accordion displaying aggregated goal commitments.'
-    },
-    {
-        id: '25-analytics-trends-dark',
-        name: 'Monthly Spending Trends (Dark)',
-        group: 'Insights',
-        theme: 'dark',
-        type: 'chart',
-        description: 'Dark mode analytics screen with interactive chart and expenditure distribution.'
-    },
-    {
-        id: '26-backup-restore-dark',
-        name: 'Settings & Data Backup (Dark)',
-        group: 'Settings',
-        theme: 'dark',
-        type: 'screen',
-        description: 'Dark mode settings and data backup screen.'
-    }
-];
-
-const drive = spawn('flutter', [
-    'drive',
-    '--driver=test_driver/integration_test.dart',
-    '--target=integration_test/screenshots_test.dart',
-    '-d',
-    device,
-], { cwd: root, stdio: ['inherit', 'pipe', 'pipe'] });
-const driveExit = new Promise((resolve) => drive.once('close', resolve));
-
-const markerWaiters = new Map();
-const receivedMarkers = new Set();
-let driveClosed = false;
-
-function waitForMarker(name) {
-    if (receivedMarkers.delete(name)) {
-        return Promise.resolve();
-    }
-    if (driveClosed) {
-        return Promise.reject(new Error(`Flutter drive exited before ${name}`));
-    }
-    return new Promise((resolve, reject) => {
-        markerWaiters.set(name, { resolve, reject });
-        setTimeout(() => {
-            const waiter = markerWaiters.get(name);
-            if (!waiter) return;
-            markerWaiters.delete(name);
-            reject(new Error(`Timed out waiting for screenshot marker: ${name}`));
-        }, 40000).unref();
-    });
-}
-
-function handleOutput(chunk) {
-    const text = chunk.toString();
-    process.stdout.write(text);
-    for (const match of text.matchAll(/SCREENSHOT_MARKER:([^\s\r\n]+)/g)) {
-        const name = match[1];
-        const waiter = markerWaiters.get(name);
-        if (waiter) {
-            waiter.resolve();
-            markerWaiters.delete(name);
-        } else {
-            receivedMarkers.add(name);
-        }
-    }
-}
-
-drive.stdout.on('data', handleOutput);
-drive.stderr.on('data', (chunk) => process.stderr.write(chunk));
-drive.on('close', () => {
-    driveClosed = true;
-    for (const { reject } of markerWaiters.values()) {
-        reject(new Error('Flutter drive exited before all screenshots were captured'));
-    }
-    markerWaiters.clear();
-});
-
-console.log(`Starting capture of ${markers.length} visual markers on device: ${device}...`);
-
-// Execute sequential host capture synchronized with Flutter test emissions
-for (const marker of markers) {
-    await waitForMarker(marker.id);
-    await capture(marker.id);
-}
-
-const exitCode = await driveExit;
-if (exitCode !== 0) {
-    console.error(`Flutter drive exited with code: ${exitCode}`);
-    process.exit(exitCode ?? 1);
-}
-
-// Generate Manifest JSON
-const manifest = {
-    generatedAt: new Date().toISOString(),
-    device,
-    totalScreenshots: markers.length,
-    markers: markers.map((m) => ({
-        ...m,
-        file: `${m.id}.png`,
-    })),
-};
-await writeFile(`${output}/manifest.json`, JSON.stringify(manifest, null, 2));
-console.log(`Generated ${output}/manifest.json`);
-
-// Generate Standalone Visual Review HTML Gallery
-function renderHtmlGallery(data) {
-    const manifestJson = JSON.stringify(data.markers);
-    return `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -533,11 +215,11 @@ function renderHtmlGallery(data) {
       <div>
         <h1>Cashflow Visual Review Gallery</h1>
         <div class="meta-bar">
-          <span>Device: ${data.device}</span>
+          <span>Device: emulator-5554</span>
           <span>•</span>
-          <span>Captures: ${data.totalScreenshots}</span>
+          <span>Captures: 26</span>
           <span>•</span>
-          <span>Generated: ${new Date().toLocaleString()}</span>
+          <span>Generated: 9/13/2026, 7:32:31 PM</span>
         </div>
       </div>
     </div>
@@ -546,7 +228,7 @@ function renderHtmlGallery(data) {
 
   <div class="controls">
     <div class="filter-group" id="filterChips">
-      <button class="btn active" data-filter="all">All (${data.totalScreenshots})</button>
+      <button class="btn active" data-filter="all">All (26)</button>
       <button class="btn" data-filter="Dashboard">Dashboard</button>
       <button class="btn" data-filter="Budgets">Budgets</button>
       <button class="btn" data-filter="Goals">Goals</button>
@@ -624,7 +306,7 @@ function renderHtmlGallery(data) {
   </div>
 
   <script>
-    const items = ${manifestJson};
+    const items = [{"id":"01-dashboard-light","name":"Dashboard Overview","group":"Dashboard","theme":"light","type":"screen","description":"Main Dashboard overview showing Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.","file":"01-dashboard-light.png"},{"id":"02-modal-expense-light","name":"Log Transaction - Expense","group":"Modals","theme":"light","type":"modal","description":"Bottom sheet modal to log an expense with amount, category picker, physical account selector, notes, and date.","file":"02-modal-expense-light.png"},{"id":"03-modal-income-light","name":"Log Transaction - Income","group":"Modals","theme":"light","type":"modal","description":"Bottom sheet modal configured for incoming revenue or salary credit with account selector.","file":"03-modal-income-light.png"},{"id":"04-modal-transfer-light","name":"Log Transaction - Transfer","group":"Modals","theme":"light","type":"modal","description":"Bottom sheet modal for physical account-to-account funds transfer with source and destination selectors.","file":"04-modal-transfer-light.png"},{"id":"05-budget-light","name":"Monthly Budgets","group":"Budgets","theme":"light","type":"screen","description":"Monthly category budget tracking screen with overall spending summary and animated category progress bars.","file":"05-budget-light.png"},{"id":"06-modal-add-category-light","name":"Add Budget Category","group":"Modals","theme":"light","type":"modal","description":"Dialog to define a new spending category name and optional monthly budget cap.","file":"06-modal-add-category-light.png"},{"id":"07-modal-edit-category-light","name":"Edit Budget Category","group":"Modals","theme":"light","type":"modal","description":"Dialog to adjust category name or budget limits, complete with accessible touch targets and delete option.","file":"07-modal-edit-category-light.png"},{"id":"08-goals-light","name":"Sinking Funds / Goals","group":"Goals","theme":"light","type":"screen","description":"Sinking funds screen displaying target dates, recommended monthly pace, and lock action buttons.","file":"08-goals-light.png"},{"id":"09-modal-add-goal-light","name":"Create Sinking Fund","group":"Modals","theme":"light","type":"modal","description":"Dialog to create a savings goal with target amount and date picker.","file":"09-modal-add-goal-light.png"},{"id":"10-modal-lock-funds-light","name":"Locked Allocations","group":"Modals","theme":"light","type":"modal","description":"Bottom sheet breakdown showing which physical accounts are locking funds into the selected goal.","file":"10-modal-lock-funds-light.png"},{"id":"11-modal-edit-goal-light","name":"Edit Sinking Fund","group":"Modals","theme":"light","type":"modal","description":"Dialog to edit target amount, due date, or delete the sinking fund.","file":"11-modal-edit-goal-light.png"},{"id":"12-accounts-light","name":"My Accounts","group":"Accounts","theme":"light","type":"screen","description":"Physical wealth accounts list with total physical balance, locked funds summary, and net liquidity.","file":"12-accounts-light.png"},{"id":"13-accounts-dropdown-expanded-light","name":"Account Locked Funds Dropdown","group":"Accounts","theme":"light","type":"expanded_dropdown","description":"Bank account card with smooth accordion expanded, displaying aggregated locked funds per goal.","file":"13-accounts-dropdown-expanded-light.png"},{"id":"14-modal-add-account-light","name":"Add Account","group":"Modals","theme":"light","type":"modal","description":"Dialog to add a new physical account with account name, starting balance, and account type.","file":"14-modal-add-account-light.png"},{"id":"15-analytics-activity-light","name":"Insights & Activity","group":"Insights","theme":"light","type":"screen","description":"Chronological transaction history with search, category filters, and monthly spend indicators.","file":"15-analytics-activity-light.png"},{"id":"16-analytics-trends-light","name":"Monthly Spending Trends","group":"Insights","theme":"light","type":"chart","description":"Monthly spending interactive line/bar trend charts and category expenditure breakdown.","file":"16-analytics-trends-light.png"},{"id":"17-backup-restore-light","name":"Settings & Data Backup","group":"Settings","theme":"light","type":"screen","description":"Data management screen offering JSON export, import, sample data seeding, and database reset.","file":"17-backup-restore-light.png"},{"id":"18-dashboard-dark","name":"Dashboard Overview (Dark)","group":"Dashboard","theme":"dark","type":"screen","description":"Dark mode view of the main dashboard with high-contrast emerald highlights.","file":"18-dashboard-dark.png"},{"id":"19-modal-expense-dark","name":"Log Transaction - Expense (Dark)","group":"Modals","theme":"dark","type":"modal","description":"Dark mode bottom sheet modal to log an expense with dark surface elevation.","file":"19-modal-expense-dark.png"},{"id":"20-budget-dark","name":"Monthly Budgets (Dark)","group":"Budgets","theme":"dark","type":"screen","description":"Dark mode budgets screen with clear contrast on progress meters and category cards.","file":"20-budget-dark.png"},{"id":"21-goals-dark","name":"Sinking Funds / Goals (Dark)","group":"Goals","theme":"dark","type":"screen","description":"Dark mode sinking funds screen with deadline status badges and progress indicators.","file":"21-goals-dark.png"},{"id":"22-modal-lock-funds-dark","name":"Locked Allocations (Dark)","group":"Modals","theme":"dark","type":"modal","description":"Dark mode modal showing locked allocations per physical account.","file":"22-modal-lock-funds-dark.png"},{"id":"23-accounts-dark","name":"My Accounts (Dark)","group":"Accounts","theme":"dark","type":"screen","description":"Dark mode accounts screen displaying account cards and liquidity metrics.","file":"23-accounts-dark.png"},{"id":"24-accounts-dropdown-expanded-dark","name":"Account Locked Funds Dropdown (Dark)","group":"Accounts","theme":"dark","type":"expanded_dropdown","description":"Dark mode account card with expanded accordion displaying aggregated goal commitments.","file":"24-accounts-dropdown-expanded-dark.png"},{"id":"25-analytics-trends-dark","name":"Monthly Spending Trends (Dark)","group":"Insights","theme":"dark","type":"chart","description":"Dark mode analytics screen with interactive chart and expenditure distribution.","file":"25-analytics-trends-dark.png"},{"id":"26-backup-restore-dark","name":"Settings & Data Backup (Dark)","group":"Settings","theme":"dark","type":"screen","description":"Dark mode settings and data backup screen.","file":"26-backup-restore-dark.png"}];
 
     function renderGrid(filter = 'all') {
       const grid = document.getElementById('viewGrid');
@@ -633,18 +315,18 @@ function renderHtmlGallery(data) {
       filtered.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = \`
-          <div class="img-wrap" onclick="openLightbox('\${item.file}')">
-            <img src="\${item.file}" loading="lazy" alt="\${item.name}">
+        card.innerHTML = `
+          <div class="img-wrap" onclick="openLightbox('${item.file}')">
+            <img src="${item.file}" loading="lazy" alt="${item.name}">
           </div>
           <div class="card-body">
             <div class="card-title">
-              <span>\${item.name}</span>
-              <span class="theme-tag theme-\${item.theme}">\${item.theme}</span>
+              <span>${item.name}</span>
+              <span class="theme-tag theme-${item.theme}">${item.theme}</span>
             </div>
-            <div class="card-desc">\${item.description}</div>
+            <div class="card-desc">${item.description}</div>
           </div>
-        \`;
+        `;
         grid.appendChild(card);
       });
     }
@@ -671,9 +353,9 @@ function renderHtmlGallery(data) {
 
         const container = document.createElement('div');
         container.className = 'sbs-pair';
-        container.innerHTML = \`
+        container.innerHTML = `
           <div class="sbs-pair-header">
-            <div class="sbs-pair-title">\${pair.title}</div>
+            <div class="sbs-pair-title">${pair.title}</div>
             <div class="meta-bar">
               <span class="pill" style="color:#0284c7">Light Mode</span>
               <span class="pill" style="color:#a5b4fc">Dark Mode</span>
@@ -681,25 +363,25 @@ function renderHtmlGallery(data) {
           </div>
           <div class="sbs-columns">
             <div class="card">
-              <div class="img-wrap" onclick="openLightbox('\${lightItem.file}')">
-                <img src="\${lightItem.file}" loading="lazy" alt="\${lightItem.name}">
+              <div class="img-wrap" onclick="openLightbox('${lightItem.file}')">
+                <img src="${lightItem.file}" loading="lazy" alt="${lightItem.name}">
               </div>
               <div class="card-body">
-                <div class="card-title">\${lightItem.name}</div>
-                <div class="card-desc">\${lightItem.description}</div>
+                <div class="card-title">${lightItem.name}</div>
+                <div class="card-desc">${lightItem.description}</div>
               </div>
             </div>
             <div class="card">
-              <div class="img-wrap" onclick="openLightbox('\${darkItem.file}')">
-                <img src="\${darkItem.file}" loading="lazy" alt="\${darkItem.name}">
+              <div class="img-wrap" onclick="openLightbox('${darkItem.file}')">
+                <img src="${darkItem.file}" loading="lazy" alt="${darkItem.name}">
               </div>
               <div class="card-body">
-                <div class="card-title">\${darkItem.name}</div>
-                <div class="card-desc">\${darkItem.description}</div>
+                <div class="card-title">${darkItem.name}</div>
+                <div class="card-desc">${darkItem.description}</div>
               </div>
             </div>
           </div>
-        \`;
+        `;
         sbs.appendChild(container);
       });
     }
@@ -735,9 +417,4 @@ function renderHtmlGallery(data) {
     renderGrid();
   </script>
 </body>
-</html>`;
-}
-
-await writeFile(`${output}/index.html`, renderHtmlGallery(manifest));
-console.log(`Generated ${output}/index.html review gallery.`);
-console.log(`All ${markers.length} visual test captures completed successfully!`);
+</html>

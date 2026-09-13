@@ -1,0 +1,241 @@
+{
+  "generatedAt": "2026-09-13T14:02:31.356Z",
+  "device": "emulator-5554",
+  "totalScreenshots": 26,
+  "markers": [
+    {
+      "id": "01-dashboard-light",
+      "name": "Dashboard Overview",
+      "group": "Dashboard",
+      "theme": "light",
+      "type": "screen",
+      "description": "Main Dashboard overview showing Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.",
+      "file": "01-dashboard-light.png"
+    },
+    {
+      "id": "02-modal-expense-light",
+      "name": "Log Transaction - Expense",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Bottom sheet modal to log an expense with amount, category picker, physical account selector, notes, and date.",
+      "file": "02-modal-expense-light.png"
+    },
+    {
+      "id": "03-modal-income-light",
+      "name": "Log Transaction - Income",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Bottom sheet modal configured for incoming revenue or salary credit with account selector.",
+      "file": "03-modal-income-light.png"
+    },
+    {
+      "id": "04-modal-transfer-light",
+      "name": "Log Transaction - Transfer",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Bottom sheet modal for physical account-to-account funds transfer with source and destination selectors.",
+      "file": "04-modal-transfer-light.png"
+    },
+    {
+      "id": "05-budget-light",
+      "name": "Monthly Budgets",
+      "group": "Budgets",
+      "theme": "light",
+      "type": "screen",
+      "description": "Monthly category budget tracking screen with overall spending summary and animated category progress bars.",
+      "file": "05-budget-light.png"
+    },
+    {
+      "id": "06-modal-add-category-light",
+      "name": "Add Budget Category",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Dialog to define a new spending category name and optional monthly budget cap.",
+      "file": "06-modal-add-category-light.png"
+    },
+    {
+      "id": "07-modal-edit-category-light",
+      "name": "Edit Budget Category",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Dialog to adjust category name or budget limits, complete with accessible touch targets and delete option.",
+      "file": "07-modal-edit-category-light.png"
+    },
+    {
+      "id": "08-goals-light",
+      "name": "Sinking Funds / Goals",
+      "group": "Goals",
+      "theme": "light",
+      "type": "screen",
+      "description": "Sinking funds screen displaying target dates, recommended monthly pace, and lock action buttons.",
+      "file": "08-goals-light.png"
+    },
+    {
+      "id": "09-modal-add-goal-light",
+      "name": "Create Sinking Fund",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Dialog to create a savings goal with target amount and date picker.",
+      "file": "09-modal-add-goal-light.png"
+    },
+    {
+      "id": "10-modal-lock-funds-light",
+      "name": "Locked Allocations",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Bottom sheet breakdown showing which physical accounts are locking funds into the selected goal.",
+      "file": "10-modal-lock-funds-light.png"
+    },
+    {
+      "id": "11-modal-edit-goal-light",
+      "name": "Edit Sinking Fund",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Dialog to edit target amount, due date, or delete the sinking fund.",
+      "file": "11-modal-edit-goal-light.png"
+    },
+    {
+      "id": "12-accounts-light",
+      "name": "My Accounts",
+      "group": "Accounts",
+      "theme": "light",
+      "type": "screen",
+      "description": "Physical wealth accounts list with total physical balance, locked funds summary, and net liquidity.",
+      "file": "12-accounts-light.png"
+    },
+    {
+      "id": "13-accounts-dropdown-expanded-light",
+      "name": "Account Locked Funds Dropdown",
+      "group": "Accounts",
+      "theme": "light",
+      "type": "expanded_dropdown",
+      "description": "Bank account card with smooth accordion expanded, displaying aggregated locked funds per goal.",
+      "file": "13-accounts-dropdown-expanded-light.png"
+    },
+    {
+      "id": "14-modal-add-account-light",
+      "name": "Add Account",
+      "group": "Modals",
+      "theme": "light",
+      "type": "modal",
+      "description": "Dialog to add a new physical account with account name, starting balance, and account type.",
+      "file": "14-modal-add-account-light.png"
+    },
+    {
+      "id": "15-analytics-activity-light",
+      "name": "Insights & Activity",
+      "group": "Insights",
+      "theme": "light",
+      "type": "screen",
+      "description": "Chronological transaction history with search, category filters, and monthly spend indicators.",
+      "file": "15-analytics-activity-light.png"
+    },
+    {
+      "id": "16-analytics-trends-light",
+      "name": "Monthly Spending Trends",
+      "group": "Insights",
+      "theme": "light",
+      "type": "chart",
+      "description": "Monthly spending interactive line/bar trend charts and category expenditure breakdown.",
+      "file": "16-analytics-trends-light.png"
+    },
+    {
+      "id": "17-backup-restore-light",
+      "name": "Settings & Data Backup",
+      "group": "Settings",
+      "theme": "light",
+      "type": "screen",
+      "description": "Data management screen offering JSON export, import, sample data seeding, and database reset.",
+      "file": "17-backup-restore-light.png"
+    },
+    {
+      "id": "18-dashboard-dark",
+      "name": "Dashboard Overview (Dark)",
+      "group": "Dashboard",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode view of the main dashboard with high-contrast emerald highlights.",
+      "file": "18-dashboard-dark.png"
+    },
+    {
+      "id": "19-modal-expense-dark",
+      "name": "Log Transaction - Expense (Dark)",
+      "group": "Modals",
+      "theme": "dark",
+      "type": "modal",
+      "description": "Dark mode bottom sheet modal to log an expense with dark surface elevation.",
+      "file": "19-modal-expense-dark.png"
+    },
+    {
+      "id": "20-budget-dark",
+      "name": "Monthly Budgets (Dark)",
+      "group": "Budgets",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode budgets screen with clear contrast on progress meters and category cards.",
+      "file": "20-budget-dark.png"
+    },
+    {
+      "id": "21-goals-dark",
+      "name": "Sinking Funds / Goals (Dark)",
+      "group": "Goals",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode sinking funds screen with deadline status badges and progress indicators.",
+      "file": "21-goals-dark.png"
+    },
+    {
+      "id": "22-modal-lock-funds-dark",
+      "name": "Locked Allocations (Dark)",
+      "group": "Modals",
+      "theme": "dark",
+      "type": "modal",
+      "description": "Dark mode modal showing locked allocations per physical account.",
+      "file": "22-modal-lock-funds-dark.png"
+    },
+    {
+      "id": "23-accounts-dark",
+      "name": "My Accounts (Dark)",
+      "group": "Accounts",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode accounts screen displaying account cards and liquidity metrics.",
+      "file": "23-accounts-dark.png"
+    },
+    {
+      "id": "24-accounts-dropdown-expanded-dark",
+      "name": "Account Locked Funds Dropdown (Dark)",
+      "group": "Accounts",
+      "theme": "dark",
+      "type": "expanded_dropdown",
+      "description": "Dark mode account card with expanded accordion displaying aggregated goal commitments.",
+      "file": "24-accounts-dropdown-expanded-dark.png"
+    },
+    {
+      "id": "25-analytics-trends-dark",
+      "name": "Monthly Spending Trends (Dark)",
+      "group": "Insights",
+      "theme": "dark",
+      "type": "chart",
+      "description": "Dark mode analytics screen with interactive chart and expenditure distribution.",
+      "file": "25-analytics-trends-dark.png"
+    },
+    {
+      "id": "26-backup-restore-dark",
+      "name": "Settings & Data Backup (Dark)",
+      "group": "Settings",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode settings and data backup screen.",
+      "file": "26-backup-restore-dark.png"
+    }
+  ]
+}

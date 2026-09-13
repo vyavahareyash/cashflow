@@ -72,7 +72,6 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
           brightness: Brightness.light,
           primary: AppColors.emerald700,
           surface: AppColors.white,
-          background: AppColors.gray50,
         ),
         scaffoldBackgroundColor: AppColors.gray50,
         appBarTheme: const AppBarTheme(
@@ -121,7 +120,6 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
           brightness: Brightness.dark,
           primary: AppColors.emerald500,
           surface: AppColors.darkSurface,
-          background: AppColors.darkBg,
         ),
         scaffoldBackgroundColor: AppColors.darkBg,
         appBarTheme: const AppBarTheme(
