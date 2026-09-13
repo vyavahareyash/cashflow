@@ -4,10 +4,10 @@
 
 - **Run Application**: `flutter run`
 - **Build Application**: `flutter build apk` (Android) or `flutter build ios` (iOS)
-- **Run All Tests**: `flutter test`
+- **Run All Tests**: `flutter test --concurrency=1`
 - **Run Single Test**: `flutter test test/path/to/test_file.dart`
 - **Lint Code**: `flutter analyze`
-- **Format Code**: `flutter format .`
+- **Format Code**: `dart format .`
 
 ## High-Level Architecture
 
@@ -38,11 +38,13 @@ The app differentiates between money actually held and money allocated for speci
 
 ## Testing
 
-- Start new tests by following the nearest passing test pattern, especially `test/income_flow_test.dart` for isolated SQLite flows.
-- Keep database invariants and rollback behavior in plain async `test()` cases; use widget tests only for UI interaction and state presentation.
-- For screens with data listeners or background refresh, do not use unbounded `pumpAndSettle()`; use bounded pumps or an explicit condition with a timeout.
-- After adding or changing a test, run that test file immediately before adding more coverage. Do not keep a test that hangs or fails due to its harness; simplify the harness or move the assertion to the owning layer.
-- Every database test must close and delete its test database in both `setUp` and `tearDown` so tests remain isolated.
+- **Concurrency**: Always run test suites with `flutter test --concurrency=1` to prevent SQLite file-lock conflicts in `sqflite_common_ffi`.
+- **No Async DB I/O in `testWidgets`**: `testWidgets` executes inside a `fakeAsync` zone. Invoking `sqflite_common_ffi` queries or async DB operations inside `testWidgets` causes deadlocks and hangs indefinitely. Keep all database logic, queries, and transaction invariants in standard async `test()` blocks. In `testWidgets`, test purely UI rendering using in-memory model instances.
+- **Avoid Unbounded `pumpAndSettle()`**: Screens with animations, tickers, or active listeners will hang `pumpAndSettle()`. Use bounded pumps (`await tester.pump()`, `await tester.pump(const Duration(milliseconds: 100))`).
+- **Follow Nearest Passing Pattern**: Model SQLite tests after `test/income_flow_test.dart` or `test/goal_payment_flow_test.dart`.
+- **Database Cleanup**: Every database test must close and delete its test database in both `setUp` and `tearDown` so tests remain isolated.
+- **Form Field Conventions**: Use `initialValue` instead of deprecated `value` on `DropdownButtonFormField`.
+- **Early Verification**: Run single test files immediately after adding changes (`flutter test test/path/to/test.dart`). If a test hangs or fails due to harness complexity, simplify the harness or move assertions to unit tests.
 
 ## GitHub Work Tracking
 

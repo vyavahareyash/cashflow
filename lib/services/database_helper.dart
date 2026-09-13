@@ -609,12 +609,23 @@ class DatabaseHelper {
     required int accountId,
     required double amount,
     required String date,
+    int? categoryId,
     String note = '',
   }) async {
     _validateAmount(amount);
     final db = await instance.database;
     final id = await db.transaction((txn) async {
       await _requireAccount(txn, accountId);
+      final accRes = await txn.query(
+        'accounts',
+        columns: ['balance'],
+        where: 'id = ?',
+        whereArgs: [accountId],
+      );
+      final accountBalance = (accRes.first['balance'] as num).toDouble();
+      if (accountBalance < amount) {
+        throw StateError('Insufficient account balance');
+      }
       await _requireGoal(txn, goalId);
       final lock = await _requireLockedAllocation(txn, goalId, accountId);
       final lockedAmount = (lock['amount'] as num).toDouble();
@@ -624,13 +635,13 @@ class DatabaseHelper {
       await _adjustAccountBalance(txn, accountId, -amount);
       await _reduceLockedAllocation(txn, lock, amount);
       await txn.rawUpdate(
-        'UPDATE goals SET current_saved = current_saved - ? WHERE id = ?',
+        'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
         [amount, goalId],
       );
       return txn.insert('transactions', {
         'account_id': accountId,
         'destination_account_id': null,
-        'category_id': null,
+        'category_id': categoryId,
         'goal_id': goalId,
         'amount': amount,
         'date': date,
@@ -1633,89 +1644,23 @@ class DatabaseHelper {
   }
 
   /// Processes a payment for a goal.
-  /// This moves money from "Locked" to "Spent".
-  Future<void> payBill(int goalId, int accountId, double amount) async {
-    final db = await instance.database;
-
-    await db.transaction((txn) async {
-      // 1. Subtract from physical account balance
-      List<Map> accRes = await txn.query(
-        'accounts',
-        where: 'id = ?',
-        whereArgs: [accountId],
-      );
-      if (accRes.isEmpty) throw Exception('Account not found');
-      double currentBalance = accRes.first['balance'];
-      await txn.update(
-        'accounts',
-        {'balance': currentBalance - amount},
-        where: 'id = ?',
-        whereArgs: [accountId],
-      );
-
-      // 2. Subtract from locked_allocations
-      // We find the allocation for this goal and account and reduce it.
-      List<Map> lockRes = await txn.query(
-        'locked_allocations',
-        where: 'goal_id = ? AND account_id = ?',
-        whereArgs: [goalId, accountId],
-      );
-      if (lockRes.isEmpty) {
-        throw Exception('No locked funds found for this goal in this account');
-      }
-
-      double currentLock = lockRes.first['amount'];
-      if (currentLock < amount) {
-        throw Exception('Insufficient locked funds in this account');
-      }
-
-      if (currentLock == amount) {
-        await txn.delete(
-          'locked_allocations',
-          where: 'id = ?',
-          whereArgs: [lockRes.first['id']],
-        );
-      } else {
-        await txn.update(
-          'locked_allocations',
-          {'amount': currentLock - amount},
-          where: 'id = ?',
-          whereArgs: [lockRes.first['id']],
-        );
-      }
-
-      // 3. Update goals total saved
-      List<Map> goalRes = await txn.query(
-        'goals',
-        where: 'id = ?',
-        whereArgs: [goalId],
-      );
-      if (goalRes.isEmpty) throw Exception('Goal not found');
-      double currentSaved = goalRes.first['current_saved'];
-      double newSaved = currentSaved - amount;
-
-      if (newSaved <= 0) {
-        // Goal is fully paid/consumed, delete it
-        await txn.delete('goals', where: 'id = ?', whereArgs: [goalId]);
-      } else {
-        await txn.update(
-          'goals',
-          {'current_saved': newSaved},
-          where: 'id = ?',
-          whereArgs: [goalId],
-        );
-      }
-
-      // 4. Create a transaction record
-      await txn.insert('transactions', {
-        'account_id': accountId,
-        'category_id': 1, // Using a default 'General' or similar category, or passed as param
-        'amount': amount,
-        'date': DateTime.now().toIso8601String(),
-        'note': 'Payment for goal id $goalId',
-      });
-    });
-    notifyDataChanged();
+  /// Moves money from "Locked" to "Spent" atomically and logs a typed goal_payment transaction.
+  Future<int> payBill(
+    int goalId,
+    int accountId,
+    double amount, {
+    int? categoryId,
+    String? date,
+    String note = '',
+  }) async {
+    return createGoalPaymentTransaction(
+      goalId: goalId,
+      accountId: accountId,
+      amount: amount,
+      date: date ?? DateTime.now().toIso8601String(),
+      categoryId: categoryId,
+      note: note.isNotEmpty ? note : 'Payment for goal',
+    );
   }
 
   // --- CORE CALCULATION LOGIC ---

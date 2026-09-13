@@ -681,7 +681,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    if (!isTransfer && !isGoal && categories.isNotEmpty) ...[
+                    if (!isTransfer &&
+                        type != 'goal_lock' &&
+                        type != 'goal_unlock' &&
+                        categories.isNotEmpty) ...[
                       DropdownButtonFormField<int?>(
                         key: const Key('edit_transaction_category_dropdown'),
                         initialValue: selectedCategoryId,
@@ -1304,14 +1307,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                                     if (isGoalTx) {
                                       final planDisplay = goalName ?? label;
+                                      final catInfo = (type == 'goal_payment' &&
+                                              categoryName != 'General' &&
+                                              categoryName.isNotEmpty)
+                                          ? ' • $categoryName'
+                                          : '';
                                       if (note != null && note.isNotEmpty) {
                                         tileTitle = note;
                                         tileSubtitle =
-                                            '$label • Goal: $planDisplay • $detail • $dateFormatted';
+                                            '$label • Goal: $planDisplay$catInfo • $detail • $dateFormatted';
                                       } else {
                                         tileTitle = planDisplay;
                                         tileSubtitle =
-                                            '$label • $detail • $dateFormatted';
+                                            '$label$catInfo • $detail • $dateFormatted';
                                       }
                                     } else {
                                       if (note != null && note.isNotEmpty) {

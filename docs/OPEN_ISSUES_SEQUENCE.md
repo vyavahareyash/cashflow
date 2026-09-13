@@ -4,24 +4,24 @@ This document defines the deterministic implementation sequence for all open Git
 
 ---
 
-## Active Execution Queue (5 Remaining Open Issues)
+## Active Execution Queue (4 Remaining Open Issues)
 
 | Order | Issue # | Title | Priority | Sprint | Status | Owning Files |
 | :---: | :---: | :--- | :---: | :---: | :---: | :--- |
-| **1** | **#36** | `NEW-021: Goal payment transaction flow` | P1 | Sprint 2.1 | Partial | `lib/services/database_helper.dart`, `lib/screens/goals_screen.dart` |
-| **2** | **#48** | `feat(ux): implement remaining UI report enhancements` | P1/P2 | Polish | Planned | `lib/screens/analytics_screen.dart`, `lib/screens/budget_screen.dart`, `lib/screens/backup_restore_screen.dart` |
-| **3** | **#11** | `LEGACY-011: Month-end budget reset and YTD behavior` | P0 | Sprint 2.4 | Partial | `lib/services/database_helper.dart`, `lib/screens/analytics_screen.dart` |
-| **4** | **#27** | `NEW-015: Dashboard calculation integration tests` | P1 | Sprint 1.5 | Partial | `test/dashboard_integration_test.dart` |
-| **5** | **#9** | `LEGACY-009: Complete project documentation` | P1 | Sprint 3.2 | Partial | `docs/`, `README.md` |
+| **1** | **#48** | `feat(ux): implement remaining UI report enhancements` | P1/P2 | Polish | Planned | `lib/screens/analytics_screen.dart`, `lib/screens/budget_screen.dart`, `lib/screens/backup_restore_screen.dart` |
+| **2** | **#11** | `LEGACY-011: Month-end budget reset and YTD behavior` | P0 | Sprint 2.4 | Partial | `lib/services/database_helper.dart`, `lib/screens/analytics_screen.dart` |
+| **3** | **#27** | `NEW-015: Dashboard calculation integration tests` | P1 | Sprint 1.5 | Partial | `test/dashboard_integration_test.dart` |
+| **4** | **#9** | `LEGACY-009: Complete project documentation` | P1 | Sprint 3.2 | Partial | `docs/`, `README.md` |
 
 ---
 
 ## Closed Issues (Verified & Administratively Completed)
 
-The following 11 issues were verified against all acceptance criteria, documented with PR links and test passes, and closed on GitHub:
+The following 12 issues were verified against all acceptance criteria, documented with PR links and test passes, and closed on GitHub:
 
 | Issue # | Title | Closed Date | Resolution Details |
 | :---: | :--- | :---: | :--- |
+| **#36** | `NEW-021: Goal payment transaction flow` | 2026-09-14 | Delivered (`createGoalPaymentTransaction` atomic updates, physical balance validation, category selection, merchant note, `test/goal_payment_flow_test.dart` 9/9 passing) |
 | **#6** | `LEGACY-006: Goal transaction history and editing` | 2026-09-14 | Delivered in PR #52 (`getGoalTransactions`, atomic sync across `locked_allocations` & `goals.current_saved`, enhanced goal contributions modal, `test/goal_transaction_history_test.dart` 12/12 passing) |
 | **#8** | `LEGACY-008: Edit, delete, and filter transactions` | 2026-09-14 | Delivered in PR #51 (atomic deletion rollback across all 6 transaction types, `updateTransaction` balance diff, edit modal, date period filter chips) |
 | **#12** | `LEGACY-012: Dashboard privacy show-hide behavior` | 2026-09-14 | Delivered in PR #50 (app_settings persistence, compactCurrency masking, test/dashboard_privacy_test.dart) |
@@ -57,11 +57,9 @@ The following 11 issues were verified against all acceptance criteria, documente
 
 ### Wave 2: Transaction Flow Completion & UX Polish
 
-#### 4. Issue #36: `NEW-021: Goal payment transaction flow` & #48 Item 1
-- **Priority**: P1-High | **Sprint**: 2.1
-- **Why Now**: Sinking funds can currently be settled, but the resulting transaction has hardcoded category (`category_id: 1`) and default note.
-- **Fix**: Update `DatabaseHelper.payBill` and `_showPaymentDialog` in `goals_screen.dart` to accept category selection and merchant note.
-- **Validation**: `flutter test test/goal_lock_flow_test.dart`.
+#### 4. Issue #36: `NEW-021: Goal payment transaction flow` (CLOSED)
+- **Status**: Completed. Added `DatabaseHelper.createGoalPaymentTransaction` with atomic physical account decrement, locked allocation reduction/cleanup, and clamped `current_saved` update. Refactored `payBill` delegation. Overhauled `_showPaymentDialog` in `goals_screen.dart` with account-specific locked funds indicators, category picker, date picker, and note. Enhanced history tile display and edit category support. Added 9 tests in `test/goal_payment_flow_test.dart` (9/9 passing).
+- **Validation**: `flutter test test/goal_payment_flow_test.dart` (9/9 passing), `flutter test --concurrency=1` (114/114 passing).
 
 #### 5. Issue #48: `feat(ux): implement remaining UI report enhancements`
 - **Priority**: P1/P2 | **Sprint**: Polish
