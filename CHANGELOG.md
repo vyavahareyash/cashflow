@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-13
+
+### Added
+- **Goal Unlock Flow**: Added dedicated bottom sheet modal and action button to release locked sinking funds back to usable liquidity without deleting goals (`DatabaseHelper.createGoalUnlockTransaction`) (#32, #49).
+- **Account-to-Account Quick Transfer**: Fast transfer action button directly on `AccountCard` in the Accounts screen with pre-filled source accounts (#49).
+- **Activity Ledger Quick-Filter Chips & CSV Export**: Added horizontal scrolling filter chips (`All`, `Expenses`, `Income`, `Transfers`, `Goal Locks`) and direct CSV export button to the activity ledger toolbar (#49).
+- **Exhaustive 27-Marker Visual Testing Suite**: Expanded automated screenshot runner (`scripts/capture_screenshots.mjs`) covering all modals, tabs, and interaction states across both Light and Dark modes with structured JSON manifest (#47).
+- **Interactive Review Gallery**: Added standalone comparison gallery (`screenshots/index.html`) featuring side-by-side theme comparison, image zoom lightbox, and audit checklist (#47).
+- **UI Design & Feature Gap Audit**: Complete audit report (`screenshots/ui_report.html`) cataloging screen-by-screen UX, WCAG contrast parity, and backend feature opportunities (#49).
+
+### Changed
+- **Dashboard Formula Clarity**: Decoupled monthly tracking budget limits from usable balance formula with a vertical separator pill (`Physical - Locked | Budget cap`) to reinforce that budgets are tracking ceilings (#49).
+- **Accessible Touch Targets**: Standardized all icon buttons and interactive controls to satisfy the WCAG minimum $48 \times 48\text{ dp}$ touch target standard (`AppComponentSizes.minTouchTarget`).
+- **Smooth Micro-Animations**: Wrapped account locked funds accordion in `AnimatedSize` (250ms, `Curves.easeInOut`) and budget progress bars in `TweenAnimationBuilder`.
+
+### Fixed
+- **Keyboard Viewport Protection**: Protected modal bottom sheets against soft keyboard occlusion with dynamic `viewInsets.bottom` scrolling.
+- **Material 3 Theme Compatibility**: Removed deprecated `background` color properties in favor of modern M3 color tokens.
+
+---
+
 ## [1.1.0] - 2026-09-13
 
 ### Added
