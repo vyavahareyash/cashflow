@@ -145,6 +145,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         const SizedBox(height: AppSpacing.xs),
                         DropdownButtonFormField<String>(
                           initialValue: selectedType,
+                          isExpanded: true,
                           dropdownColor: isDark
                               ? AppColors.darkSurfaceElevated
                               : AppColors.white,
@@ -273,6 +274,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
                       initialValue: selectedType,
+                      isExpanded: true,
                       dropdownColor: isDark
                           ? AppColors.darkSurfaceElevated
                           : AppColors.white,
