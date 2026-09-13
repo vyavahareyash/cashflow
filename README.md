@@ -6,7 +6,7 @@ Track the money in your accounts, set monthly spending targets, and reserve mone
 
 ## Download for Android
 
-[Download the latest APK: Cashflow v1.0.1](https://github.com/vyavahareyash/cashflow/releases/download/v1.0.1/app-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
+[Download the latest APK: Cashflow v1.1.0](https://github.com/vyavahareyash/cashflow/releases/download/v1.1.0/app-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
 
 ![Cashflow dashboard](screenshots/01-dashboard.png)
 

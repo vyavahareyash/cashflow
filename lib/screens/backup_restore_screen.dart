@@ -734,7 +734,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         children: [
           _buildInfoRow('Application', 'Cashflow', isDark),
           const Divider(height: 16),
-          _buildInfoRow('Version', '1.0.0 (Build 1)', isDark),
+          _buildInfoRow('Version', '1.1.0 (Build 2)', isDark),
           const Divider(height: 16),
           _buildInfoRow('Storage Engine', 'SQLite (Local-First)', isDark),
           const Divider(height: 16),
