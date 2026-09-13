@@ -4,26 +4,26 @@ This document defines the deterministic implementation sequence for all open Git
 
 ---
 
-## Active Execution Queue (7 Remaining Open Issues)
+## Active Execution Queue (5 Remaining Open Issues)
 
 | Order | Issue # | Title | Priority | Sprint | Status | Owning Files |
 | :---: | :---: | :--- | :---: | :---: | :---: | :--- |
-| **1** | **#8** | `LEGACY-008: Edit, delete, and filter transactions` | P0 | Sprint 2.3 | Partial (Bug) | `lib/services/database_helper.dart`, `lib/screens/history_screen.dart` |
-| **2** | **#6** | `LEGACY-006: Goal transaction history and editing` | P0 | Sprint 2.3 | Partial | `lib/services/database_helper.dart`, `lib/screens/history_screen.dart` |
-| **3** | **#36** | `NEW-021: Goal payment transaction flow` | P1 | Sprint 2.1 | Partial | `lib/services/database_helper.dart`, `lib/screens/goals_screen.dart` |
-| **4** | **#48** | `feat(ux): implement remaining UI report enhancements` | P1/P2 | Polish | Planned | `lib/screens/analytics_screen.dart`, `lib/screens/budget_screen.dart`, `lib/screens/backup_restore_screen.dart` |
-| **5** | **#11** | `LEGACY-011: Month-end budget reset and YTD behavior` | P0 | Sprint 2.4 | Partial | `lib/services/database_helper.dart`, `lib/screens/analytics_screen.dart` |
-| **6** | **#27** | `NEW-015: Dashboard calculation integration tests` | P1 | Sprint 1.5 | Partial | `test/dashboard_integration_test.dart` |
-| **7** | **#9** | `LEGACY-009: Complete project documentation` | P1 | Sprint 3.2 | Partial | `docs/`, `README.md` |
+| **1** | **#36** | `NEW-021: Goal payment transaction flow` | P1 | Sprint 2.1 | Partial | `lib/services/database_helper.dart`, `lib/screens/goals_screen.dart` |
+| **2** | **#48** | `feat(ux): implement remaining UI report enhancements` | P1/P2 | Polish | Planned | `lib/screens/analytics_screen.dart`, `lib/screens/budget_screen.dart`, `lib/screens/backup_restore_screen.dart` |
+| **3** | **#11** | `LEGACY-011: Month-end budget reset and YTD behavior` | P0 | Sprint 2.4 | Partial | `lib/services/database_helper.dart`, `lib/screens/analytics_screen.dart` |
+| **4** | **#27** | `NEW-015: Dashboard calculation integration tests` | P1 | Sprint 1.5 | Partial | `test/dashboard_integration_test.dart` |
+| **5** | **#9** | `LEGACY-009: Complete project documentation` | P1 | Sprint 3.2 | Partial | `docs/`, `README.md` |
 
 ---
 
 ## Closed Issues (Verified & Administratively Completed)
 
-The following 9 issues were verified against all acceptance criteria, documented with PR links and test passes, and closed on GitHub:
+The following 11 issues were verified against all acceptance criteria, documented with PR links and test passes, and closed on GitHub:
 
 | Issue # | Title | Closed Date | Resolution Details |
 | :---: | :--- | :---: | :--- |
+| **#6** | `LEGACY-006: Goal transaction history and editing` | 2026-09-14 | Delivered in PR #52 (`getGoalTransactions`, atomic sync across `locked_allocations` & `goals.current_saved`, enhanced goal contributions modal, `test/goal_transaction_history_test.dart` 12/12 passing) |
+| **#8** | `LEGACY-008: Edit, delete, and filter transactions` | 2026-09-14 | Delivered in PR #51 (atomic deletion rollback across all 6 transaction types, `updateTransaction` balance diff, edit modal, date period filter chips) |
 | **#12** | `LEGACY-012: Dashboard privacy show-hide behavior` | 2026-09-14 | Delivered in PR #50 (app_settings persistence, compactCurrency masking, test/dashboard_privacy_test.dart) |
 | **#32** | `NEW-020: Implement goal unlock transaction flow` | 2026-09-13 | Delivered in PR #49 (`_showUnlockFundsDialog`, `test/goal_unlock_flow_test.dart` 5/5 passing) |
 | **#20** | `NEW-011: Use real usable balance on dashboard` | 2026-09-13 | Real calculations wired via `DatabaseHelper.instance.calculateUsableBalance()` |
@@ -46,23 +46,12 @@ The following 9 issues were verified against all acceptance criteria, documented
 - **Fix**: Wrap remaining visible numbers in `AppFormatters.currency(..., isPrivate: _isPrivate)`.
 - **Validation**: `flutter test test/widget_test.dart`.
 
-#### 2. Issue #8: `LEGACY-008: Edit, delete, and filter transactions`
-- **Priority**: P0-Critical | **Sprint**: 2.3
-- **Why Now**: Critical data-integrity bug. `DatabaseHelper.deleteTransaction` currently assumes every transaction is an expense and blindly refunds balance:
-  - Deleting `income` adds to balance instead of subtracting.
-  - Deleting `transfer` refunds the source account without reversing the destination.
-  - Deleting `goal_lock` does not restore the locked allocation.
-  - Furthermore, editing transactions (amount, date, category, note) is completely missing.
-- **Fix**:
-  - Update `deleteTransaction` in `database_helper.dart` to branch on `tx['type']` and atomically reverse the exact legs of each transaction type.
-  - Implement `updateTransaction` in `database_helper.dart` with balance diff adjustment.
-  - Add Edit Transaction modal in `HistoryScreen`.
-- **Validation**: `flutter test test/transaction_helpers_test.dart` + new deletion/edit tests.
+#### 2. Issue #8: `LEGACY-008: Edit, delete, and filter transactions` (CLOSED - PR #51)
+- **Status**: Completed and merged in PR #51. Added atomic reversal across all 6 transaction types, implemented `updateTransaction` balance delta sync, edit transaction modal in `HistoryScreen`, quick date period filter chips, and comprehensive tests in `test/transaction_edit_delete_test.dart`.
 
-#### 3. Issue #6: `LEGACY-006: Goal transaction history and editing`
-- **Priority**: P0-Critical | **Sprint**: 2.3
-- **Why Now**: Dependent on #8. Ensures editing or deleting goal lock transactions correctly synchronizes `locked_allocations` and `goals.current_saved`.
-- **Validation**: `flutter test test/goal_lock_flow_test.dart`.
+#### 3. Issue #6: `LEGACY-006: Goal transaction history and editing` (CLOSED - PR #52)
+- **Status**: Completed in PR #52. Added `DatabaseHelper.getGoalTransactions`, `goalId` filter in `getTransactionHistory`, atomic editing/deletion synchronization for `goal_lock`, `goal_unlock`, and `goal_payment`, redesigned goal contribution & activity modal with progress header, account allocations, and inline edit/delete actions, and added 12 tests in `test/goal_transaction_history_test.dart`.
+- **Validation**: `flutter test test/goal_transaction_history_test.dart` (12/12 passing), `flutter test --concurrency=1` (105/105 passing).
 
 ---
 

@@ -112,7 +112,7 @@ void main() {
     // 10: Locked Allocations Modal
     await tester.tap(find.byTooltip('Contribution Breakdown').first);
     await tester.pumpAndSettle();
-    await _waitForText(tester, 'Locked Allocations for');
+    await _waitForText(tester, 'Goal Contributions & Activity');
     await _markScreen('10-modal-lock-funds-light');
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
@@ -217,7 +217,7 @@ void main() {
     // 22: Locked Allocations Modal (Dark)
     await tester.tap(find.byTooltip('Contribution Breakdown').first);
     await tester.pumpAndSettle();
-    await _waitForText(tester, 'Locked Allocations for');
+    await _waitForText(tester, 'Goal Contributions & Activity');
     await _markScreen('22-modal-lock-funds-dark');
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();

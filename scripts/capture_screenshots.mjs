@@ -102,11 +102,11 @@ const markers = [
     },
     {
         id: '10-modal-lock-funds-light',
-        name: 'Locked Allocations',
+        name: 'Goal Contributions & Activity',
         group: 'Modals',
         theme: 'light',
         type: 'modal',
-        description: 'Bottom sheet breakdown showing which physical accounts are locking funds into the selected goal.'
+        description: 'Bottom sheet breakdown showing goal progress, locked funds by account, and chronological transaction activity history.'
     },
     {
         id: '11-modal-edit-goal-light',
@@ -206,11 +206,11 @@ const markers = [
     },
     {
         id: '22-modal-lock-funds-dark',
-        name: 'Locked Allocations (Dark)',
+        name: 'Goal Contributions & Activity (Dark)',
         group: 'Modals',
         theme: 'dark',
         type: 'modal',
-        description: 'Dark mode modal showing locked allocations per physical account.'
+        description: 'Dark mode view of goal contributions breakdown, account allocations, and activity history.'
     },
     {
         id: '23-accounts-dark',
