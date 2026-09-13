@@ -16,6 +16,7 @@ import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/transaction_model.dart';
 import 'package:cashflow/models/goal_model.dart';
 import 'package:cashflow/models/locked_allocation_model.dart';
+import 'package:cashflow/models/salary_cycle.dart';
 
 class DatabaseHelper {
   // Singleton pattern: ensures only one database connection exists
@@ -1686,53 +1687,83 @@ class DatabaseHelper {
     return (totalPhysical - totalLocked).clamp(0.0, double.infinity);
   }
 
-  /// Gets the total spent in a specific category for the specified calendar month and year.
+  /// Gets the total spent in a specific category for the specified calendar month and year,
+  /// or for a given [SalaryCycle].
   /// Only includes transactions with type 'expense'.
-  /// Defaults to the current month and year if omitted.
+  /// Defaults to the current month and year if both [cycle] and [month] are omitted.
   Future<double> getCategorySpendingForMonth(
     int categoryId, {
     int? month,
     int? year,
+    SalaryCycle? cycle,
   }) async {
     final db = await instance.database;
-    final now = DateTime.now();
-    final targetYear = year ?? now.year;
-    final targetMonth = month ?? now.month;
-    final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
+    String whereClause;
+    List<dynamic> whereArgs;
+
+    if (cycle != null) {
+      whereClause =
+          "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
+      whereArgs = [categoryId, cycle.startDateString, cycle.endDateString];
+    } else {
+      final now = DateTime.now();
+      final targetYear = year ?? now.year;
+      final targetMonth = month ?? now.month;
+      final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
+      whereClause =
+          "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 7) = ?";
+      whereArgs = [categoryId, monthStr];
+    }
 
     final result = await db.rawQuery(
-      'SELECT SUM(amount) as total FROM transactions '
-      "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 7) = ?",
-      [categoryId, monthStr],
+      'SELECT SUM(amount) as total FROM transactions $whereClause',
+      whereArgs,
     );
 
     return (result.first['total'] as num? ?? 0).toDouble();
   }
 
-  /// Gets the total spent in a specific category for the current month.
+  /// Gets the total spent in a specific category for the current month or active salary cycle.
   /// Used to calculate budget progress.
-  Future<double> getCategorySpendingForCurrentMonth(int categoryId) async {
-    return getCategorySpendingForMonth(categoryId);
+  Future<double> getCategorySpendingForCurrentMonth(
+    int categoryId, {
+    SalaryCycle? cycle,
+  }) async {
+    return getCategorySpendingForMonth(categoryId, cycle: cycle);
   }
 
-  /// Gets monthly expense spending for all categories for a given calendar month and year.
+  /// Gets monthly expense spending for all categories for a given calendar month and year,
+  /// or for a given [SalaryCycle].
   /// Returns a `Map<categoryId, totalExpense>`.
   /// Only includes transactions with type 'expense'.
   Future<Map<int, double>> getMonthlySpendingByCategoryId({
     int? month,
     int? year,
+    SalaryCycle? cycle,
   }) async {
     final db = await instance.database;
-    final now = DateTime.now();
-    final targetYear = year ?? now.year;
-    final targetMonth = month ?? now.month;
-    final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
+    String whereClause;
+    List<dynamic> whereArgs;
+
+    if (cycle != null) {
+      whereClause =
+          "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
+      whereArgs = [cycle.startDateString, cycle.endDateString];
+    } else {
+      final now = DateTime.now();
+      final targetYear = year ?? now.year;
+      final targetMonth = month ?? now.month;
+      final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
+      whereClause =
+          "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 7) = ?";
+      whereArgs = [monthStr];
+    }
 
     final result = await db.rawQuery(
       'SELECT category_id, SUM(amount) as total FROM transactions '
-      "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 7) = ? "
+      '$whereClause '
       'GROUP BY category_id',
-      [monthStr],
+      whereArgs,
     );
 
     final map = <int, double>{};
@@ -1743,6 +1774,17 @@ class DatabaseHelper {
       }
     }
     return map;
+  }
+
+  /// Gets total expense spending across all categories for a given salary cycle.
+  Future<double> getTotalSpendingForSalaryCycle(SalaryCycle cycle) async {
+    final db = await instance.database;
+    final result = await db.rawQuery(
+      "SELECT SUM(amount) as total FROM transactions "
+      "WHERE type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?",
+      [cycle.startDateString, cycle.endDateString],
+    );
+    return (result.first['total'] as num? ?? 0.0).toDouble();
   }
 
   // --- JSON EXPORT/IMPORT ---
@@ -1976,6 +2018,103 @@ class DatabaseHelper {
     );
 
     return (result.first['total'] as num? ?? 0).toDouble();
+  }
+
+  // --- YEAR-TO-DATE (YTD) ANALYTICS ---
+
+  /// Computes cumulative expense spending from Jan 1 of [year] through current date.
+  Future<double> getYtdSpending({int? year}) async {
+    final db = await instance.database;
+    final targetYear = year ?? DateTime.now().year;
+    final yearPrefix = '$targetYear-';
+
+    final result = await db.rawQuery(
+      "SELECT SUM(amount) as total FROM transactions "
+      "WHERE type = 'expense' AND SUBSTR(date, 1, 5) = ?",
+      [yearPrefix],
+    );
+    return (result.first['total'] as num? ?? 0.0).toDouble();
+  }
+
+  /// Returns cumulative spending by category for the full year to date.
+  Future<Map<String, double>> getYtdSpendingByCategory({int? year}) async {
+    final db = await instance.database;
+    final targetYear = year ?? DateTime.now().year;
+    final yearPrefix = '$targetYear-';
+
+    final result = await db.rawQuery(
+      '''
+      SELECT c.name, SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.id
+      WHERE t.type = 'expense' AND SUBSTR(t.date, 1, 5) = ?
+      GROUP BY t.category_id
+      ORDER BY total DESC
+    ''',
+      [yearPrefix],
+    );
+
+    return {
+      for (final row in result)
+        row['name'] as String: (row['total'] as num? ?? 0.0).toDouble(),
+    };
+  }
+
+  /// Gets month-by-month spending for the given year (Jan through Dec).
+  Future<Map<String, double>> getYtdMonthlySpendings({int? year}) async {
+    final db = await instance.database;
+    final targetYear = year ?? DateTime.now().year;
+    final yearPrefix = '$targetYear-';
+
+    final result = await db.rawQuery(
+      '''
+      SELECT 
+        SUBSTR(date, 1, 7) as month,
+        SUM(amount) as total
+      FROM transactions
+      WHERE type = 'expense' AND SUBSTR(date, 1, 5) = ?
+      GROUP BY month
+      ORDER BY month ASC
+    ''',
+      [yearPrefix],
+    );
+
+    final map = <String, double>{};
+    for (var row in result) {
+      map[row['month'] as String] = (row['total'] as num? ?? 0.0).toDouble();
+    }
+    return map;
+  }
+
+  /// Computes cumulative Inflow (income), Outflow (expenses), Net Savings, and Savings Rate for the year to date.
+  Future<Map<String, double>> getYtdCashflowSummary({int? year}) async {
+    final db = await instance.database;
+    final targetYear = year ?? DateTime.now().year;
+    final yearPrefix = '$targetYear-';
+
+    final incomeResult = await db.rawQuery(
+      "SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND SUBSTR(date, 1, 5) = ?",
+      [yearPrefix],
+    );
+    final expenseResult = await db.rawQuery(
+      "SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND SUBSTR(date, 1, 5) = ?",
+      [yearPrefix],
+    );
+
+    final totalIncome = (incomeResult.first['total'] as num? ?? 0.0).toDouble();
+    final totalExpense = (expenseResult.first['total'] as num? ?? 0.0).toDouble();
+    final netSavings = totalIncome - totalExpense;
+    final savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100.0 : 0.0;
+
+    return {
+      'inflow': totalIncome,
+      'outflow': totalExpense,
+      'netSavings': netSavings,
+      'income': totalIncome,
+      'expense': totalExpense,
+      'net': netSavings,
+      'savingsRate': savingsRate,
+    };
   }
 
   // --- APP SETTINGS OPERATIONS ---

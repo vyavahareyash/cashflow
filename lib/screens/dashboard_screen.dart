@@ -65,6 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final db = DatabaseHelper.instance;
     final isPrivate = await db.getPrivacyMode();
     final salaryDay = await db.getSalaryDay();
+    final cycle = SalaryCycle.resolve(salaryDay: salaryDay);
     final accountsData = await db.readAllAccounts();
     final locked = await db.getTotalLockedAmount();
     final usable = await db.calculateUsableBalance();
@@ -77,7 +78,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       totalPhysical += acc.balance;
     }
 
-    final categorySpendingMap = await db.getMonthlySpendingByCategoryId();
+    final categorySpendingMap =
+        await db.getMonthlySpendingByCategoryId(cycle: cycle);
     double totalBudget = 0;
     double totalSpent = 0;
     for (var cat in categoriesData) {

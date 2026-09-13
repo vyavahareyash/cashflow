@@ -47,9 +47,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
       setState(() => _isLoading = true);
     }
     final categories = await DatabaseHelper.instance.readAllCategories();
-    final monthlySpending =
-        await DatabaseHelper.instance.getMonthlySpendingByCategoryId();
     final salaryDay = await DatabaseHelper.instance.getSalaryDay();
+    final cycle = SalaryCycle.resolve(salaryDay: salaryDay);
+    final monthlySpending =
+        await DatabaseHelper.instance.getMonthlySpendingByCategoryId(cycle: cycle);
     double totalBudgetLimit = 0;
     double totalSpent = 0;
     Map<int, double> spendingMap = {};
@@ -377,7 +378,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Cycle: ${cycle.cycleLabel} • ${cycle.resetCountdownText}',
+                    'Cycle: ${cycle.cycleLabel} • ${cycle.resetCountdownText} • Zero rollover',
                     style: AppTypography.labelSmall.copyWith(
                       fontSize: 11,
                       color: isDark ? AppColors.gray400 : AppColors.gray600,
@@ -478,6 +479,41 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ],
           ),
+          if (isOver) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: AppBorderRadius.mediumBorder,
+                border: Border.all(
+                  color: AppColors.danger.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Total spend exceeds budget by ${AppFormatters.currency(_totalSpent - _totalBudgetLimit)}. Resets on ${cycle.resetCountdownText.toLowerCase()}.',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -654,6 +690,26 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ],
           ),
+          if (isOver) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xxs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.12),
+                borderRadius: AppBorderRadius.smallBorder,
+              ),
+              child: Text(
+                '+₹${(spent - budget).toStringAsFixed(0)} over limit',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
