@@ -19,10 +19,7 @@ void main() {
       ElevatedButton,
       'Populate Sample Data',
     );
-    final backupScrollable = find.ancestor(
-      of: populateButton,
-      matching: find.byType(Scrollable),
-    );
+    final backupScrollable = find.byType(Scrollable).first;
     await tester.drag(backupScrollable, const Offset(0, -500));
     await tester.pumpAndSettle();
     await tester.tap(populateButton);

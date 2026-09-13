@@ -14,7 +14,6 @@ Future<String?> saveBackupBytes(String filename, List<int> bytes) async {
 Future<List<int>?> pickBackupBytes() async {
   final dynamic result = await FilePicker.pickFiles(
     type: FileType.any,
-    withData: true,
   );
   if (result == null) return null;
 
@@ -22,5 +21,10 @@ Future<List<int>?> pickBackupBytes() async {
       ? result
       : (result.files as List<PlatformFile>);
   if (files.isEmpty) return null;
-  return files.single.readAsBytes();
+
+  final file = files.single;
+  if (file.path != null) {
+    return await File(file.path!).readAsBytes();
+  }
+  return await file.readAsBytes();
 }
