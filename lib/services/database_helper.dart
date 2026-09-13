@@ -1309,26 +1309,63 @@ class DatabaseHelper {
     return (totalPhysical - totalLocked).clamp(0.0, double.infinity);
   }
 
-  /// Gets the total spent in a specific category for the current month.
-  /// Used to calculate budget progress.
-  Future<double> getCategorySpendingForCurrentMonth(int categoryId) async {
+  /// Gets the total spent in a specific category for the specified calendar month and year.
+  /// Only includes transactions with type 'expense'.
+  /// Defaults to the current month and year if omitted.
+  Future<double> getCategorySpendingForMonth(
+    int categoryId, {
+    int? month,
+    int? year,
+  }) async {
     final db = await instance.database;
-
-    // Get current month and year in YYYY-MM format
     final now = DateTime.now();
-    final monthStart = DateTime(
-      now.year,
-      now.month,
-      1,
-    ).toIso8601String().substring(0, 7);
-    final monthEnd = DateTime(now.year, now.month + 1, 0).toIso8601String();
+    final targetYear = year ?? now.year;
+    final targetMonth = month ?? now.month;
+    final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
 
     final result = await db.rawQuery(
-      'SELECT SUM(amount) as total FROM transactions WHERE category_id = ? AND date >= ? AND date <= ?',
-      [categoryId, monthStart, monthEnd],
+      'SELECT SUM(amount) as total FROM transactions '
+      "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 7) = ?",
+      [categoryId, monthStr],
     );
 
     return (result.first['total'] as num? ?? 0).toDouble();
+  }
+
+  /// Gets the total spent in a specific category for the current month.
+  /// Used to calculate budget progress.
+  Future<double> getCategorySpendingForCurrentMonth(int categoryId) async {
+    return getCategorySpendingForMonth(categoryId);
+  }
+
+  /// Gets monthly expense spending for all categories for a given calendar month and year.
+  /// Returns a `Map<categoryId, totalExpense>`.
+  /// Only includes transactions with type 'expense'.
+  Future<Map<int, double>> getMonthlySpendingByCategoryId({
+    int? month,
+    int? year,
+  }) async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final targetYear = year ?? now.year;
+    final targetMonth = month ?? now.month;
+    final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
+
+    final result = await db.rawQuery(
+      'SELECT category_id, SUM(amount) as total FROM transactions '
+      "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 7) = ? "
+      'GROUP BY category_id',
+      [monthStr],
+    );
+
+    final map = <int, double>{};
+    for (final row in result) {
+      final catId = row['category_id'] as int?;
+      if (catId != null) {
+        map[catId] = (row['total'] as num? ?? 0).toDouble();
+      }
+    }
+    return map;
   }
 
   // --- JSON EXPORT/IMPORT ---
@@ -1449,19 +1486,13 @@ class DatabaseHelper {
   }) async {
     final db = await instance.database;
 
-    String whereClause = '';
+    String whereClause = "WHERE t.type = 'expense'";
+    List<dynamic> whereArgs = [];
     if (currentMonthOnly) {
       final now = DateTime.now();
-      final monthStart = DateTime(now.year, now.month, 1).toIso8601String();
-      final monthEnd = DateTime(
-        now.year,
-        now.month + 1,
-        0,
-        23,
-        59,
-        59,
-      ).toIso8601String();
-      whereClause = 'WHERE t.date >= "$monthStart" AND t.date <= "$monthEnd"';
+      final monthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      whereClause = "WHERE t.type = 'expense' AND SUBSTR(t.date, 1, 7) = ?";
+      whereArgs = [monthStr];
     }
 
     final result = await db.rawQuery('''
@@ -1471,7 +1502,7 @@ class DatabaseHelper {
       $whereClause
       GROUP BY t.category_id
       ORDER BY total DESC
-    ''');
+    ''', whereArgs.isNotEmpty ? whereArgs : null);
 
     final map = <String, double>{};
     for (var row in result) {
@@ -1490,7 +1521,7 @@ class DatabaseHelper {
         SUBSTR(date, 1, 7) as month,
         SUM(amount) as total
       FROM transactions
-      WHERE date >= datetime('now', '-$months months')
+      WHERE type = 'expense' AND date >= datetime('now', '-$months months')
       GROUP BY month
       ORDER BY month ASC
     ''');
@@ -1514,7 +1545,7 @@ class DatabaseHelper {
       SELECT c.name, SUM(t.amount) as total
       FROM transactions t
       JOIN categories c ON t.category_id = c.id
-      WHERE SUBSTR(t.date, 1, 7) = ?
+      WHERE SUBSTR(t.date, 1, 7) = ? AND t.type = 'expense'
       GROUP BY t.category_id
       ORDER BY total DESC
     ''',
@@ -1538,7 +1569,7 @@ class DatabaseHelper {
       SELECT c.name, SUM(t.amount) as total
       FROM transactions t
       JOIN categories c ON t.category_id = c.id
-      WHERE t.date >= ? AND t.date < ?
+      WHERE t.type = 'expense' AND t.date >= ? AND t.date < ?
       GROUP BY t.category_id
       ORDER BY total DESC
     ''',
@@ -1562,7 +1593,7 @@ class DatabaseHelper {
       '''
       SELECT SUM(amount) as total
       FROM transactions
-      WHERE SUBSTR(date, 1, 7) = ?
+      WHERE SUBSTR(date, 1, 7) = ? AND type = 'expense'
     ''',
       [month],
     );
