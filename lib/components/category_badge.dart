@@ -7,6 +7,8 @@ class CategoryBadge extends StatelessWidget {
   final Color? color;
   final IconData? icon;
   final bool showIcon;
+  final bool iconOnly;
+  final double? size;
 
   const CategoryBadge({
     super.key,
@@ -14,6 +16,8 @@ class CategoryBadge extends StatelessWidget {
     this.color,
     this.icon,
     this.showIcon = true,
+    this.iconOnly = false,
+    this.size,
   });
 
   @override
@@ -22,6 +26,31 @@ class CategoryBadge extends StatelessWidget {
     final badgeColor = color ?? style.color;
     final badgeIcon = icon ?? style.icon;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (iconOnly) {
+      final s = size ?? 40.0;
+      return Container(
+        width: s,
+        height: s,
+        decoration: BoxDecoration(
+          color: isDark
+              ? badgeColor.withValues(alpha: 0.18)
+              : badgeColor.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isDark
+                ? badgeColor.withValues(alpha: 0.3)
+                : badgeColor.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Icon(
+          badgeIcon,
+          size: s * 0.5,
+          color: badgeColor,
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(

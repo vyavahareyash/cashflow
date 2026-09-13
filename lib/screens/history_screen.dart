@@ -1268,8 +1268,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     label: type == 'expense'
                                         ? categoryName
                                         : label,
+                                    iconOnly: true,
                                   ),
-                                  const SizedBox(width: AppSpacing.md),
+                                  const SizedBox(width: AppSpacing.sm + 2),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -1290,17 +1291,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
-                                          '$detail • ${DateFormat('MMM dd, yyyy').format(date)}',
+                                          note != null && note.isNotEmpty
+                                              ? '${type == 'expense' ? categoryName : label} • $detail • ${DateFormat('MMM dd').format(date)}'
+                                              : '$detail • ${DateFormat('MMM dd').format(date)}',
                                           style: AppTypography.labelSmall
                                               .copyWith(
                                                 color: isDark
                                                     ? AppColors.gray400
                                                     : AppColors.gray600,
                                               ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(width: AppSpacing.xs),
                                   Text(
                                     '${_isCredit(type)
                                         ? '+'
@@ -1325,6 +1331,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           ? AppColors.gray400
                                           : AppColors.gray600,
                                     ),
+                                    visualDensity: VisualDensity.compact,
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.all(AppSpacing.xs),
                                     tooltip: 'Edit Transaction',
                                     onPressed: () =>
                                         _showEditTransactionDialog(tx),
@@ -1338,6 +1347,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           ? AppColors.gray500
                                           : AppColors.gray400,
                                     ),
+                                    visualDensity: VisualDensity.compact,
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.all(AppSpacing.xs),
                                     tooltip: 'Delete Transaction',
                                     onPressed: () =>
                                         _deleteTransaction(tx),
