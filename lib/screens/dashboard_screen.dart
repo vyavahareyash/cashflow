@@ -61,6 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final db = DatabaseHelper.instance;
+    final isPrivate = await db.getPrivacyMode();
     final accountsData = await db.readAllAccounts();
     final locked = await db.getTotalLockedAmount();
     final usable = await db.calculateUsableBalance();
@@ -95,15 +96,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _usableBalance = usable;
         _totalBudgetLimit = totalBudget;
         _totalSpentThisMonth = totalSpent;
+        _isPrivate = isPrivate;
         _isLoading = false;
       });
     }
   }
 
   void _togglePrivacy() {
+    final nextPrivate = !_isPrivate;
     setState(() {
-      _isPrivate = !_isPrivate;
+      _isPrivate = nextPrivate;
     });
+    DatabaseHelper.instance.setPrivacyMode(nextPrivate);
   }
 
   @override
@@ -550,13 +554,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '$daysLeft days left (₹${perDayLeft.toStringAsFixed(0)}/day)',
+                      '$daysLeft days left (${AppFormatters.compactCurrency(perDayLeft, isPrivate: _isPrivate)}/day)',
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                     Text(
-                      '₹${remainingBudget.toStringAsFixed(0)} left of ₹${_totalBudgetLimit.toStringAsFixed(0)}',
+                      '${AppFormatters.compactCurrency(remainingBudget, isPrivate: _isPrivate)} left of ${AppFormatters.compactCurrency(_totalBudgetLimit, isPrivate: _isPrivate)}',
                       style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.emerald600,
@@ -709,7 +713,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(width: AppSpacing.xs),
                             Text(
-                              '₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)}',
+                              '${AppFormatters.compactCurrency(goal.currentSaved, isPrivate: _isPrivate)} / ${AppFormatters.compactCurrency(goal.totalTarget, isPrivate: _isPrivate)}',
                               style: AppTypography.labelSmall.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),

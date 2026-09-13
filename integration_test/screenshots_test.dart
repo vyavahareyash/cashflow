@@ -44,6 +44,13 @@ void main() {
     // 01: Dashboard Overview
     await _markScreen('01-dashboard-light');
 
+    // 01b: Dashboard Overview (Privacy Mode)
+    await tester.tap(find.byTooltip('Hide Balance'));
+    await tester.pumpAndSettle();
+    await _markScreen('01b-dashboard-privacy-light');
+    await tester.tap(find.byTooltip('Show Balance'));
+    await tester.pumpAndSettle();
+
     // 02: Log Transaction Modal - Expense Tab
     await tester.tap(find.text('Log Transaction'));
     await tester.pumpAndSettle();
@@ -181,6 +188,13 @@ void main() {
     await tester.tap(find.text('Home'));
     await _waitForScreen(tester, 'Cashflow');
     await _markScreen('18-dashboard-dark');
+
+    // 18b: Dashboard Overview (Privacy Mode Dark)
+    await tester.tap(find.byTooltip('Hide Balance'));
+    await tester.pumpAndSettle();
+    await _markScreen('18b-dashboard-privacy-dark');
+    await tester.tap(find.byTooltip('Show Balance'));
+    await tester.pumpAndSettle();
 
     // 19: Log Transaction Modal (Dark)
     await tester.tap(find.text('Log Transaction'));

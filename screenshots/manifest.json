@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-13T14:17:30.530Z",
+  "generatedAt": "2026-09-13T18:35:31.735Z",
   "device": "emulator-5554",
-  "totalScreenshots": 27,
+  "totalScreenshots": 29,
   "markers": [
     {
       "id": "01-dashboard-light",
@@ -11,6 +11,15 @@
       "type": "screen",
       "description": "Main Dashboard overview showing Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.",
       "file": "01-dashboard-light.png"
+    },
+    {
+      "id": "01b-dashboard-privacy-light",
+      "name": "Dashboard (Privacy Mode)",
+      "group": "Dashboard",
+      "theme": "light",
+      "type": "screen",
+      "description": "Main Dashboard with privacy mode toggled on; sensitive balances, formula pills, budget figures, and goal amounts are masked.",
+      "file": "01b-dashboard-privacy-light.png"
     },
     {
       "id": "02-modal-expense-light",
@@ -164,6 +173,15 @@
       "type": "screen",
       "description": "Dark mode view of the main dashboard with high-contrast emerald highlights.",
       "file": "18-dashboard-dark.png"
+    },
+    {
+      "id": "18b-dashboard-privacy-dark",
+      "name": "Dashboard (Privacy Mode Dark)",
+      "group": "Dashboard",
+      "theme": "dark",
+      "type": "screen",
+      "description": "Dark mode dashboard with privacy mode active, masking all balances and financial commitments.",
+      "file": "18b-dashboard-privacy-dark.png"
     },
     {
       "id": "19-modal-expense-dark",
