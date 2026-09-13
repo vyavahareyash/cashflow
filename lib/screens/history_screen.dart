@@ -268,6 +268,72 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  Future<void> _exportCSV() async {
+    try {
+      final path = await DatabaseHelper.instance.exportTransactionsAsCSV();
+      if (!mounted) return;
+      if (path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('CSV exported successfully to:\n$path'),
+            backgroundColor: AppColors.emerald700,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('CSV export cancelled')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildQuickFilterChip(
+    String label,
+    bool isSelected,
+    VoidCallback onTap,
+    bool isDark,
+  ) {
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected
+              ? (isDark ? AppColors.emerald400 : AppColors.emerald800)
+              : (isDark ? AppColors.gray400 : AppColors.gray700),
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.gray100,
+      selectedColor: isDark
+          ? AppColors.emerald700.withValues(alpha: 0.25)
+          : AppColors.emerald100,
+      checkmarkColor: isDark ? AppColors.emerald400 : AppColors.emerald700,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppBorderRadius.pillBorder,
+        side: BorderSide(
+          color: isSelected
+              ? AppColors.emerald600
+              : (isDark ? AppColors.darkBorder : AppColors.gray300),
+          width: isSelected ? 1.5 : 1,
+        ),
+      ),
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+
   String _transactionLabel(String type) =>
       _transactionTypes[type] ?? 'Transaction';
 
@@ -382,40 +448,178 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
-                  // Search Box
-                  TextField(
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    decoration: InputDecoration(
-                      hintText: 'Search ledger by note, category...',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurface
-                          : AppColors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: AppBorderRadius.mediumBorder,
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : AppColors.gray200,
+                  // Search & Action Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          key: const Key('activity_ledger_search_field'),
+                          onChanged: (val) =>
+                              setState(() => _searchQuery = val),
+                          decoration: InputDecoration(
+                            hintText: 'Search ledger by note, category...',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: AppBorderRadius.mediumBorder,
+                              borderSide: BorderSide(
+                                color: isDark
+                                    ? AppColors.darkBorder
+                                    : AppColors.gray200,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.sm,
+                            ),
+                          ),
                         ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.sm,
+                      const SizedBox(width: AppSpacing.sm),
+                      IconButton(
+                        key: const Key('activity_ledger_export_csv_btn'),
+                        icon: const Icon(Icons.download_rounded),
+                        tooltip: 'Export CSV',
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                            side: BorderSide(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.gray200,
+                            ),
+                          ),
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: _exportCSV,
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.xs),
+                      IconButton(
+                        key: const Key('activity_ledger_open_filters_btn'),
+                        icon: Icon(
+                          Icons.tune_rounded,
+                          color: (_selectedCategories.isNotEmpty ||
+                                  _startDate != null)
+                              ? AppColors.emerald600
+                              : null,
+                        ),
+                        tooltip: 'Advanced Filters',
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                            side: BorderSide(
+                              color: (_selectedCategories.isNotEmpty ||
+                                      _startDate != null)
+                                  ? AppColors.emerald600
+                                  : (isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.gray200),
+                            ),
+                          ),
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: _openFilters,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  OutlinedButton.icon(
-                    onPressed: _openFilters,
-                    icon: const Icon(Icons.tune_rounded),
-                    label: Text(
-                      _selectedTypes.isEmpty &&
-                              _selectedCategories.isEmpty &&
-                              _startDate == null
-                          ? 'Filters'
-                          : 'Filters applied',
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Horizontal Quick Filter Chips Row
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildQuickFilterChip(
+                          'All',
+                          _selectedTypes.isEmpty,
+                          () {
+                            setState(() => _selectedTypes.clear());
+                            _loadTransactions();
+                          },
+                          isDark,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _buildQuickFilterChip(
+                          'Expenses',
+                          _selectedTypes.length == 1 &&
+                              _selectedTypes.contains('expense'),
+                          () {
+                            setState(() {
+                              if (_selectedTypes.contains('expense')) {
+                                _selectedTypes.clear();
+                              } else {
+                                _selectedTypes = {'expense'};
+                              }
+                            });
+                            _loadTransactions();
+                          },
+                          isDark,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _buildQuickFilterChip(
+                          'Income',
+                          _selectedTypes.length == 1 &&
+                              _selectedTypes.contains('income'),
+                          () {
+                            setState(() {
+                              if (_selectedTypes.contains('income')) {
+                                _selectedTypes.clear();
+                              } else {
+                                _selectedTypes = {'income'};
+                              }
+                            });
+                            _loadTransactions();
+                          },
+                          isDark,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _buildQuickFilterChip(
+                          'Transfers',
+                          _selectedTypes.length == 1 &&
+                              _selectedTypes.contains('transfer'),
+                          () {
+                            setState(() {
+                              if (_selectedTypes.contains('transfer')) {
+                                _selectedTypes.clear();
+                              } else {
+                                _selectedTypes = {'transfer'};
+                              }
+                            });
+                            _loadTransactions();
+                          },
+                          isDark,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _buildQuickFilterChip(
+                          'Goal Locks',
+                          _selectedTypes.contains('goal_lock') ||
+                              _selectedTypes.contains('goal_unlock'),
+                          () {
+                            setState(() {
+                              if (_selectedTypes.contains('goal_lock')) {
+                                _selectedTypes.clear();
+                              } else {
+                                _selectedTypes = {
+                                  'goal_lock',
+                                  'goal_unlock',
+                                  'goal_payment',
+                                };
+                              }
+                            });
+                            _loadTransactions();
+                          },
+                          isDark,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),

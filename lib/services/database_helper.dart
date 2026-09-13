@@ -1191,7 +1191,7 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.rawQuery(
       '''
-      SELECT la.amount, a.name as account_name, la.id as lock_id
+      SELECT la.amount, a.name as account_name, la.id as lock_id, la.account_id
       FROM locked_allocations la
       JOIN accounts a ON la.account_id = a.id
       WHERE la.goal_id = ?
@@ -1480,7 +1480,7 @@ class DatabaseHelper {
 
   // --- ANALYTICS QUERIES ---
   /// Gets spending by category for current month or all-time.
-  /// Returns a Map<categoryName, totalAmount>
+  /// Returns a `Map<categoryName, totalAmount>`
   Future<Map<String, double>> getSpendingByCategory({
     bool currentMonthOnly = true,
   }) async {

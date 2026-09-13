@@ -903,8 +903,13 @@ function renderHtmlGallery(data) {
           <div class="subtitle">Exhaustive Multimodal & Human Design Quality Report</div>
         </div>
       </div>
-      <div class="counter-pill" style="color:var(--primary-light); font-weight:700;">
-        ✓ All 27 Captures & 71 Tests Verified
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="counter-pill" style="color:var(--primary-light); font-weight:700;">
+          ✓ All 27 Captures & 71 Tests Verified
+        </div>
+        <a href="ui_report.html" style="background:var(--primary); color:#061e14; padding:7px 14px; border-radius:8px; font-weight:700; text-decoration:none; font-size:12px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px var(--primary-glow);">
+          <span>📊</span> Design & Feature Gap Report
+        </a>
       </div>
     </div>
 
@@ -948,6 +953,7 @@ function renderHtmlGallery(data) {
         <button class="mode-btn" data-mode="slider">Split Slider (10)</button>
         <button class="mode-btn" data-mode="grid">All Captures (27)</button>
         <button class="mode-btn" data-mode="rubric">Multimodal Rubric</button>
+        <a href="ui_report.html" class="mode-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; color:var(--primary-light);">📊 Audit Report</a>
       </div>
     </div>
 

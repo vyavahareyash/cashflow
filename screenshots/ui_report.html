@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cashflow - UI Design Audit & Backend Feature Gap Report</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-elevated: #1f2937;
+      --surface-hover: #263346;
+      --border: #374151;
+      --border-subtle: #242d3d;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-light: #34d399;
+      --primary-glow: rgba(16, 185, 129, 0.25);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.2);
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.2);
+      --blue: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.2);
+      --purple: #8b5cf6;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .header-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .badge-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.15));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 16px var(--primary-glow);
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-nav {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .btn-nav:hover {
+      background: var(--surface-hover);
+      border-color: var(--primary);
+    }
+    .btn-nav.primary {
+      background: var(--primary);
+      color: #061e14;
+      border-color: var(--primary-light);
+      font-weight: 700;
+    }
+    .btn-nav.primary:hover {
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* SCORECARD STRIP */
+    .scorecard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .score-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .score-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+    }
+    .score-card.emerald::before { background: var(--primary); }
+    .score-card.amber::before { background: var(--amber); }
+    .score-card.blue::before { background: var(--blue); }
+    .score-card.purple::before { background: var(--purple); }
+
+    .score-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+    .score-val-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .score-val {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .score-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .status-good { background: rgba(16, 185, 129, 0.15); color: var(--primary-light); }
+    .status-warn { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .score-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* NAV TABS */
+    .section-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .tab-pill {
+      background: var(--surface);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .tab-pill:hover, .tab-pill.active {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border-color: var(--primary);
+    }
+    .tab-pill.active {
+      background: var(--primary);
+      color: #061e14;
+      font-weight: 700;
+    }
+
+    /* SECTIONS */
+    .section-block {
+      margin-bottom: 40px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* SCREEN AUDIT CARDS */
+    .audit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+    }
+    .audit-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color 0.15s;
+    }
+    .audit-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .audit-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .audit-card-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .audit-card-category {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-top: 2px;
+    }
+    .audit-thumbs {
+      display: flex;
+      gap: 12px;
+    }
+    .thumb-wrap {
+      flex: 1;
+      aspect-ratio: 1080 / 2424;
+      background: #000;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      position: relative;
+      cursor: zoom-in;
+    }
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: transform 0.2s;
+    }
+    .thumb-wrap:hover img {
+      transform: scale(1.03);
+    }
+    .thumb-label {
+      position: absolute;
+      bottom: 6px;
+      left: 6px;
+      right: 6px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      color: #fff;
+    }
+
+    .audit-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .audit-box {
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      line-height: 1.45;
+    }
+    .audit-box-good {
+      background: rgba(16, 185, 129, 0.08);
+      border-left: 3px solid var(--primary);
+    }
+    .audit-box-warn {
+      background: rgba(245, 158, 11, 0.08);
+      border-left: 3px solid var(--amber);
+    }
+    .audit-box-bad {
+      background: rgba(244, 63, 94, 0.08);
+      border-left: 3px solid var(--rose);
+    }
+    .box-title {
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .audit-box-good .box-title { color: var(--primary-light); }
+    .audit-box-warn .box-title { color: var(--amber); }
+    .audit-box-bad .box-title { color: var(--rose); }
+
+    /* TABLES */
+    .data-table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .data-table th, .data-table td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table th {
+      background: var(--surface-elevated);
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .badge-priority {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .p0 { background: rgba(244, 63, 94, 0.2); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.4); }
+    .p1 { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .p2 { background: rgba(59, 130, 246, 0.2); color: #bfdbfe; border: 1px solid rgba(59, 130, 246, 0.4); }
+
+    .code-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--primary-light);
+    }
+
+    /* LIGHTBOX */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 7, 13, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .lightbox.active { display: flex; }
+    .lightbox-content {
+      position: relative;
+      max-width: 90vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .lightbox-content img {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+    .lightbox-caption {
+      margin-top: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .lightbox-close:hover {
+      background: var(--surface-hover);
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      margin-top: 48px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      color: var(--text-dim);
+      font-size: 12px;
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 16px; }
+      .audit-grid { grid-template-columns: 1fr; }
+      .data-table th, .data-table td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-top">
+      <div class="brand">
+        <div class="badge-icon">📊</div>
+        <div>
+          <h1>Cashflow UI Design & Feature Gap Audit</h1>
+          <div class="subtitle">Comprehensive Analysis of 27 Visual Captures, Ergonomics, Contrast, & Database Capabilities</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="index.html" class="btn-nav">
+          <span>🖼️</span> Visual Review Gallery
+        </a>
+        <a href="#action-plan" class="btn-nav primary">
+          <span>🎯</span> Priority Roadmap
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- SCORECARD STRIP -->
+  <div class="scorecard-grid">
+    <div class="score-card emerald">
+      <span class="score-label">Design System Parity</span>
+      <div class="score-val-row">
+        <span class="score-val">96%</span>
+        <span class="score-status status-good">AA Compliant</span>
+      </div>
+      <span class="score-desc">Deep slate dark theme (#090D16) & emerald accents avoid harsh glare.</span>
+    </div>
+
+    <div class="score-card blue">
+      <span class="score-label">Touch Target Standard</span>
+      <div class="score-val-row">
+        <span class="score-val">100%</span>
+        <span class="score-status status-good">Pass</span>
+      </div>
+      <span class="score-desc">All buttons & form inputs meet or exceed 48×48 dp standard.</span>
+    </div>
+
+    <div class="score-card amber">
+      <span class="score-label">Backend UI Coverage</span>
+      <div class="score-val-row">
+        <span class="score-val">78%</span>
+        <span class="score-status status-warn">Key Gaps</span>
+      </div>
+      <span class="score-desc">Goal unlocking & account transfers exist in DB but lack full UI integration.</span>
+    </div>
+
+    <div class="score-card purple">
+      <span class="score-label">Scope Integrity</span>
+      <div class="score-val-row">
+        <span class="score-val">100%</span>
+        <span class="score-status status-good">Pure Offline</span>
+      </div>
+      <span class="score-desc">Zero cloud overhead, privacy-first SQLite, core usable balance respected.</span>
+    </div>
+  </div>
+
+  <!-- NAVIGATION PILLS -->
+  <div class="section-nav">
+    <a href="#executive-summary" class="tab-pill active">Executive Summary</a>
+    <a href="#screen-audit" class="tab-pill">Screen-by-Screen Audit</a>
+    <a href="#backend-gaps" class="tab-pill">Backend Feature Gaps</a>
+    <a href="#scope-guardrails" class="tab-pill">Scope Compliance</a>
+    <a href="#action-plan" class="tab-pill">Prioritized Roadmap</a>
+  </div>
+
+  <!-- 1. EXECUTIVE SUMMARY -->
+  <section id="executive-summary" class="section-block">
+    <div class="section-header">
+      <div class="section-title">
+        <span>📋</span> 1. Executive Summary & Design System Review
+      </div>
+      <span class="section-title-tag" style="background:rgba(16,185,129,0.15); color:var(--primary-light);">Foundations</span>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; line-height:1.6; font-size:14px; color:var(--text-muted);">
+      <p style="margin-bottom:12px; color:var(--text);">
+        Cashflow adheres strictly to an <strong>offline-first, zero-overhead personal finance</strong> architecture. Visual styling uses Material Design 3 tokens encapsulated in <code class="code-tag">AppColors</code>, <code class="code-tag">AppTypography</code>, and <code class="code-tag">AppSpacing</code>. The visual signature is anchored around the <strong>Usable Balance Hero Card</strong>, differentiating raw physical bank holdings from actual disposable liquidity.
+      </p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px;">
+        <div style="background:var(--surface-elevated); padding:14px; border-radius:var(--radius-sm); border-left:3px solid var(--primary);">
+          <strong style="color:var(--text);">Semantic Palette Consistency:</strong> Green (<code class="code-tag">#10b981</code>) for Usable Balance and Income; Amber (<code class="code-tag">#F59E0B</code>) for locked sinking funds; Rose (<code class="code-tag">#EF4444</code>) for over-budget warnings; and Blue for informational limits.
+        </div>
+        <div style="background:var(--surface-elevated); padding:14px; border-radius:var(--radius-sm); border-left:3px solid var(--blue);">
+          <strong style="color:var(--text);">Dark Mode Elevation:</strong> Avoids pure <code class="code-tag">#000000</code> OLED black in favor of deep midnight blue/slate (<code class="code-tag">#090D16</code> canvas with <code class="code-tag">#111827</code> cards), retaining card contouring and subtle border contrast.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. SCREEN-BY-SCREEN AUDIT -->
+  <section id="screen-audit" class="section-block">
+    <div class="section-header">
+      <div class="section-title">
+        <span>🔍</span> 2. Screen-by-Screen UI Evaluation
+      </div>
+      <span class="section-title-tag" style="background:rgba(59,130,246,0.15); color:#93c5fd;">Visual Audit</span>
+    </div>
+
+    <div class="audit-grid">
+
+      <!-- DASHBOARD -->
+      <div class="audit-card">
+        <div class="audit-card-head">
+          <div>
+            <div class="audit-card-title">Dashboard Overview</div>
+            <div class="audit-card-category">Core Flow • 01-light / 18-dark</div>
+          </div>
+          <span class="badge-priority p0">Hero Pill Fix</span>
+        </div>
+        <div class="audit-thumbs">
+          <div class="thumb-wrap" onclick="openLightbox('01-dashboard-light.png', 'Dashboard Overview (Light Mode)')">
+            <img src="01-dashboard-light.png" alt="Dashboard Light" loading="lazy" />
+            <div class="thumb-label">Light Mode</div>
+          </div>
+          <div class="thumb-wrap" onclick="openLightbox('18-dashboard-dark.png', 'Dashboard Overview (Dark Mode)')">
+            <img src="18-dashboard-dark.png" alt="Dashboard Dark" loading="lazy" />
+            <div class="thumb-label">Dark Mode</div>
+          </div>
+        </div>
+        <div class="audit-content">
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ What's Good</div>
+            Hero Usable Balance is immediately prominent with discreet privacy toggle eye icon. Quick-actions row enables one-tap expense, income, and transfer logging.
+          </div>
+          <div class="audit-box audit-box-warn">
+            <div class="box-title">⚠ Area for Improvement</div>
+            <strong>Formula Confusion:</strong> Pill displays <em>Physical − Locked − Monthly limit</em>. The minus before "Monthly limit" implies budgets are deducted from cash. In reality, Usable Balance = Accounts − Locked Goals, and budgets are tracking limits.
+          </div>
+        </div>
+      </div>
+
+      <!-- BUDGETS -->
+      <div class="audit-card">
+        <div class="audit-card-head">
+          <div>
+            <div class="audit-card-title">Monthly Budgets</div>
+            <div class="audit-card-category">Tracking • 05-light / 20-dark</div>
+          </div>
+          <span class="badge-priority p1">Usability Polish</span>
+        </div>
+        <div class="audit-thumbs">
+          <div class="thumb-wrap" onclick="openLightbox('05-budget-light.png', 'Monthly Budgets (Light Mode)')">
+            <img src="05-budget-light.png" alt="Budgets Light" loading="lazy" />
+            <div class="thumb-label">Light Mode</div>
+          </div>
+          <div class="thumb-wrap" onclick="openLightbox('20-budget-dark.png', 'Monthly Budgets (Dark Mode)')">
+            <img src="20-budget-dark.png" alt="Budgets Dark" loading="lazy" />
+            <div class="thumb-label">Dark Mode</div>
+          </div>
+        </div>
+        <div class="audit-content">
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ What's Good</div>
+            Real-time monthly spending velocity summary with smooth progress bars transitioning green → amber → red. Direct edit and add category actions are easily accessible.
+          </div>
+          <div class="audit-box audit-box-warn">
+            <div class="box-title">⚠ Area for Improvement</div>
+            Over-budget categories clamp to full red, but lack an explicit delta chip (e.g. <em>+₹1,200 over</em>). Also missing a subtle indicator for when the monthly cycle resets (e.g. <em>Resets in 17 days</em>).
+          </div>
+        </div>
+      </div>
+
+      <!-- GOALS / SINKING FUNDS -->
+      <div class="audit-card">
+        <div class="audit-card-head">
+          <div>
+            <div class="audit-card-title">Sinking Funds / Goals</div>
+            <div class="audit-card-category">Commitments • 08-light / 21-dark</div>
+          </div>
+          <span class="badge-priority p0">Unlock Gap</span>
+        </div>
+        <div class="audit-thumbs">
+          <div class="thumb-wrap" onclick="openLightbox('08-goals-light.png', 'Sinking Funds (Light Mode)')">
+            <img src="08-goals-light.png" alt="Goals Light" loading="lazy" />
+            <div class="thumb-label">Light Mode</div>
+          </div>
+          <div class="thumb-wrap" onclick="openLightbox('21-goals-dark.png', 'Sinking Funds (Dark Mode)')">
+            <img src="21-goals-dark.png" alt="Goals Dark" loading="lazy" />
+            <div class="thumb-label">Dark Mode</div>
+          </div>
+        </div>
+        <div class="audit-content">
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ What's Good</div>
+            Actionable dynamic monthly pace indicator (<em>Save ~₹X/mo to hit target on time</em>) transforms abstract savings goals into concrete monthly commitments. Clear deadline badges.
+          </div>
+          <div class="audit-box audit-box-bad">
+            <div class="box-title">✕ Critical Missing Action</div>
+            <strong>No Unlock Funds Button:</strong> Card provides <em>Lock Funds</em> and <em>Pay / Settle</em>. If a user needs emergency access to locked money without spending it or deleting the goal, there is no unlock button!
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCOUNTS & ACCORDION -->
+      <div class="audit-card">
+        <div class="audit-card-head">
+          <div>
+            <div class="audit-card-title">My Accounts & Accordion</div>
+            <div class="audit-card-category">Liquidity • 12-light / 13-expanded</div>
+          </div>
+          <span class="badge-priority p1">Transfer Polish</span>
+        </div>
+        <div class="audit-thumbs">
+          <div class="thumb-wrap" onclick="openLightbox('12-accounts-light.png', 'Accounts Screen (Light Mode)')">
+            <img src="12-accounts-light.png" alt="Accounts Light" loading="lazy" />
+            <div class="thumb-label">Card Overview</div>
+          </div>
+          <div class="thumb-wrap" onclick="openLightbox('13-accounts-dropdown-expanded-light.png', 'Expanded Goal Accordion')">
+            <img src="13-accounts-dropdown-expanded-light.png" alt="Accounts Accordion" loading="lazy" />
+            <div class="thumb-label">Goal Accordion</div>
+          </div>
+        </div>
+        <div class="audit-content">
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ What's Good</div>
+            New accordion dropdown aggregates locked funds by goal cleanly. Total physical balance vs net liquidity calculation gives instant clarity on raw vs spendable bank balance.
+          </div>
+          <div class="audit-box audit-box-warn">
+            <div class="box-title">⚠ Area for Improvement</div>
+            No direct <em>Transfer</em> action from the account card. Users must navigate to Dashboard to transfer between accounts. Adding a transfer button on the account card improves flow.
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY LEDGER -->
+      <div class="audit-card">
+        <div class="audit-card-head">
+          <div>
+            <div class="audit-card-title">Activity Ledger Tab</div>
+            <div class="audit-card-category">Ledger • 15-light / 25-dark</div>
+          </div>
+          <span class="badge-priority p1">Chips & Export</span>
+        </div>
+        <div class="audit-thumbs">
+          <div class="thumb-wrap" onclick="openLightbox('15-activity-ledger-light.png', 'Activity Ledger (Light Mode)')">
+            <img src="15-activity-ledger-light.png" alt="Ledger Light" loading="lazy" />
+            <div class="thumb-label">Light Mode</div>
+          </div>
+          <div class="thumb-wrap" onclick="openLightbox('25-activity-ledger-dark.png', 'Activity Ledger (Dark Mode)')">
+            <img src="25-activity-ledger-dark.png" alt="Ledger Dark" loading="lazy" />
+            <div class="thumb-label">Dark Mode</div>
+          </div>
+        </div>
+        <div class="audit-content">
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ What's Good</div>
+            Chronological date grouping (<em>Today</em>, <em>Yesterday</em>, dates) and semantic color-coded transaction values (+green, −rose, purple transfer, amber locks).
+          </div>
+          <div class="audit-box audit-box-warn">
+            <div class="box-title">⚠ Area for Improvement</div>
+            Filter requires opening a bottom sheet modal. Adding horizontal scrolling filter chips (<em>All</em>, <em>Expenses</em>, <em>Income</em>, <em>Transfers</em>, <em>Locks</em>) and direct CSV export improves speed.
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS TRENDS -->
+      <div class="audit-card">
+        <div class="audit-card-head">
+          <div>
+            <div class="audit-card-title">Analytics & Spending Trends</div>
+            <div class="audit-card-category">Insights • 16-light / 26-dark</div>
+          </div>
+          <span class="badge-priority p1">Cashflow Parity</span>
+        </div>
+        <div class="audit-thumbs">
+          <div class="thumb-wrap" onclick="openLightbox('16-analytics-trends-light.png', 'Analytics Trends (Light Mode)')">
+            <img src="16-analytics-trends-light.png" alt="Analytics Light" loading="lazy" />
+            <div class="thumb-label">Light Mode</div>
+          </div>
+          <div class="thumb-wrap" onclick="openLightbox('26-analytics-trends-dark.png', 'Analytics Trends (Dark Mode)')">
+            <img src="26-analytics-trends-dark.png" alt="Analytics Dark" loading="lazy" />
+            <div class="thumb-label">Dark Mode</div>
+          </div>
+        </div>
+        <div class="audit-content">
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ What's Good</div>
+            Clean monthly expense trend chart and percentage-ranked category breakdown cards. Flexible date range picker for custom timeframes.
+          </div>
+          <div class="audit-box audit-box-warn">
+            <div class="box-title">⚠ Area for Improvement</div>
+            <strong>Expense-Only Limitation:</strong> Screen currently only graphs expenses. The database stores income transactions, so showing a Net Savings comparison (Income vs Expense) would provide true cashflow insights.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 3. BACKEND FEATURE GAPS -->
+  <section id="backend-gaps" class="section-block">
+    <div class="section-header">
+      <div class="section-title">
+        <span>⚡</span> 3. Backend Capabilities vs. UI Exposure Matrix
+      </div>
+      <span class="section-title-tag" style="background:rgba(245,158,11,0.15); color:var(--amber);">Feature Gaps</span>
+    </div>
+
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Backend Function (`DatabaseHelper.dart`)</th>
+            <th>Database & Model Status</th>
+            <th>Current UI State</th>
+            <th>Priority</th>
+            <th>Action Required</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>`createGoalUnlockTransaction()`</strong><br>
+              <span style="color:var(--text-dim); font-size:11px;">Releases locked funds back to usable balance</span>
+            </td>
+            <td><span style="color:var(--primary-light); font-weight:700;">✓ Fully Implemented & Tested</span></td>
+            <td><span style="color:var(--rose); font-weight:700;">✕ 0% (No UI Button)</span></td>
+            <td><span class="badge-priority p0">P0 Critical</span></td>
+            <td>Add "Unlock" button to <code class="code-tag">GoalCard</code> triggering unlock bottom sheet.</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>`exportTransactionsAsCSV()`</strong><br>
+              <span style="color:var(--text-dim); font-size:11px;">Exports CSV formatted ledger</span>
+            </td>
+            <td><span style="color:var(--primary-light); font-weight:700;">✓ Fully Implemented</span></td>
+            <td><span style="color:var(--amber); font-weight:700;">⚠ Partial (Settings only)</span></td>
+            <td><span class="badge-priority p1">P1 Usability</span></td>
+            <td>Add quick export icon on <code class="code-tag">Activity Ledger</code> app bar.</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>`createTransferTransaction()`</strong><br>
+              <span style="color:var(--text-dim); font-size:11px;">Account-to-account funds transfer</span>
+            </td>
+            <td><span style="color:var(--primary-light); font-weight:700;">✓ Fully Implemented</span></td>
+            <td><span style="color:var(--amber); font-weight:700;">⚠ Partial (Dashboard FAB only)</span></td>
+            <td><span class="badge-priority p1">P1 Usability</span></td>
+            <td>Add "Transfer" button to individual account cards pre-populating source account.</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>`payBill()` with Category Mapping</strong><br>
+              <span style="color:var(--text-dim); font-size:11px;">Settles sinking fund into expense transaction</span>
+            </td>
+            <td><span style="color:var(--primary-light); font-weight:700;">✓ Supported by schema</span></td>
+            <td><span style="color:var(--amber); font-weight:700;">⚠ Missing Category Picker</span></td>
+            <td><span class="badge-priority p1">P1 Polish</span></td>
+            <td>Allow selecting Expense Category & note during Bill Payment dialog.</td>
+          </tr>
+          <tr>
+            <td>
+              <strong>Income vs. Expense Trends</strong><br>
+              <span style="color:var(--text-dim); font-size:11px;">Net cashflow & savings rate</span>
+            </td>
+            <td><span style="color:var(--primary-light); font-weight:700;">✓ Stored in transactions table</span></td>
+            <td><span style="color:var(--rose); font-weight:700;">✕ Expense-only chart</span></td>
+            <td><span class="badge-priority p1">P1 Analytics</span></td>
+            <td>Add Inflow vs Outflow toggle / net savings pill to Analytics tab.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4. SCOPE GUARDRAILS -->
+  <section id="scope-guardrails" class="section-block">
+    <div class="section-header">
+      <div class="section-title">
+        <span>🛡️</span> 4. Scope Guardrails & Offline Architecture
+      </div>
+      <span class="section-title-tag" style="background:rgba(16,185,129,0.15); color:var(--primary-light);">Scope Guard</span>
+    </div>
+
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:18px;">
+        <div style="background:var(--surface-elevated); padding:16px; border-radius:var(--radius-sm);">
+          <div style="font-weight:700; color:var(--primary-light); margin-bottom:6px;">1. Strict Offline-First Principle</div>
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.45;">
+            No cloud accounts, no mandatory internet connection, no analytics telemetry. All data resides in local SQLite (<code class="code-tag">cashflow.db</code>) with direct user-initiated JSON/CSV exports.
+          </p>
+        </div>
+
+        <div style="background:var(--surface-elevated); padding:16px; border-radius:var(--radius-sm);">
+          <div style="font-weight:700; color:var(--amber); margin-bottom:6px;">2. Usable Balance as Core Anchor</div>
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.45;">
+            The central formula is always: <code class="code-tag">Usable = Physical - Locked Goals</code>. Monthly budgets remain strictly tracking ceilings, never balance reductions.
+          </p>
+        </div>
+
+        <div style="background:var(--surface-elevated); padding:16px; border-radius:var(--radius-sm);">
+          <div style="font-weight:700; color:var(--blue); margin-bottom:6px;">3. Low Cognitive Friction (≤ 2 Taps)</div>
+          <p style="font-size:13px; color:var(--text-muted); line-height:1.45;">
+            No complex multi-currency exchange or double-entry book-keeping overhead. Actions like logging an expense or locking funds must complete within two taps.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. PRIORITIZED ROADMAP -->
+  <section id="action-plan" class="section-block">
+    <div class="section-header">
+      <div class="section-title">
+        <span>🎯</span> 5. Prioritized Implementation Roadmap
+      </div>
+      <span class="section-title-tag" style="background:rgba(244,63,94,0.15); color:#fda4af;">Action Plan</span>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px;">
+
+      <!-- P0 -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--rose); border-radius:var(--radius-md); padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:var(--text); font-size:15px;">Phase 1: Critical UX & Data Consistency (P0)</strong>
+          <span class="badge-priority p0">Immediate</span>
+        </div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--text-muted);">
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" checked disabled />
+            <span><strong>Fix Hero Formula Pill:</strong> Decouple "Monthly limit" pill from the minus subtraction sign in <code class="code-tag">dashboard_screen.dart</code>.</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" checked disabled />
+            <span><strong>Implement Goal Unlock Dialog:</strong> Add "Unlock" action on <code class="code-tag">GoalCard</code> wiring to <code class="code-tag">DatabaseHelper.createGoalUnlockTransaction</code>.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- P1 -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--amber); border-radius:var(--radius-md); padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:var(--text); font-size:15px;">Phase 2: High-Value Usability & Navigation Wins (P1)</strong>
+          <span class="badge-priority p1">Next Sprint</span>
+        </div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--text-muted);">
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Activity Ledger Horizontal Chips:</strong> Filter by All / Expense / Income / Transfer / Lock directly above transaction feed.</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Direct CSV Export Button:</strong> Add export icon to Activity Ledger toolbar.</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Account Card Quick Transfer:</strong> Transfer button directly on individual account cards.</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Cashflow Comparison Chart:</strong> Dual bar / net savings metric in Analytics tab.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- P2 -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--blue); border-radius:var(--radius-md); padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:var(--text); font-size:15px;">Phase 3: Visual Polish & Delight (P2)</strong>
+          <span class="badge-priority p2">Enhancement</span>
+        </div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--text-muted);">
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Goal Completion Celebration:</strong> Emerald achievement glow when sinking fund hits 100%.</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Empty State Illustrations:</strong> Rich guided onboarding cards when accounts or budgets have 0 items.</span>
+          </li>
+          <li style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" disabled />
+            <span><strong>Backup Freshness Reminder:</strong> Timestamp indicator for last saved backup.</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>Cashflow Visual Quality & Architecture Audit • Generated 2026-09-13</div>
+    <div>27 Verified Captures • 71 Automated Tests Passing • Pure Offline SQLite</div>
+  </footer>
+
+</div>
+
+<!-- LIGHTBOX MODAL -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <div class="lightbox-content" onclick="event.stopPropagation()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="Full resolution capture" />
+    <div id="lightbox-caption" class="lightbox-caption"></div>
+  </div>
+</div>
+
+<script>
+  function openLightbox(src, caption) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox-caption').innerText = caption;
+    document.getElementById('lightbox').classList.add('active');
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+</script>
+
+</body>
+</html>

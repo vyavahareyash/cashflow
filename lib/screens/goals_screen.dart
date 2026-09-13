@@ -807,6 +807,247 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  void _showUnlockFundsDialog(Goal goal) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final contributions =
+        await DatabaseHelper.instance.getGoalContributions(goal.id!);
+    if (!mounted) return;
+
+    if (contributions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No locked funds found to unlock for this goal.'),
+        ),
+      );
+      return;
+    }
+
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    int? selectedAccountId =
+        (contributions.first['account_id'] as num?)?.toInt();
+    double maxUnlockable =
+        (contributions.first['amount'] as num?)?.toDouble() ?? 0.0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.gray700 : AppColors.gray300,
+                          borderRadius: AppBorderRadius.pillBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Unlock Funds from "${goal.name}"',
+                      style: AppTypography.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Release locked savings back into your physical account\'s usable balance.',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    CustomInputField(
+                      controller: amountController,
+                      label: 'Amount to Unlock',
+                      prefixText: '₹ ',
+                      hint: '0.00',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefixIcon: Icons.lock_open_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Max available in selected account: ${AppFormatters.currency(maxUnlockable)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    Text(
+                      'Release To Account',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: isDark ? AppColors.gray300 : AppColors.gray700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedAccountId,
+                      isExpanded: true,
+                      dropdownColor: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.white,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                      ),
+                      items: contributions.map((c) {
+                        final accId = (c['account_id'] as num).toInt();
+                        final accName = c['account_name'] as String;
+                        final amt = (c['amount'] as num).toDouble();
+                        return DropdownMenuItem<int>(
+                          value: accId,
+                          child: Text(
+                            '$accName (${AppFormatters.currency(amt)} locked)',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          final match = contributions.firstWhere(
+                            (c) => (c['account_id'] as num).toInt() == val,
+                          );
+                          setStateSheet(() {
+                            selectedAccountId = val;
+                            maxUnlockable = (match['amount'] as num).toDouble();
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    CustomInputField(
+                      controller: noteController,
+                      label: 'Note (Optional)',
+                      hint: 'e.g. Changed priority, emergency liquidity',
+                      prefixIcon: Icons.notes_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: AppComponentSizes.buttonHeightLarge,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (selectedAccountId == null ||
+                              amountController.text.trim().isEmpty) {
+                            return;
+                          }
+                          final amount =
+                              double.tryParse(amountController.text.trim()) ??
+                              0.0;
+                          if (amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter an amount > 0'),
+                              ),
+                            );
+                            return;
+                          }
+                          if (amount > maxUnlockable) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Cannot unlock more than ${AppFormatters.currency(maxUnlockable)} from this account',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          try {
+                            await DatabaseHelper.instance
+                                .createGoalUnlockTransaction(
+                              goalId: goal.id!,
+                              accountId: selectedAccountId!,
+                              amount: amount,
+                              date: DateTime.now().toIso8601String(),
+                              note: noteController.text.trim(),
+                            );
+                            if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+                            _loadData();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Unlocked ${AppFormatters.currency(amount)} back to usable balance!',
+                                  ),
+                                  backgroundColor: AppColors.emerald700,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Unlock failed: $e'),
+                                  backgroundColor: AppColors.danger,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          foregroundColor: Colors.black87,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                          ),
+                        ),
+                        child: const Text(
+                          'Unlock Funds',
+                          style: AppTypography.titleMedium,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1015,6 +1256,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       onEdit: () => _showEditGoalDialog(goal),
       onLockFunds: () => _showContributionDialog(goal),
       onPay: () => _showPaymentDialog(goal),
+      onUnlock: () => _showUnlockFundsDialog(goal),
     );
   }
 }
@@ -1151,10 +1393,7 @@ class _EditGoalDialogState extends State<EditGoalDialog> {
             onPressed: widget.onDelete,
             child: const Text(
               'Delete',
-              style: TextStyle(
-                color: AppColors.danger,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: AppColors.danger),
             ),
           ),
         TextButton(
@@ -1166,15 +1405,13 @@ class _EditGoalDialogState extends State<EditGoalDialog> {
           width: 120,
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final updatedGoal = Goal(
-                id: widget.goal.id,
+              final updated = widget.goal.copyWith(
                 name: _nameController.text.trim(),
                 totalTarget:
                     double.tryParse(_targetController.text.trim()) ?? 0.0,
                 targetDate: DateFormat('yyyy-MM-dd').format(_targetDate),
-                currentSaved: widget.goal.currentSaved,
               );
-              await widget.onUpdate(updatedGoal);
+              await widget.onUpdate(updated);
               if (context.mounted) {
                 Navigator.pop(context);
               }
@@ -1192,6 +1429,7 @@ class GoalCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onLockFunds;
   final VoidCallback? onPay;
+  final VoidCallback? onUnlock;
 
   const GoalCard({
     super.key,
@@ -1200,6 +1438,7 @@ class GoalCard extends StatelessWidget {
     this.onEdit,
     this.onLockFunds,
     this.onPay,
+    this.onUnlock,
   });
 
   @override
@@ -1260,6 +1499,22 @@ class GoalCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onUnlock != null && goal.currentSaved > 0)
+                IconButton(
+                  key: Key('goal_card_unlock_${goal.id ?? 0}'),
+                  icon: const Icon(
+                    Icons.lock_open_rounded,
+                    size: 20,
+                    color: AppColors.warning,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  constraints: const BoxConstraints(
+                    minWidth: AppComponentSizes.minTouchTarget,
+                    minHeight: AppComponentSizes.minTouchTarget,
+                  ),
+                  tooltip: 'Unlock Funds',
+                  onPressed: onUnlock,
+                ),
               if (onHistory != null)
                 IconButton(
                   icon: Icon(
