@@ -4,27 +4,27 @@ This document defines the deterministic implementation sequence for all open Git
 
 ---
 
-## Active Execution Queue (8 Remaining Open Issues)
+## Active Execution Queue (7 Remaining Open Issues)
 
 | Order | Issue # | Title | Priority | Sprint | Status | Owning Files |
 | :---: | :---: | :--- | :---: | :---: | :---: | :--- |
-| **1** | **#12** | `LEGACY-012: Dashboard privacy show-hide behavior` | P0 | Sprint 1.3 | Partial | `lib/screens/dashboard_screen.dart` |
-| **2** | **#8** | `LEGACY-008: Edit, delete, and filter transactions` | P0 | Sprint 2.3 | Partial (Bug) | `lib/services/database_helper.dart`, `lib/screens/history_screen.dart` |
-| **3** | **#6** | `LEGACY-006: Goal transaction history and editing` | P0 | Sprint 2.3 | Partial | `lib/services/database_helper.dart`, `lib/screens/history_screen.dart` |
-| **4** | **#36** | `NEW-021: Goal payment transaction flow` | P1 | Sprint 2.1 | Partial | `lib/services/database_helper.dart`, `lib/screens/goals_screen.dart` |
-| **5** | **#48** | `feat(ux): implement remaining UI report enhancements` | P1/P2 | Polish | Planned | `lib/screens/analytics_screen.dart`, `lib/screens/budget_screen.dart`, `lib/screens/backup_restore_screen.dart` |
-| **6** | **#11** | `LEGACY-011: Month-end budget reset and YTD behavior` | P0 | Sprint 2.4 | Partial | `lib/services/database_helper.dart`, `lib/screens/analytics_screen.dart` |
-| **7** | **#27** | `NEW-015: Dashboard calculation integration tests` | P1 | Sprint 1.5 | Partial | `test/dashboard_integration_test.dart` |
-| **8** | **#9** | `LEGACY-009: Complete project documentation` | P1 | Sprint 3.2 | Partial | `docs/`, `README.md` |
+| **1** | **#8** | `LEGACY-008: Edit, delete, and filter transactions` | P0 | Sprint 2.3 | Partial (Bug) | `lib/services/database_helper.dart`, `lib/screens/history_screen.dart` |
+| **2** | **#6** | `LEGACY-006: Goal transaction history and editing` | P0 | Sprint 2.3 | Partial | `lib/services/database_helper.dart`, `lib/screens/history_screen.dart` |
+| **3** | **#36** | `NEW-021: Goal payment transaction flow` | P1 | Sprint 2.1 | Partial | `lib/services/database_helper.dart`, `lib/screens/goals_screen.dart` |
+| **4** | **#48** | `feat(ux): implement remaining UI report enhancements` | P1/P2 | Polish | Planned | `lib/screens/analytics_screen.dart`, `lib/screens/budget_screen.dart`, `lib/screens/backup_restore_screen.dart` |
+| **5** | **#11** | `LEGACY-011: Month-end budget reset and YTD behavior` | P0 | Sprint 2.4 | Partial | `lib/services/database_helper.dart`, `lib/screens/analytics_screen.dart` |
+| **6** | **#27** | `NEW-015: Dashboard calculation integration tests` | P1 | Sprint 1.5 | Partial | `test/dashboard_integration_test.dart` |
+| **7** | **#9** | `LEGACY-009: Complete project documentation` | P1 | Sprint 3.2 | Partial | `docs/`, `README.md` |
 
 ---
 
 ## Closed Issues (Verified & Administratively Completed)
 
-The following 8 issues were verified against all acceptance criteria, documented with PR links and test passes, and closed on GitHub:
+The following 9 issues were verified against all acceptance criteria, documented with PR links and test passes, and closed on GitHub:
 
 | Issue # | Title | Closed Date | Resolution Details |
 | :---: | :--- | :---: | :--- |
+| **#12** | `LEGACY-012: Dashboard privacy show-hide behavior` | 2026-09-14 | Delivered in PR #50 (app_settings persistence, compactCurrency masking, test/dashboard_privacy_test.dart) |
 | **#32** | `NEW-020: Implement goal unlock transaction flow` | 2026-09-13 | Delivered in PR #49 (`_showUnlockFundsDialog`, `test/goal_unlock_flow_test.dart` 5/5 passing) |
 | **#20** | `NEW-011: Use real usable balance on dashboard` | 2026-09-13 | Real calculations wired via `DatabaseHelper.instance.calculateUsableBalance()` |
 | **#25** | `NEW-010: Update category screens for optional budgets` | 2026-09-13 | Delivered in PR #46 (`Category.monthlyBudget` nullable, `test/category_model_test.dart`) |
@@ -40,9 +40,8 @@ The following 8 issues were verified against all acceptance criteria, documented
 
 ### Wave 1: Immediate Critical Fixes (P0 Data Integrity & Privacy)
 
-#### 1. Issue #12: `LEGACY-012: Dashboard privacy show-hide behavior`
-- **Priority**: P0-Critical | **Sprint**: 1.3
-- **Why First**: Earliest uncompleted sprint P0 issue; fast, zero-risk fix.
+#### 1. Issue #12: `LEGACY-012: Dashboard privacy show-hide behavior` (CLOSED - PR #50)
+- **Status**: Completed and merged in PR #50. Persisted privacy state in DB, masked all daily velocity pills and goal amounts, added 6 tests in `test/dashboard_privacy_test.dart`, and added visual parity markers `01b` & `18b`.
 - **Problem**: `_isPrivate` toggle hides main balances, but misses `perDayLeft` in the budget snapshot card (`'$daysLeft days left (₹${perDayLeft.toStringAsFixed(0)}/day)'`) and goal target cards (`'₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)}'`).
 - **Fix**: Wrap remaining visible numbers in `AppFormatters.currency(..., isPrivate: _isPrivate)`.
 - **Validation**: `flutter test test/widget_test.dart`.

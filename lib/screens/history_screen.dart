@@ -21,6 +21,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Set<String> _selectedCategories = {};
   DateTime? _startDate;
   DateTime? _endDate;
+  DateTime? _selectedPeriod;
   String? _errorMessage;
 
   static const _transactionTypes = <String, String>{
@@ -339,24 +340,113 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   bool _isCredit(String type) => type == 'income' || type == 'goal_unlock';
 
-  Future<void> _deleteTransaction(int id) async {
+  void _setPeriod(DateTime? period) {
+    setState(() {
+      _selectedPeriod = period;
+      if (period != null) {
+        _startDate = DateTime(period.year, period.month, 1);
+        _endDate = DateTime(period.year, period.month + 1, 0, 23, 59, 59);
+      } else {
+        _startDate = null;
+        _endDate = null;
+      }
+    });
+    _loadTransactions();
+  }
+
+  void _stepPeriod(int monthDelta) {
+    final current =
+        _selectedPeriod ?? DateTime(DateTime.now().year, DateTime.now().month, 1);
+    final next = DateTime(current.year, current.month + monthDelta, 1);
+    _setPeriod(next);
+  }
+
+  Future<void> _pickPeriodMonthYear() async {
+    final current = _selectedPeriod ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      initialDatePickerMode: DatePickerMode.year,
+    );
+    if (picked != null) {
+      _setPeriod(DateTime(picked.year, picked.month, 1));
+    }
+  }
+
+  Future<void> _deleteTransaction(Map<String, dynamic> tx) async {
+    final id = tx['id'] as int;
+    final type = tx['type'] as String? ?? 'expense';
+    final amount = (tx['amount'] as num).toDouble();
+    final accountName = tx['account_name'] as String? ?? 'Account';
+    final destName = tx['destination_account_name'] as String? ?? 'Destination';
+
+    String title;
+    String content;
+    String actionText;
+
+    switch (type) {
+      case 'expense':
+        title = 'Delete Expense?';
+        content =
+            'This will delete the expense and refund ${AppFormatters.currency(amount)} back to $accountName.';
+        actionText = 'Delete & Refund';
+        break;
+      case 'income':
+        title = 'Delete Income?';
+        content =
+            'This will delete the income and deduct ${AppFormatters.currency(amount)} from $accountName.';
+        actionText = 'Delete & Deduct';
+        break;
+      case 'transfer':
+        title = 'Delete Transfer?';
+        content =
+            'This will reverse the transfer by returning ${AppFormatters.currency(amount)} to $accountName and deducting it from $destName.';
+        actionText = 'Delete & Revert';
+        break;
+      case 'goal_lock':
+        title = 'Delete Goal Lock?';
+        content =
+            'This will delete the lock record and release ${AppFormatters.currency(amount)} back to spendable funds.';
+        actionText = 'Delete & Release';
+        break;
+      case 'goal_unlock':
+        title = 'Delete Goal Unlock?';
+        content =
+            'This will delete the unlock record and re-lock ${AppFormatters.currency(amount)} into the goal.';
+        actionText = 'Delete & Re-lock';
+        break;
+      case 'goal_payment':
+        title = 'Delete Goal Payment?';
+        content =
+            'This will refund ${AppFormatters.currency(amount)} to $accountName and restore the locked goal balance.';
+        actionText = 'Delete & Restore';
+        break;
+      default:
+        title = 'Delete Transaction?';
+        content =
+            'This will delete the transaction and update account balances.';
+        actionText = 'Delete';
+        break;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Transaction?'),
-        content: const Text(
-          'This will remove the transaction and refund the money back to the account balance.',
-        ),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
           TextButton(
+            key: const Key('confirm_delete_transaction_btn'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Delete & Refund',
-              style: TextStyle(
+            child: Text(
+              actionText,
+              style: const TextStyle(
                 color: AppColors.danger,
                 fontWeight: FontWeight.bold,
               ),
@@ -373,7 +463,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Transaction deleted and balance refunded!'),
+            content: Text('Transaction deleted and balances updated.'),
             backgroundColor: AppColors.emerald700,
           ),
         );
@@ -384,6 +474,296 @@ class _HistoryScreenState extends State<HistoryScreen> {
         );
       }
     }
+  }
+
+  Future<void> _showEditTransactionDialog(Map<String, dynamic> tx) async {
+    final type = tx['type'] as String? ?? 'expense';
+    final isTransfer = type == 'transfer';
+    final isGoal =
+        type == 'goal_lock' || type == 'goal_unlock' || type == 'goal_payment';
+
+    final accounts = await DatabaseHelper.instance.readAllAccounts();
+    final categories = await DatabaseHelper.instance.readAllCategories();
+
+    final amountNum = (tx['amount'] as num).toDouble();
+    final amountController = TextEditingController(
+      text: amountNum.truncateToDouble() == amountNum
+          ? amountNum.toStringAsFixed(0)
+          : amountNum.toStringAsFixed(2),
+    );
+    final noteController =
+        TextEditingController(text: tx['note'] as String? ?? '');
+
+    DateTime selectedDate =
+        DateTime.tryParse(tx['date'] as String? ?? '') ?? DateTime.now();
+    int selectedAccountId = tx['account_id'] as int;
+    int? selectedDestAccountId = tx['destination_account_id'] as int?;
+    int? selectedCategoryId = tx['category_id'] as int?;
+
+    if (!accounts.any((a) => a.id == selectedAccountId) && accounts.isNotEmpty) {
+      selectedAccountId = accounts.first.id!;
+    }
+    if (isTransfer &&
+        selectedDestAccountId != null &&
+        !accounts.any((a) => a.id == selectedDestAccountId)) {
+      selectedDestAccountId =
+          accounts.where((a) => a.id != selectedAccountId).firstOrNull?.id;
+    }
+    if (selectedCategoryId != null &&
+        !categories.any((c) => c.id == selectedCategoryId)) {
+      selectedCategoryId = null;
+    }
+
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                top: AppSpacing.lg,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom +
+                    AppSpacing.lg,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.white,
+                borderRadius: const BorderRadius.vertical(
+                  top: AppBorderRadius.xlarge,
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Edit ${_transactionLabel(type)}',
+                          style: AppTypography.titleLarge,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(sheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      key: const Key('edit_transaction_amount_field'),
+                      controller: amountController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount',
+                        prefixText: '₹ ',
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.calendar_today_rounded,
+                        color: AppColors.emerald600,
+                      ),
+                      title: const Text('Transaction Date'),
+                      subtitle: Text(
+                        DateFormat('yyyy-MM-dd').format(selectedDate),
+                      ),
+                      trailing: const Icon(Icons.arrow_drop_down_rounded),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: sheetContext,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedDate = picked);
+                        }
+                      },
+                    ),
+                    const Divider(),
+                    DropdownButtonFormField<int>(
+                      key: const Key('edit_transaction_account_dropdown'),
+                      initialValue: selectedAccountId,
+                      decoration: InputDecoration(
+                        labelText: isTransfer ? 'Source Account' : 'Account',
+                        border: const OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                      items: accounts.map((a) {
+                        return DropdownMenuItem<int>(
+                          value: a.id,
+                          child: Text(
+                            '${a.name} (${AppFormatters.compactCurrency(a.balance)})',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedAccountId = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (isTransfer) ...[
+                      DropdownButtonFormField<int>(
+                        key: const Key('edit_transaction_dest_account_dropdown'),
+                        initialValue: selectedDestAccountId,
+                        decoration: const InputDecoration(
+                          labelText: 'Destination Account',
+                          border: OutlineInputBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                          ),
+                        ),
+                        items: accounts
+                            .where((a) => a.id != selectedAccountId)
+                            .map((a) {
+                              return DropdownMenuItem<int>(
+                                value: a.id,
+                                child: Text(
+                                  '${a.name} (${AppFormatters.compactCurrency(a.balance)})',
+                                ),
+                              );
+                            })
+                            .toList(),
+                        onChanged: (val) {
+                          setDialogState(() => selectedDestAccountId = val);
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    if (!isTransfer && !isGoal && categories.isNotEmpty) ...[
+                      DropdownButtonFormField<int?>(
+                        key: const Key('edit_transaction_category_dropdown'),
+                        initialValue: selectedCategoryId,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                          ),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Uncategorized'),
+                          ),
+                          ...categories.map((c) {
+                            return DropdownMenuItem<int?>(
+                              value: c.id,
+                              child: Text(c.name),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setDialogState(() => selectedCategoryId = val);
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    TextField(
+                      key: const Key('edit_transaction_note_field'),
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Note / Description',
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton(
+                      key: const Key('edit_transaction_save_btn'),
+                      onPressed: () async {
+                        final parsed =
+                            double.tryParse(amountController.text.trim());
+                        if (parsed == null || parsed <= 0) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please enter a valid amount greater than 0',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        if (isTransfer && selectedDestAccountId == null) {
+                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Please select a destination account',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          await DatabaseHelper.instance.updateTransaction(
+                            id: tx['id'],
+                            amount: parsed,
+                            date: selectedDate.toIso8601String(),
+                            accountId: selectedAccountId,
+                            destinationAccountId: selectedDestAccountId,
+                            categoryId: selectedCategoryId,
+                            note: noteController.text.trim(),
+                          );
+                          if (sheetContext.mounted) {
+                            Navigator.pop(sheetContext);
+                          }
+                          await _loadTransactions();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Transaction updated successfully.'),
+                              backgroundColor: AppColors.emerald700,
+                            ),
+                          );
+                        } catch (e) {
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating transaction: $e'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.emerald700,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.md,
+                        ),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                        ),
+                      ),
+                      child: const Text(
+                        'Save Changes',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -400,6 +780,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
           category.contains(q) ||
           account.contains(q);
     }).toList();
+
+    double totalOutflow = 0;
+    double totalInflow = 0;
+    for (final tx in filtered) {
+      final amt = (tx['amount'] as num?)?.toDouble() ?? 0.0;
+      final type = tx['type'] as String? ?? 'expense';
+      if (type == 'expense' || type == 'goal_payment' || type == 'goal_lock') {
+        totalOutflow += amt;
+      } else if (type == 'income' || type == 'goal_unlock') {
+        totalInflow += amt;
+      }
+    }
+    final netCashflow = totalInflow - totalOutflow;
 
     // Group transactions by month
     Map<String, List<Map<String, dynamic>>> grouped = {};
@@ -624,6 +1017,175 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
 
+                  // Period Selector & Summary Card
+                  CustomCard(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                IconButton(
+                                  key: const Key('activity_ledger_prev_period_btn'),
+                                  icon: const Icon(Icons.chevron_left_rounded),
+                                  tooltip: 'Previous Month',
+                                  onPressed: () => _stepPeriod(-1),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                InkWell(
+                                  key: const Key('activity_ledger_pick_period_btn'),
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: _pickPeriodMonthYear,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xs,
+                                      vertical: AppSpacing.xs,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          _selectedPeriod == null
+                                              ? Icons.all_inclusive_rounded
+                                              : Icons.calendar_month_rounded,
+                                          size: 18,
+                                          color: AppColors.emerald600,
+                                        ),
+                                        const SizedBox(width: AppSpacing.xs),
+                                        Text(
+                                          _selectedPeriod == null
+                                              ? 'All Time'
+                                              : DateFormat('MMMM yyyy').format(_selectedPeriod!),
+                                          style: AppTypography.titleMedium.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  key: const Key('activity_ledger_next_period_btn'),
+                                  icon: const Icon(Icons.chevron_right_rounded),
+                                  tooltip: 'Next Month',
+                                  onPressed: () => _stepPeriod(1),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              key: const Key('activity_ledger_toggle_all_time_btn'),
+                              onPressed: () => _setPeriod(
+                                _selectedPeriod == null
+                                    ? DateTime(
+                                        DateTime.now().year,
+                                        DateTime.now().month,
+                                        1,
+                                      )
+                                    : null,
+                              ),
+                              child: Text(
+                                _selectedPeriod == null ? 'Show Month' : 'All Time',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        const Divider(height: 1),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Column(
+                              children: [
+                                Text(
+                                  'Outflow',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '-${AppFormatters.compactCurrency(totalOutflow)}',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Inflow',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '+${AppFormatters.compactCurrency(totalInflow)}',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Net',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${netCashflow >= 0 ? '+' : ''}${AppFormatters.compactCurrency(netCashflow)}',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: netCashflow >= 0
+                                        ? AppColors.emerald600
+                                        : AppColors.danger,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  'Count',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${filtered.length}',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
                   if (filtered.isEmpty)
                     CustomCard(
                       child: Center(
@@ -755,6 +1317,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     ),
                                   ),
                                   IconButton(
+                                    key: Key('edit_tx_${tx['id']}'),
+                                    icon: Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                      color: isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray600,
+                                    ),
+                                    tooltip: 'Edit Transaction',
+                                    onPressed: () =>
+                                        _showEditTransactionDialog(tx),
+                                  ),
+                                  IconButton(
+                                    key: Key('delete_tx_${tx['id']}'),
                                     icon: Icon(
                                       Icons.delete_outline_rounded,
                                       size: 18,
@@ -762,8 +1338,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           ? AppColors.gray500
                                           : AppColors.gray400,
                                     ),
+                                    tooltip: 'Delete Transaction',
                                     onPressed: () =>
-                                        _deleteTransaction(tx['id']),
+                                        _deleteTransaction(tx),
                                   ),
                                 ],
                               ),
