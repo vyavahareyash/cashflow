@@ -919,8 +919,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
-          CategoryBadge(label: categoryName),
-          const SizedBox(width: AppSpacing.md),
+          CategoryBadge(label: categoryName, iconOnly: true),
+          const SizedBox(width: AppSpacing.sm + 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -934,7 +934,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '$accountDescription • ${DateFormat('MMM dd').format(date)}',
+                  note != null && note.isNotEmpty
+                      ? '$categoryName • $accountDescription • ${DateFormat('MMM dd').format(date)}'
+                      : '$accountDescription • ${DateFormat('MMM dd').format(date)}',
                   style: AppTypography.labelSmall.copyWith(
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),

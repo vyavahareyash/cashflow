@@ -841,11 +841,66 @@ class DatabaseHelper {
     notifyDataChanged();
   }
 
-  /// Deletes a transaction and refunds the amount to the associated account balance.
+  Future<void> _restoreLockedAllocation(
+    Transaction txn,
+    int goalId,
+    int accountId,
+    double amount,
+  ) async {
+    final existing = await txn.query(
+      'locked_allocations',
+      where: 'goal_id = ? AND account_id = ?',
+      whereArgs: [goalId, accountId],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      await txn.rawUpdate(
+        'UPDATE locked_allocations SET amount = amount + ? WHERE id = ?',
+        [amount, existing.first['id']],
+      );
+    } else {
+      await txn.insert('locked_allocations', {
+        'goal_id': goalId,
+        'account_id': accountId,
+        'amount': amount,
+      });
+    }
+  }
+
+  Future<void> _reduceLockedAllocationByGoalAndAccount(
+    Transaction txn,
+    int goalId,
+    int accountId,
+    double amount,
+  ) async {
+    final existing = await txn.query(
+      'locked_allocations',
+      where: 'goal_id = ? AND account_id = ?',
+      whereArgs: [goalId, accountId],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      final lock = existing.first;
+      final current = (lock['amount'] as num).toDouble();
+      if (current <= amount) {
+        await txn.delete(
+          'locked_allocations',
+          where: 'id = ?',
+          whereArgs: [lock['id']],
+        );
+      } else {
+        await txn.rawUpdate(
+          'UPDATE locked_allocations SET amount = amount - ? WHERE id = ?',
+          [amount, lock['id']],
+        );
+      }
+    }
+  }
+
+  /// Deletes a transaction and atomically reverses its effects on accounts, budgets, and goals.
   Future<void> deleteTransaction(int transactionId) async {
     final db = await instance.database;
 
-    // 1. Get transaction details to know which account to refund
     final result = await db.query(
       'transactions',
       where: 'id = ?',
@@ -854,36 +909,244 @@ class DatabaseHelper {
 
     if (result.isEmpty) return;
 
-    final transaction = result.first;
-    final int accountId = transaction['account_id'] as int;
-    final double amount = (transaction['amount'] as num).toDouble();
+    final tx = result.first;
+    final type = tx['type'] as String? ?? 'expense';
+    final accountId = tx['account_id'] as int;
+    final destinationAccountId = tx['destination_account_id'] as int?;
+    final goalId = tx['goal_id'] as int?;
+    final double amount = (tx['amount'] as num).toDouble();
 
-    // Use a transaction to ensure both operations succeed or fail together
     await db.transaction((txn) async {
-      // 2. Refund the amount to the account
-      List<Map> accountResult = await txn.query(
-        'accounts',
-        where: 'id = ?',
-        whereArgs: [accountId],
-      );
+      switch (type) {
+        case 'expense':
+          await _adjustAccountBalance(txn, accountId, amount);
+          break;
 
-      if (accountResult.isNotEmpty) {
-        double currentBalance = accountResult.first['balance'];
-        await txn.update(
-          'accounts',
-          {'balance': currentBalance + amount},
-          where: 'id = ?',
-          whereArgs: [accountId],
-        );
+        case 'income':
+          await _adjustAccountBalance(txn, accountId, -amount);
+          break;
+
+        case 'transfer':
+          await _adjustAccountBalance(txn, accountId, amount);
+          if (destinationAccountId != null) {
+            await _adjustAccountBalance(txn, destinationAccountId, -amount);
+          }
+          break;
+
+        case 'goal_lock':
+          if (goalId != null) {
+            await _reduceLockedAllocationByGoalAndAccount(
+              txn,
+              goalId,
+              accountId,
+              amount,
+            );
+            await txn.rawUpdate(
+              'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+              [amount, goalId],
+            );
+          }
+          break;
+
+        case 'goal_unlock':
+          if (goalId != null) {
+            await _restoreLockedAllocation(txn, goalId, accountId, amount);
+            await txn.rawUpdate(
+              'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+              [amount, goalId],
+            );
+          }
+          break;
+
+        case 'goal_payment':
+          await _adjustAccountBalance(txn, accountId, amount);
+          if (goalId != null) {
+            await _restoreLockedAllocation(txn, goalId, accountId, amount);
+            await txn.rawUpdate(
+              'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+              [amount, goalId],
+            );
+          }
+          break;
+
+        default:
+          await _adjustAccountBalance(txn, accountId, amount);
+          break;
       }
 
-      // 3. Delete the transaction record
       await txn.delete(
         'transactions',
         where: 'id = ?',
         whereArgs: [transactionId],
       );
     });
+
+    notifyDataChanged();
+  }
+
+  /// Updates an existing transaction and atomically adjusts balances and allocations.
+  Future<void> updateTransaction({
+    required int id,
+    required double amount,
+    required String date,
+    required int accountId,
+    int? categoryId,
+    String? note,
+    int? destinationAccountId,
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) throw StateError('Transaction not found: $id');
+
+      final oldTx = existing.first;
+      final type = oldTx['type'] as String? ?? 'expense';
+      final oldAmount = (oldTx['amount'] as num).toDouble();
+      final oldAccountId = oldTx['account_id'] as int;
+      final oldDestId = oldTx['destination_account_id'] as int?;
+      final goalId = oldTx['goal_id'] as int?;
+
+      await _requireAccount(txn, accountId);
+      if (categoryId != null) {
+        await _requireCategory(txn, categoryId);
+      }
+
+      switch (type) {
+        case 'expense':
+          if (oldAccountId == accountId) {
+            final balanceDelta = oldAmount - amount;
+            await _adjustAccountBalance(txn, accountId, balanceDelta);
+          } else {
+            await _adjustAccountBalance(txn, oldAccountId, oldAmount);
+            await _adjustAccountBalance(txn, accountId, -amount);
+          }
+          break;
+
+        case 'income':
+          if (oldAccountId == accountId) {
+            final balanceDelta = amount - oldAmount;
+            await _adjustAccountBalance(txn, accountId, balanceDelta);
+          } else {
+            await _adjustAccountBalance(txn, oldAccountId, -oldAmount);
+            await _adjustAccountBalance(txn, accountId, amount);
+          }
+          break;
+
+        case 'transfer':
+          final targetDestId = destinationAccountId ?? oldDestId;
+          if (targetDestId == null) {
+            throw ArgumentError('Transfer requires destination account');
+          }
+          if (accountId == targetDestId) {
+            throw ArgumentError('Transfer accounts must be different');
+          }
+          await _requireAccount(txn, targetDestId);
+
+          await _adjustAccountBalance(txn, oldAccountId, oldAmount);
+          if (oldDestId != null) {
+            await _adjustAccountBalance(txn, oldDestId, -oldAmount);
+          }
+          await _adjustAccountBalance(txn, accountId, -amount);
+          await _adjustAccountBalance(txn, targetDestId, amount);
+          break;
+
+        case 'goal_lock':
+          if (goalId != null && oldAmount != amount) {
+            final diff = amount - oldAmount;
+            if (diff > 0) {
+              await _restoreLockedAllocation(txn, goalId, accountId, diff);
+              await txn.rawUpdate(
+                'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+                [diff, goalId],
+              );
+            } else {
+              await _reduceLockedAllocationByGoalAndAccount(
+                txn,
+                goalId,
+                accountId,
+                -diff,
+              );
+              await txn.rawUpdate(
+                'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+                [-diff, goalId],
+              );
+            }
+          }
+          break;
+
+        case 'goal_unlock':
+          if (goalId != null && oldAmount != amount) {
+            final diff = amount - oldAmount;
+            if (diff > 0) {
+              await _reduceLockedAllocationByGoalAndAccount(
+                txn,
+                goalId,
+                accountId,
+                diff,
+              );
+              await txn.rawUpdate(
+                'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+                [diff, goalId],
+              );
+            } else {
+              await _restoreLockedAllocation(txn, goalId, accountId, -diff);
+              await txn.rawUpdate(
+                'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+                [-diff, goalId],
+              );
+            }
+          }
+          break;
+
+        case 'goal_payment':
+          final balanceDelta = oldAmount - amount;
+          await _adjustAccountBalance(txn, accountId, balanceDelta);
+          if (goalId != null && oldAmount != amount) {
+            final diff = amount - oldAmount;
+            if (diff > 0) {
+              await _reduceLockedAllocationByGoalAndAccount(
+                txn,
+                goalId,
+                accountId,
+                diff,
+              );
+              await txn.rawUpdate(
+                'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+                [diff, goalId],
+              );
+            } else {
+              await _restoreLockedAllocation(txn, goalId, accountId, -diff);
+              await txn.rawUpdate(
+                'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+                [-diff, goalId],
+              );
+            }
+          }
+          break;
+      }
+
+      await txn.update(
+        'transactions',
+        {
+          'account_id': accountId,
+          'destination_account_id': destinationAccountId ?? oldDestId,
+          'category_id': categoryId,
+          'amount': amount,
+          'date': date,
+          'note': note ?? '',
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+
     notifyDataChanged();
   }
 
