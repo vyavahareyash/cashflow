@@ -227,25 +227,51 @@ void main() {
       expect(find.byIcon(Icons.trending_up_rounded), findsOneWidget);
     });
 
-    testWidgets('Salary Preferences Dropdown renders with 31 selectable days', (tester) async {
+
+
+    testWidgets('Payday 31-day picker grid renders all 31 days and selects tapped day', (tester) async {
       int selected = 1;
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData.light(),
           home: Scaffold(
             body: StatefulBuilder(
               builder: (ctx, setState) {
-                return DropdownButton<int>(
-                  key: const Key('test_salary_dropdown'),
-                  value: selected,
-                  items: List.generate(31, (i) {
-                    final d = i + 1;
-                    return DropdownMenuItem<int>(
-                      value: d,
-                      child: Text('Day $d of month'),
-                    );
-                  }),
-                  onChanged: (v) => setState(() => selected = v!),
+                return Column(
+                  children: [
+                    Text('Current: $selected'),
+                    ElevatedButton(
+                      key: const Key('open_picker'),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: ctx,
+                          isScrollControlled: true,
+                          builder: (sheetCtx) => SizedBox(
+                            height: 400,
+                            child: GridView.builder(
+                              itemCount: 31,
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 7,
+                              ),
+                              itemBuilder: (c, idx) {
+                                final day = idx + 1;
+                                return InkWell(
+                                  key: Key('payday_grid_day_$day'),
+                                  onTap: () {
+                                    setState(() => selected = day);
+                                    Navigator.pop(sheetCtx);
+                                  },
+                                  child: Text('Day $day'),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('Open'),
+                    ),
+                  ],
                 );
               },
             ),
@@ -254,16 +280,17 @@ void main() {
       );
 
       await tester.pump();
+      await tester.tap(find.byKey(const Key('open_picker')));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Day 1 of month'), findsOneWidget);
+      expect(find.byKey(const Key('payday_grid_day_1')), findsOneWidget);
+      expect(find.byKey(const Key('payday_grid_day_15')), findsOneWidget);
+      expect(find.byKey(const Key('payday_grid_day_31')), findsOneWidget);
 
-      final dropdown = tester.widget<DropdownButton<int>>(
-        find.byKey(const Key('test_salary_dropdown')),
-      );
-      expect(dropdown.items, hasLength(31));
-      expect(dropdown.items!.first.value, 1);
-      expect(dropdown.items![24].value, 25);
-      expect(dropdown.items!.last.value, 31);
+      await tester.tap(find.byKey(const Key('payday_grid_day_20')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Current: 20'), findsOneWidget);
     });
   });
 }
