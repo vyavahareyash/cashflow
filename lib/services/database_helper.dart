@@ -46,6 +46,10 @@ class DatabaseHelper {
         await txn.delete('transactions');
         await txn.delete('categories');
         await txn.delete('accounts');
+        await txn.execute(
+          'CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+        );
+        await txn.delete('app_settings');
       });
       notifyDataChanged();
       return;
@@ -67,6 +71,14 @@ class DatabaseHelper {
       version: 2,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
+      },
+      onOpen: (db) async {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          )
+        ''');
       },
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -267,6 +279,14 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         FOREIGN KEY (goal_id) REFERENCES goals (id),
         FOREIGN KEY (account_id) REFERENCES accounts (id)
+      )
+    ''');
+
+    // 6. App Settings Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
       )
     ''');
   }
@@ -1599,5 +1619,44 @@ class DatabaseHelper {
     );
 
     return (result.first['total'] as num? ?? 0).toDouble();
+  }
+
+  // --- APP SETTINGS OPERATIONS ---
+
+  /// Retrieves a persisted string setting by key.
+  Future<String?> getSetting(String key, {String? defaultValue}) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'app_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return result.first['value'] as String;
+    }
+    return defaultValue;
+  }
+
+  /// Persists a string setting by key using upsert semantics.
+  Future<void> setSetting(String key, String value) async {
+    final db = await instance.database;
+    await db.insert(
+      'app_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Retrieves dashboard privacy mode (defaults to false).
+  Future<bool> getPrivacyMode() async {
+    final val = await getSetting('dashboard_privacy_mode', defaultValue: 'false');
+    return val == 'true';
+  }
+
+  /// Persists dashboard privacy mode.
+  Future<void> setPrivacyMode(bool isPrivate) async {
+    await setSetting('dashboard_privacy_mode', isPrivate ? 'true' : 'false');
   }
 }

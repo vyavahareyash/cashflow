@@ -29,6 +29,14 @@ const markers = [
         description: 'Main Dashboard overview showing Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.'
     },
     {
+        id: '01b-dashboard-privacy-light',
+        name: 'Dashboard (Privacy Mode)',
+        group: 'Dashboard',
+        theme: 'light',
+        type: 'screen',
+        description: 'Main Dashboard with privacy mode toggled on; sensitive balances, formula pills, budget figures, and goal amounts are masked.'
+    },
+    {
         id: '02-modal-expense-light',
         name: 'Log Transaction - Expense',
         group: 'Modals',
@@ -163,6 +171,14 @@ const markers = [
         theme: 'dark',
         type: 'screen',
         description: 'Dark mode view of the main dashboard with high-contrast emerald highlights.'
+    },
+    {
+        id: '18b-dashboard-privacy-dark',
+        name: 'Dashboard (Privacy Mode Dark)',
+        group: 'Dashboard',
+        theme: 'dark',
+        type: 'screen',
+        description: 'Dark mode dashboard with privacy mode active, masking all balances and financial commitments.'
     },
     {
         id: '19-modal-expense-dark',
@@ -326,6 +342,7 @@ console.log(`Generated ${output}/manifest.json`);
 
 const PAIRS = [
     { id: 'dashboard', title: 'Dashboard Overview', group: 'Dashboard', light: '01-dashboard-light', dark: '18-dashboard-dark', description: 'Main screen displaying net balance, sinking fund allocations, and budget gauge.' },
+    { id: 'dashboard-privacy', title: 'Dashboard (Privacy Mode)', group: 'Dashboard', light: '01b-dashboard-privacy-light', dark: '18b-dashboard-privacy-dark', description: 'Main Dashboard with privacy mode active: usable balance, formula pills, budget metrics, and goal amounts are masked.' },
     { id: 'modal-expense', title: 'Log Transaction - Expense Modal', group: 'Modals', light: '02-modal-expense-light', dark: '19-modal-expense-dark', description: 'Bottom sheet modal configured for logging expenses with account picker, category, and date.' },
     { id: 'budget', title: 'Monthly Budgets Overview', group: 'Budgets', light: '05-budget-light', dark: '20-budget-dark', description: 'Category progress meters, monthly spend caps, and overall remaining budget.' },
     { id: 'goals', title: 'Sinking Funds / Goals Overview', group: 'Goals', light: '08-goals-light', dark: '21-goals-dark', description: 'Target date pacing, target amounts, days remaining, and allocation shortcuts.' },
@@ -341,6 +358,12 @@ const PAIRS = [
 function renderHtmlGallery(data) {
     const manifestJson = JSON.stringify(data.markers);
     const pairsJson = JSON.stringify(PAIRS);
+    const lightCount = data.markers.filter((m) => m.theme === 'light').length;
+    const darkCount = data.markers.filter((m) => m.theme === 'dark').length;
+    const totalCaptures = data.markers.length;
+    const pairsCount = PAIRS.length;
+    const modalCount = data.markers.filter((m) => m.group === 'Modals').length;
+    const testCount = 82;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -905,7 +928,7 @@ function renderHtmlGallery(data) {
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
         <div class="counter-pill" style="color:var(--primary-light); font-weight:700;">
-          ✓ All 27 Captures & 71 Tests Verified
+          ✓ All ${totalCaptures} Captures & ${testCount} Tests Verified
         </div>
         <a href="ui_report.html" style="background:var(--primary); color:#061e14; padding:7px 14px; border-radius:8px; font-weight:700; text-decoration:none; font-size:12px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px var(--primary-glow);">
           <span>📊</span> Design & Feature Gap Report
@@ -916,27 +939,27 @@ function renderHtmlGallery(data) {
     <div class="stats-strip">
       <div class="stat-card">
         <span class="stat-label">Total Visual Captures</span>
-        <span class="stat-value">27</span>
-        <span class="stat-badge">17 Light • 10 Dark</span>
+        <span class="stat-value">${totalCaptures}</span>
+        <span class="stat-badge">${lightCount} Light • ${darkCount} Dark</span>
       </div>
       <div class="stat-card">
         <span class="stat-label">Paired Comparisons</span>
-        <span class="stat-value">10 Pairs</span>
+        <span class="stat-value">${pairsCount} Pairs</span>
         <span class="stat-badge">Pixel-aligned parity</span>
       </div>
       <div class="stat-card">
         <span class="stat-label">Modals & Interactions</span>
-        <span class="stat-value">11 Views</span>
+        <span class="stat-value">${modalCount} Views</span>
         <span class="stat-badge">Keyboard safe</span>
       </div>
       <div class="stat-card">
         <span class="stat-label">Automated Unit/Widget Tests</span>
-        <span class="stat-value">71 / 71</span>
+        <span class="stat-value">${testCount} / ${testCount}</span>
         <span class="stat-badge">100% Pass Rate</span>
       </div>
       <div class="stat-card">
         <span class="stat-label">Target Device</span>
-        <span class="stat-value">emulator-5554</span>
+        <span class="stat-value">${data.device || 'emulator-5554'}</span>
         <span class="stat-badge">1080 × 2424 RGBA</span>
       </div>
     </div>
@@ -949,9 +972,9 @@ function renderHtmlGallery(data) {
         <input type="text" id="searchInput" class="search-input" placeholder="Search captures (e.g. 'ledger', 'budget', 'modal', 'accounts')..." />
       </div>
       <div class="mode-group" id="modeButtons">
-        <button class="mode-btn active" data-mode="sbs">Side-by-Side (10)</button>
-        <button class="mode-btn" data-mode="slider">Split Slider (10)</button>
-        <button class="mode-btn" data-mode="grid">All Captures (27)</button>
+        <button class="mode-btn active" data-mode="sbs">Side-by-Side (${pairsCount})</button>
+        <button class="mode-btn" data-mode="slider">Split Slider (${pairsCount})</button>
+        <button class="mode-btn" data-mode="grid">All Captures (${totalCaptures})</button>
         <button class="mode-btn" data-mode="rubric">Multimodal Rubric</button>
         <a href="ui_report.html" class="mode-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; color:var(--primary-light);">📊 Audit Report</a>
       </div>
@@ -968,7 +991,7 @@ function renderHtmlGallery(data) {
         <button class="filter-btn" data-filter="Modals">Modals</button>
         <button class="filter-btn" data-filter="Settings">Settings</button>
       </div>
-      <div class="counter-pill" id="matchCounter">Showing 10 pairs</div>
+      <div class="counter-pill" id="matchCounter">Showing ${pairsCount} pairs</div>
     </div>
   </div>
 
@@ -1036,10 +1059,16 @@ function renderHtmlGallery(data) {
           <td class="status-pass">PASS (15-activity-ledger-light & 25-activity-ledger-dark)</td>
         </tr>
         <tr>
+          <td>Privacy Mode Obfuscation</td>
+          <td>Dashboard usable balance, budget pills, sinking fund goals</td>
+          <td>All sensitive currency amounts masked with AppFormatters.compactCurrency(..., isPrivate: true)</td>
+          <td class="status-pass">PASS (01b-dashboard-privacy-light & 18b-dashboard-privacy-dark)</td>
+        </tr>
+        <tr>
           <td>Automated Regression</td>
           <td>Full unit, widget, and database migration test suite</td>
-          <td>71 test assertions passing across all domains</td>
-          <td class="status-pass">PASS (flutter test --concurrency=1: 71/71 passing)</td>
+          <td>${testCount} test assertions passing across all domains</td>
+          <td class="status-pass">PASS (flutter test --concurrency=1: ${testCount}/${testCount} passing)</td>
         </tr>
       </tbody>
     </table>

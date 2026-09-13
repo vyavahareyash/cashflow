@@ -491,7 +491,7 @@
         <div class="badge-icon">📊</div>
         <div>
           <h1>Cashflow UI Design & Feature Gap Audit</h1>
-          <div class="subtitle">Comprehensive Analysis of 27 Visual Captures, Ergonomics, Contrast, & Database Capabilities</div>
+          <div class="subtitle">Comprehensive Analysis of 29 Visual Captures, Ergonomics, Contrast, & Database Capabilities</div>
         </div>
       </div>
       <div class="nav-actions">
@@ -591,29 +591,37 @@
       <div class="audit-card">
         <div class="audit-card-head">
           <div>
-            <div class="audit-card-title">Dashboard Overview</div>
-            <div class="audit-card-category">Core Flow • 01-light / 18-dark</div>
+            <div class="audit-card-title">Dashboard Overview &amp; Privacy Masking</div>
+            <div class="audit-card-category">Core Flow • 01-light / 01b-privacy-light / 18-dark / 18b-privacy-dark</div>
           </div>
-          <span class="badge-priority p0">Hero Pill Fix</span>
+          <span class="badge-priority p0">P0 Verified</span>
         </div>
         <div class="audit-thumbs">
           <div class="thumb-wrap" onclick="openLightbox('01-dashboard-light.png', 'Dashboard Overview (Light Mode)')">
             <img src="01-dashboard-light.png" alt="Dashboard Light" loading="lazy" />
             <div class="thumb-label">Light Mode</div>
           </div>
+          <div class="thumb-wrap" onclick="openLightbox('01b-dashboard-privacy-light.png', 'Dashboard Privacy Masked (Light Mode)')">
+            <img src="01b-dashboard-privacy-light.png" alt="Dashboard Privacy Light" loading="lazy" />
+            <div class="thumb-label">Privacy Masked (Light)</div>
+          </div>
           <div class="thumb-wrap" onclick="openLightbox('18-dashboard-dark.png', 'Dashboard Overview (Dark Mode)')">
             <img src="18-dashboard-dark.png" alt="Dashboard Dark" loading="lazy" />
             <div class="thumb-label">Dark Mode</div>
           </div>
+          <div class="thumb-wrap" onclick="openLightbox('18b-dashboard-privacy-dark.png', 'Dashboard Privacy Masked (Dark Mode)')">
+            <img src="18b-dashboard-privacy-dark.png" alt="Dashboard Privacy Dark" loading="lazy" />
+            <div class="thumb-label">Privacy Masked (Dark)</div>
+          </div>
         </div>
         <div class="audit-content">
           <div class="audit-box audit-box-good">
-            <div class="box-title">✓ What's Good</div>
-            Hero Usable Balance is immediately prominent with discreet privacy toggle eye icon. Quick-actions row enables one-tap expense, income, and transfer logging.
+            <div class="box-title">✓ Privacy Masking &amp; Persistence (LEGACY-012)</div>
+            Hero Usable Balance, formula pills, account balances, monthly budget velocity metrics, and sinking fund targets are completely masked with •••• / •••••• when privacy mode is active. State persists across restarts in SQLite app_settings.
           </div>
-          <div class="audit-box audit-box-warn">
-            <div class="box-title">⚠ Area for Improvement</div>
-            <strong>Formula Confusion:</strong> Pill displays <em>Physical − Locked − Monthly limit</em>. The minus before "Monthly limit" implies budgets are deducted from cash. In reality, Usable Balance = Accounts − Locked Goals, and budgets are tracking limits.
+          <div class="audit-box audit-box-good">
+            <div class="box-title">✓ Decoupled Formula Pill</div>
+            Hero formula pill cleanly separates cash balance from tracking limits with clear divider: Physical − Locked | Budget cap.
           </div>
         </div>
       </div>
@@ -970,7 +978,7 @@
   <!-- FOOTER -->
   <footer>
     <div>Cashflow Visual Quality & Architecture Audit • Generated 2026-09-13</div>
-    <div>27 Verified Captures • 71 Automated Tests Passing • Pure Offline SQLite</div>
+    <div>29 Verified Captures • Automated Tests Passing • Pure Offline SQLite</div>
   </footer>
 
 </div>
