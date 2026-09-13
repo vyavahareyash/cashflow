@@ -1,4 +1,4 @@
-name: Release APK
+name: Release App
 
 on:
   push:
@@ -10,7 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-android:
+    name: Build Android APKs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,15 +40,101 @@ jobs:
       - name: Build Universal Release APK
         run: flutter build apk --release
 
-      - name: List APK outputs
-        run: ls -la build/app/outputs/flutter-apk/
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 1
 
-      - name: Create Release and Upload APKs
+  build-web:
+    name: Build Web App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Package Web App
+        run: |
+          cd build/web
+          zip -r ../../cashflow-web.zip .
+          cd ../..
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: cashflow-web.zip
+          retention-days: 1
+
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS (unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package iOS Payload and IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r cashflow-ios-unsigned.ipa Payload
+          zip -r cashflow-ios-app.zip build/ios/iphoneos/Runner.app
+
+      - name: Upload iOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-bundles
+          path: |
+            cashflow-ios-unsigned.ipa
+            cashflow-ios-app.zip
+          retention-days: 1
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-android, build-web, build-ios]
+    if: always() && (needs.build-android.result == 'success' || needs.build-web.result == 'success' || needs.build-ios.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List Release Assets
+        run: ls -la release-assets/
+
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: build/app/outputs/flutter-apk/*.apk
           name: "Cashflow ${{ github.ref_name }}"
+          files: release-assets/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

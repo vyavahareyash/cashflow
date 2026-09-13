@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web & Browser Support**: Web platform compatibility using `sqlite3.wasm` and `sqflite_common_ffi_web` for full in-browser local database execution.
 - **Backup & Restore**: Cross-platform JSON backup export and restore mechanisms across mobile, desktop, and web environments with data validation.
 - **Integration & Screenshot Tooling**: Added automated Android screenshot runner (`scripts/capture_screenshots.mjs`) and Flutter integration test suite (`integration_test/screenshots_test.dart`).
+- **Multi-Platform Automated Releases**: Extended CI/CD workflow to compile and distribute Android APKs (split and universal), Web application bundles (ZIP), and iOS application bundles (unsigned IPA).
 - **Comprehensive Documentation Hub**: Complete project documentation suite including `INDEX.md`, `PRODUCT_SPECIFICATION.md`, `PROJECT_SCOPE.md`, `SCHEMA_REDESIGN.md`, and `development.md`.
 
 ### Changed
