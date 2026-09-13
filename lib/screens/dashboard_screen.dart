@@ -953,6 +953,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int? selectedCategoryId = _categories.isNotEmpty
         ? _categories.first.id
         : null;
+    int? selectedGoalId = _goals.isNotEmpty ? _goals.first.id : null;
 
     showModalBottomSheet(
       context: context,
@@ -1040,6 +1041,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           value: 'transfer',
                           child: Text('Transfer'),
                         ),
+                        DropdownMenuItem(
+                          value: 'goal_lock',
+                          child: Text('Goal Lock'),
+                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -1112,6 +1117,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onChanged: (val) =>
                             setStateSheet(() => selectedCategoryId = val),
                       ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
+                    // Goal Selector (goal_lock only)
+                    if (selectedType == 'goal_lock') ...[
+                      Text(
+                        'Goal',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: isDark ? AppColors.gray300 : AppColors.gray700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      if (_goals.isEmpty)
+                        Text(
+                          'No goals available. Create a goal first.',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.danger,
+                          ),
+                        )
+                      else
+                        DropdownButtonFormField<int>(
+                          initialValue: selectedGoalId,
+                          dropdownColor: isDark
+                              ? AppColors.darkSurfaceElevated
+                              : AppColors.white,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.gray50,
+                            border: OutlineInputBorder(
+                              borderRadius: AppBorderRadius.mediumBorder,
+                              borderSide: BorderSide(
+                                color: isDark
+                                    ? AppColors.darkBorder
+                                    : AppColors.gray300,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.md,
+                            ),
+                          ),
+                          items: _goals
+                              .map(
+                                (goal) => DropdownMenuItem(
+                                  value: goal.id,
+                                  child: Text(
+                                    '${goal.name} (₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)})',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) =>
+                              setStateSheet(() => selectedGoalId = val),
+                        ),
                       const SizedBox(height: AppSpacing.md),
                     ],
 
@@ -1314,6 +1376,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     sourceAccountId: selectedAccountId!,
                                     destinationAccountId:
                                         selectedDestinationAccountId!,
+                                    amount: amount,
+                                    date: _selectedDate.toIso8601String(),
+                                    note: noteController.text.trim(),
+                                  );
+                            } else if (selectedType == 'goal_lock') {
+                              if (selectedGoalId == null) {
+                                throw ArgumentError('Select a goal.');
+                              }
+                              final account = _accounts.firstWhere(
+                                (acc) => acc.id == selectedAccountId,
+                                orElse: () =>
+                                    throw ArgumentError('Select an account.'),
+                              );
+                              if (amount > account.balance) {
+                                throw ArgumentError(
+                                  'Lock amount cannot exceed account balance (₹${account.balance.toStringAsFixed(0)}).',
+                                );
+                              }
+                              await DatabaseHelper.instance
+                                  .createGoalLockTransaction(
+                                    goalId: selectedGoalId!,
+                                    accountId: selectedAccountId!,
                                     amount: amount,
                                     date: _selectedDate.toIso8601String(),
                                     note: noteController.text.trim(),

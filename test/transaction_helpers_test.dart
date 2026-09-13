@@ -273,4 +273,74 @@ void main() {
     expect((await db.readAllAccounts()).single.balance, 100.0);
     expect((await (await db.database).query('transactions')), isEmpty);
   });
+
+  test('rolls back a goal lock when an account or goal is missing', () async {
+    final db = DatabaseHelper.instance;
+    final accountId = await db.createAccount(
+      Account(name: 'Checking', balance: 100.0, type: 'Bank'),
+    );
+    final goalId = await db.createGoal(
+      Goal(
+        name: 'Emergency',
+        totalTarget: 200.0,
+        targetDate: '2027-01-01',
+        currentSaved: 0.0,
+      ),
+    );
+
+    expect(
+      () => db.createGoalLockTransaction(
+        goalId: goalId,
+        accountId: 999,
+        amount: 40.0,
+        date: '2026-09-08',
+      ),
+      throwsStateError,
+    );
+
+    expect(
+      () => db.createGoalLockTransaction(
+        goalId: 999,
+        accountId: accountId,
+        amount: 40.0,
+        date: '2026-09-08',
+      ),
+      throwsStateError,
+    );
+
+    expect((await db.readAllAccounts()).single.balance, 100.0);
+    expect((await db.readAllGoals()).single.currentSaved, 0.0);
+    expect((await (await db.database).query('locked_allocations')), isEmpty);
+    expect((await (await db.database).query('transactions')), isEmpty);
+  });
+
+  test('rejects goal lock amount exceeding available account funds', () async {
+    final db = DatabaseHelper.instance;
+    final accountId = await db.createAccount(
+      Account(name: 'Checking', balance: 50.0, type: 'Bank'),
+    );
+    final goalId = await db.createGoal(
+      Goal(
+        name: 'Emergency',
+        totalTarget: 200.0,
+        targetDate: '2027-01-01',
+        currentSaved: 0.0,
+      ),
+    );
+
+    expect(
+      () => db.createGoalLockTransaction(
+        goalId: goalId,
+        accountId: accountId,
+        amount: 100.0,
+        date: '2026-09-08',
+      ),
+      throwsStateError,
+    );
+
+    expect((await db.readAllAccounts()).single.balance, 50.0);
+    expect((await db.readAllGoals()).single.currentSaved, 0.0);
+    expect((await (await db.database).query('locked_allocations')), isEmpty);
+    expect((await (await db.database).query('transactions')), isEmpty);
+  });
 }

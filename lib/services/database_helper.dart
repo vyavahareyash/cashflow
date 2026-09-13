@@ -504,7 +504,24 @@ class DatabaseHelper {
     _validateAmount(amount);
     final db = await instance.database;
     final id = await db.transaction((txn) async {
-      await _requireAccount(txn, accountId);
+      final account = await txn.query(
+        'accounts',
+        columns: ['id', 'balance'],
+        where: 'id = ?',
+        whereArgs: [accountId],
+      );
+      if (account.isEmpty) throw StateError('Account not found: $accountId');
+      final accountBalance = (account.first['balance'] as num).toDouble();
+      final lockedResult = await txn.rawQuery(
+        'SELECT SUM(amount) as total FROM locked_allocations WHERE account_id = ?',
+        [accountId],
+      );
+      final currentLocked = (lockedResult.first['total'] as num? ?? 0)
+          .toDouble();
+      if (currentLocked + amount > accountBalance) {
+        throw StateError('Insufficient account funds to lock');
+      }
+
       await _requireGoal(txn, goalId);
       await txn.insert('locked_allocations', {
         'goal_id': goalId,
