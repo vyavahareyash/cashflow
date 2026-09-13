@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-09-14
+
+### Added
+- **Configurable Payday Salary Cycle**: Custom salary cycle start day (1–31) with an interactive calendar grid picker in Settings, dynamically scoping category budgets, spending summaries, and Daily Burn Pace to actual payday schedules (#48, #54).
+- **Payday Cycle Budget Reset & Zero Rollover**: Monthly budget calculations strictly scoped to the active salary cycle window with zero rollover into subsequent periods, and visual over-budget warning badges on exceeded categories (#11, #55).
+- **Year-to-Date (YTD) Cumulative Analytics**: Comprehensive YTD spending aggregates by category and net cashflow indicators in Analytics (#11, #55).
+- **Goal Payment Flow**: Dedicated "Pay from Goal" bottom sheet modal to spend accumulated sinking funds directly from goals with atomic SQLite consistency, reducing physical account balance, locked allocation, and goal current saved simultaneously (#36, #53).
+- **Goal Transaction History & Editing**: Full bidirectional synchronization between goal allocations and activity ledger, complete with in-place goal editing and live reactive dashboard updates (#6, #52).
+- **Transaction Edit, Delete & Rollback**: Full transaction edit modal with automatic balance difference adjustment, transaction deletion with atomic mathematical account balance reversal, soft-undo SnackBar feedback, and period ledger filter chips (This Cycle, Last Cycle, All Time) (#8, #51).
+- **Privacy Mode Masking**: Persistent one-tap privacy toggle on the dashboard app bar masking all currency figures (`$••••••`) across the entire app for discreet usage in public (#12, #50).
+- **Goal Completion Celebratory Flair**: Interactive celebratory dialog with confetti burst animation when a savings goal reaches 100% completion (#48, #56).
+- **Backup Freshness Indicator**: Visual freshness badge in Settings displaying "Last backup: X ago" or "Never backed up" with actionable status coloring (#48, #56).
+- **Comprehensive Integration Testing**: Isolated SQLite integration test suite covering balance invariants, mutations, cycle boundaries, empty states, and reactive notifications, plus backup export/import roundtrip verification with in-progress UI indicators (#27, #57).
+- **Complete Project Documentation**: End-to-end user manuals (`FEATURE_GUIDE.md`, `CALCULATIONS.md`, `FAQ_AND_ONBOARDING.md`), three-tier system architecture guide (`ARCHITECTURE.md`) with Mermaid SQLite ER diagrams and `dataRevision` reactive state model, and updated documentation index (#9, #58).
+
+### Changed
+- **Root README & Documentation Overhaul**: Modern badges, corrected Safe-to-Spend formula ($\text{Usable} = \text{Physical} - \text{Locked}$), responsive screenshot showcase, and developer quickstart instructions (#9, #58).
+- **Database Reset & Import Ordering**: Hardened foreign key cascade and insertion sequence to prevent constraint violations with goal-linked transactions (#27, #57).
+- **Cleaned Intermediate Documentation**: Removed obsolete development planning files to keep the repository clean and presentable (#9, #58).
+
+---
+
 ## [1.2.0] - 2026-09-13
 
 ### Added
