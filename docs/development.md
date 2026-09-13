@@ -36,7 +36,7 @@ flutter run -d ios
 Run all tests, a single test file, or static analysis:
 
 ```bash
-flutter test
+flutter test --concurrency=1
 flutter test test/path/to/test_file.dart
 flutter analyze
 ```
@@ -136,12 +136,22 @@ ANDROID_DEVICE=<device-id> node scripts/capture_screenshots.mjs
 
 Screenshots are written to `screenshots/`.
 
+## Testing Guidelines & Pitfall Prevention
+
+Follow these rules to prevent tests from hanging or failing intermittently:
+
+- **Single concurrency (`--concurrency=1`)**: Tests use `sqflite_common_ffi` with SQLite database files. Always run test suites with `flutter test --concurrency=1` to prevent database file locks across isolates.
+- **No async DB I/O in `testWidgets`**: `testWidgets` runs inside a `fakeAsync` zone. Performing `sqflite_common_ffi` operations inside `testWidgets` can deadlock and hang the test indefinitely. Keep database logic and transaction invariants in standard async `test()` blocks. In `testWidgets`, test UI rendering using in-memory model instances and `await tester.pump()`.
+- **Avoid unbounded `pumpAndSettle()`**: Screens with periodic timers, listening streams, or active animations can cause `pumpAndSettle()` to timeout or freeze. Use bounded pumps (`await tester.pump()`, `await tester.pump(const Duration(milliseconds: 100))`).
+- **Database isolation**: Ensure every database test closes and deletes test database files in both `setUp` and `tearDown`.
+- **Form Field Conventions**: Use `initialValue` instead of deprecated `value` on `DropdownButtonFormField`.
+
 ## Recommended Pre-Change Check
 
 Before opening a pull request, run the focused tests for the changed area, then run the full test suite and analyzer:
 
 ```bash
 flutter test test/path/to/changed_test.dart
-flutter test
+flutter test --concurrency=1
 flutter analyze
 ```

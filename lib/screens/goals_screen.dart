@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../services/database_helper.dart';
 import '../models/goal_model.dart';
+import '../models/category_model.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
@@ -1295,13 +1296,32 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   void _showPaymentDialog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accounts = await DatabaseHelper.instance.readAllAccounts();
-    final amountController = TextEditingController(
-      text: goal.currentSaved.toStringAsFixed(0),
-    );
-    int? selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
-
+    final contributions =
+        await DatabaseHelper.instance.getGoalContributions(goal.id!);
+    final List<Category> categories =
+        await DatabaseHelper.instance.readAllCategories();
     if (!mounted) return;
+
+    if (contributions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No locked funds found to settle for this goal.'),
+        ),
+      );
+      return;
+    }
+
+    int? selectedAccountId =
+        (contributions.first['account_id'] as num?)?.toInt();
+    double maxPayable =
+        (contributions.first['amount'] as num?)?.toDouble() ?? 0.0;
+    final amountController = TextEditingController(
+      text: maxPayable > 0 ? maxPayable.toStringAsFixed(0) : '',
+    );
+    int? selectedCategoryId =
+        categories.isNotEmpty ? categories.first.id : null;
+    final noteController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
 
     showModalBottomSheet(
       context: context,
@@ -1337,14 +1357,14 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Pay / Settle Bill for "${goal.name}"',
+                      'Pay / Settle from "${goal.name}"',
                       style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'This will deduct payment from the chosen account and release the locked funds.',
+                      'Deduct payment from locked savings and physical account balance.',
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
@@ -1355,10 +1375,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       controller: amountController,
                       label: 'Payment Amount',
                       prefixText: '₹ ',
+                      hint: '0.00',
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       prefixIcon: Icons.payment_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Max available in selected account: ${AppFormatters.currency(maxPayable)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
 
@@ -1394,35 +1422,174 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           vertical: AppSpacing.md,
                         ),
                       ),
-                      items: accounts
-                          .map(
-                            (acc) => DropdownMenuItem(
-                              value: acc.id,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      acc.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
+                      items: contributions.map((c) {
+                        final accId = (c['account_id'] as num).toInt();
+                        final accName = c['account_name'] as String;
+                        final amt = (c['amount'] as num).toDouble();
+                        return DropdownMenuItem<int>(
+                          value: accId,
+                          child: Text(
+                            '$accName (${AppFormatters.currency(amt)} locked)',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          final match = contributions.firstWhere(
+                            (c) => (c['account_id'] as num).toInt() == val,
+                          );
+                          setStateSheet(() {
+                            selectedAccountId = val;
+                            maxPayable = (match['amount'] as num).toDouble();
+                            final currentVal =
+                                double.tryParse(amountController.text.trim()) ??
+                                    0.0;
+                            if (currentVal > maxPayable) {
+                              amountController.text =
+                                  maxPayable.toStringAsFixed(0);
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    Text(
+                      'Expense Category (Optional)',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: isDark ? AppColors.gray300 : AppColors.gray700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    DropdownButtonFormField<int?>(
+                      initialValue: selectedCategoryId,
+                      isExpanded: true,
+                      dropdownColor: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.white,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
+                        border: OutlineInputBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('No Category / Sinking Fund'),
+                        ),
+                        ...categories.map((cat) {
+                          final style = CategoryStyle.getStyle(cat.name);
+                          return DropdownMenuItem<int?>(
+                            value: cat.id,
+                            child: Row(
+                              children: [
+                                Icon(style.icon, size: 18, color: style.color),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    cat.name,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Text(
-                                    '₹${acc.balance.toStringAsFixed(0)}',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: isDark
-                                          ? AppColors.gray400
-                                          : AppColors.gray500,
-                                    ),
-                                  ),
-                                ],
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) =>
+                          setStateSheet(() => selectedCategoryId = val),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    Text(
+                      'Payment Date',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: isDark ? AppColors.gray300 : AppColors.gray700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setStateSheet(() => selectedDate = picked);
+                        }
+                      },
+                      borderRadius: AppBorderRadius.mediumBorder,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.gray50,
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 18,
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              DateFormat('MMM d, yyyy').format(selectedDate),
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.gray200
+                                    : AppColors.gray800,
                               ),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setStateSheet(() => selectedAccountId = val),
+                            const Spacer(),
+                            Text(
+                              'Change',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.emerald700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    CustomInputField(
+                      controller: noteController,
+                      label: 'Note / Payee (Optional)',
+                      hint: 'e.g. Annual premium policy #5829',
+                      prefixIcon: Icons.notes_rounded,
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
@@ -1432,18 +1599,42 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (selectedAccountId == null ||
-                              amountController.text.isEmpty) {
+                              amountController.text.trim().isEmpty) {
                             return;
                           }
                           final amount =
-                              double.tryParse(amountController.text) ?? 0.0;
-                          if (amount <= 0) return;
+                              double.tryParse(amountController.text.trim()) ??
+                                  0.0;
+                          if (amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter an amount > 0'),
+                              ),
+                            );
+                            return;
+                          }
+                          if (amount > maxPayable) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Cannot pay more than ${AppFormatters.currency(maxPayable)} from this account',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
                           try {
-                            await DatabaseHelper.instance.payBill(
-                              goal.id!,
-                              selectedAccountId!,
-                              amount,
+                            await DatabaseHelper.instance
+                                .createGoalPaymentTransaction(
+                              goalId: goal.id!,
+                              accountId: selectedAccountId!,
+                              amount: amount,
+                              date: selectedDate.toIso8601String(),
+                              categoryId: selectedCategoryId,
+                              note: noteController.text.trim().isNotEmpty
+                                  ? noteController.text.trim()
+                                  : 'Payment for ${goal.name}',
                             );
                             if (sheetCtx.mounted) {
                               Navigator.pop(sheetCtx);
@@ -1451,9 +1642,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             _loadData();
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                    'Payment completed and funds released!',
+                                    'Payment of ${AppFormatters.currency(amount)} recorded and funds released!',
                                   ),
                                   backgroundColor: AppColors.emerald700,
                                 ),
