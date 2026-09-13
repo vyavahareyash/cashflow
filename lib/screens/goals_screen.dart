@@ -449,6 +449,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<int>(
                       initialValue: selectedAccountId,
+                      isExpanded: true,
                       dropdownColor: isDark
                           ? AppColors.darkSurfaceElevated
                           : AppColors.white,
@@ -474,8 +475,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           .map(
                             (acc) => DropdownMenuItem(
                               value: acc.id,
-                              child: Text(
-                                '${acc.name} (Balance: ₹${acc.balance.toStringAsFixed(0)})',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      acc.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    '₹${acc.balance.toStringAsFixed(0)}',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           )
@@ -648,6 +666,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<int>(
                       initialValue: selectedAccountId,
+                      isExpanded: true,
                       dropdownColor: isDark
                           ? AppColors.darkSurfaceElevated
                           : AppColors.white,
@@ -673,8 +692,25 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           .map(
                             (acc) => DropdownMenuItem(
                               value: acc.id,
-                              child: Text(
-                                '${acc.name} (Balance: ₹${acc.balance.toStringAsFixed(0)})',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      acc.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    '₹${acc.balance.toStringAsFixed(0)}',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           )

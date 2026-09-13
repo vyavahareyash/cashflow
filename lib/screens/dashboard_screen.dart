@@ -1018,6 +1018,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<String>(
                       initialValue: selectedType,
+                      isExpanded: true,
                       dropdownColor: isDark
                           ? AppColors.darkSurfaceElevated
                           : AppColors.white,
@@ -1069,16 +1070,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     CustomInputField(
                       controller: amountController,
                       label: 'Amount',
+                      hint: '0.00',
                       prefixText: '₹ ',
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      autofocus: true,
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Category Selector (expense only)
-                    if (selectedType == 'expense') ...[
+                    // Category Selector (expense & income)
+                    if (selectedType != 'transfer' &&
+                        selectedType != 'goal_lock') ...[
                       Text(
                         'Category',
                         style: AppTypography.labelMedium.copyWith(
@@ -1089,6 +1091,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: AppSpacing.xs),
                       DropdownButtonFormField<int>(
                         initialValue: selectedCategoryId,
+                        isExpanded: true,
                         dropdownColor: isDark
                             ? AppColors.darkSurfaceElevated
                             : AppColors.white,
@@ -1116,9 +1119,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 value: cat.id,
                                 child: Row(
                                   children: [
-                                    CategoryBadge(
-                                      label: cat.name,
-                                      showIcon: true,
+                                    Expanded(
+                                      child: CategoryBadge(
+                                        label: cat.name,
+                                        showIcon: true,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1151,6 +1156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       else
                         DropdownButtonFormField<int>(
                           initialValue: selectedGoalId,
+                          isExpanded: true,
                           dropdownColor: isDark
                               ? AppColors.darkSurfaceElevated
                               : AppColors.white,
@@ -1178,6 +1184,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   value: goal.id,
                                   child: Text(
                                     '${goal.name} (₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)})',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
                               )
@@ -1199,6 +1207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: AppSpacing.xs),
                     DropdownButtonFormField<int>(
                       initialValue: selectedAccountId,
+                      isExpanded: true,
                       dropdownColor: isDark
                           ? AppColors.darkSurfaceElevated
                           : AppColors.white,
@@ -1224,8 +1233,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           .map(
                             (acc) => DropdownMenuItem(
                               value: acc.id,
-                              child: Text(
-                                '${acc.name} (₹${acc.balance.toStringAsFixed(0)})',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      acc.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    '₹${acc.balance.toStringAsFixed(0)}',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           )
@@ -1246,6 +1272,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: AppSpacing.xs),
                       DropdownButtonFormField<int>(
                         initialValue: selectedDestinationAccountId,
+                        isExpanded: true,
                         dropdownColor: isDark
                             ? AppColors.darkSurfaceElevated
                             : AppColors.white,
@@ -1271,8 +1298,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             .map(
                               (acc) => DropdownMenuItem(
                                 value: acc.id,
-                                child: Text(
-                                  '${acc.name} (₹${acc.balance.toStringAsFixed(0)})',
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        acc.name,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text(
+                                      '₹${acc.balance.toStringAsFixed(0)}',
+                                      style:
+                                          AppTypography.labelSmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.gray400
+                                            : AppColors.gray500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             )
