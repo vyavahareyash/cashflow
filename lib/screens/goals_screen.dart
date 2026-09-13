@@ -20,6 +20,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   List<Goal> _goals = [];
   double _totalLocked = 0.0;
   double _totalTarget = 0.0;
+  int _salaryDay = 1;
   bool _isLoading = true;
 
   @override
@@ -47,6 +48,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
     final goals = await DatabaseHelper.instance.readAllGoals();
     final locked = await DatabaseHelper.instance.getTotalLockedAmount();
+    final salaryDay = await DatabaseHelper.instance.getSalaryDay();
 
     double totalTarget = 0.0;
     for (var p in goals) {
@@ -58,6 +60,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         _goals = goals;
         _totalLocked = locked;
         _totalTarget = totalTarget;
+        _salaryDay = salaryDay;
         _isLoading = false;
       });
     }
@@ -2130,6 +2133,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Widget _buildGoalCard(Goal goal, bool isDark) {
     return GoalCard(
       goal: goal,
+      salaryDay: _salaryDay,
       onHistory: () => _showContributionLog(goal),
       onEdit: () => _showEditGoalDialog(goal),
       onLockFunds: () => _showContributionDialog(goal),
@@ -2303,6 +2307,7 @@ class _EditGoalDialogState extends State<EditGoalDialog> {
 
 class GoalCard extends StatelessWidget {
   final Goal goal;
+  final int? salaryDay;
   final VoidCallback? onHistory;
   final VoidCallback? onEdit;
   final VoidCallback? onLockFunds;
@@ -2312,6 +2317,7 @@ class GoalCard extends StatelessWidget {
   const GoalCard({
     super.key,
     required this.goal,
+    this.salaryDay,
     this.onHistory,
     this.onEdit,
     this.onLockFunds,
@@ -2326,7 +2332,11 @@ class GoalCard extends StatelessWidget {
     final remaining = goal.remainingAmount;
     final isCompleted = goal.isCompleted;
     final isOverdue = goal.isOverdue();
-    final pace = goal.recommendedMonthlyPace();
+    final pace = goal.recommendedMonthlyPace(salaryDay: salaryDay);
+    final adviceText = goal.pacingAdviceText(
+      salaryDay: salaryDay,
+      currencyFormatter: (amt) => AppFormatters.currency(amt),
+    );
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -2559,7 +2569,8 @@ class GoalCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Save ~${AppFormatters.currency(pace)}/mo to hit target on time',
+                      adviceText ??
+                          'Save ~${AppFormatters.currency(pace)}/mo to hit target on time',
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark
                             ? AppColors.emerald400

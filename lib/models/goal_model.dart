@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'salary_cycle.dart';
 
 class Goal {
   final int? id;
@@ -76,16 +77,69 @@ class Goal {
     return days < 0;
   }
 
-  double? recommendedMonthlyPace({DateTime? today}) {
+  int? paydaysRemaining({DateTime? today, required int salaryDay}) {
+    if (isCompleted || remainingAmount <= 0) return 0;
+    final target = parsedTargetDate;
+    if (target == null) return null;
+    final now = today ?? DateTime.now();
+    final nowDate = DateTime(now.year, now.month, now.day);
+    final targetDateOnly = DateTime(target.year, target.month, target.day);
+    if (!nowDate.isBefore(targetDateOnly)) return null;
+
+    return SalaryCycle.countPaydaysBetween(
+      from: nowDate,
+      to: targetDateOnly,
+      salaryDay: salaryDay,
+    );
+  }
+
+  double? recommendedMonthlyPace({DateTime? today, int? salaryDay}) {
     if (isCompleted || remainingAmount <= 0) return 0.0;
     final days = daysRemaining(today: today);
     if (days == null || days <= 0) return null;
+
+    if (salaryDay != null) {
+      final paydays = paydaysRemaining(today: today, salaryDay: salaryDay);
+      if (paydays == null) return null;
+      if (paydays <= 0) {
+        return remainingAmount;
+      }
+      return remainingAmount / paydays;
+    }
 
     final months = days / 30.4375;
     if (months < 1.0) {
       return remainingAmount;
     }
     return remainingAmount / months;
+  }
+
+  String? pacingAdviceText({
+    DateTime? today,
+    int? salaryDay,
+    String Function(double amount)? currencyFormatter,
+  }) {
+    if (isCompleted || remainingAmount <= 0) return null;
+    final days = daysRemaining(today: today);
+    if (days == null || days <= 0) return null;
+
+    final pace = recommendedMonthlyPace(today: today, salaryDay: salaryDay);
+    if (pace == null) return null;
+
+    final fmt = currencyFormatter ?? (val) => '₹${val.toStringAsFixed(0)}';
+
+    if (salaryDay != null) {
+      final paydays = paydaysRemaining(today: today, salaryDay: salaryDay);
+      if (paydays == null || paydays <= 0) {
+        return 'Due in $days days (0 paydays left) • Fund from existing balance';
+      } else if (paydays == 1) {
+        return 'Save ~${fmt(pace)} from next paycheck (1 payday left)';
+      } else {
+        return 'Save ~${fmt(pace)} / paycheck ($paydays paydays left)';
+      }
+    }
+
+    return 'Save ~${fmt(pace)}/mo to hit target on time';
   }
 
   String deadlineStatusText({DateTime? today}) {

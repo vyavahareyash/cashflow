@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/database_helper.dart';
 import '../models/category_model.dart';
+import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
@@ -19,6 +20,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Map<int, double> _spending = {};
   double _totalBudgetLimit = 0.0;
   double _totalSpent = 0.0;
+  int _salaryDay = 1;
   bool _isLoading = true;
 
   @override
@@ -47,6 +49,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final categories = await DatabaseHelper.instance.readAllCategories();
     final monthlySpending =
         await DatabaseHelper.instance.getMonthlySpendingByCategoryId();
+    final salaryDay = await DatabaseHelper.instance.getSalaryDay();
     double totalBudgetLimit = 0;
     double totalSpent = 0;
     Map<int, double> spendingMap = {};
@@ -66,6 +69,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
         _spending = spendingMap;
         _totalBudgetLimit = totalBudgetLimit;
         _totalSpent = totalSpent;
+        _salaryDay = salaryDay;
         _isLoading = false;
       });
     }
@@ -179,6 +183,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       Category(name: name, monthlyBudget: budget),
                     );
                   }
+                  if (!mounted) return;
                   Navigator.pop(context);
                   _loadBudgets();
                 }
@@ -234,6 +239,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
       double.infinity,
     );
 
+    final cycle = SalaryCycle.resolve(salaryDay: _salaryDay);
+
     return Scaffold(
       body: _isLoading
           ? const Center(
@@ -247,7 +254,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
                   // 1. TOP SUMMARY CARD
-                  _buildBudgetHeaderCard(isDark, totalProgress, remainingTotal),
+                  _buildBudgetHeaderCard(
+                    isDark,
+                    totalProgress,
+                    remainingTotal,
+                    cycle,
+                  ),
                   const SizedBox(height: AppSpacing.xl),
 
                   // 2. SECTION TITLE
@@ -332,6 +344,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     bool isDark,
     double totalProgress,
     double remainingTotal,
+    SalaryCycle cycle,
   ) {
     final isOver = totalProgress > 1.0;
 
@@ -352,12 +365,25 @@ class _BudgetScreenState extends State<BudgetScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Total Monthly Budget',
-                style: AppTypography.labelMedium.copyWith(
-                  color: isDark ? AppColors.gray400 : AppColors.gray600,
-                  fontWeight: FontWeight.w600,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Monthly Budget',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Cycle: ${cycle.cycleLabel} • ${cycle.resetCountdownText}',
+                    style: AppTypography.labelSmall.copyWith(
+                      fontSize: 11,
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    ),
+                  ),
+                ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(

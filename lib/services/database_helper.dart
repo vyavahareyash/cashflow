@@ -2016,4 +2016,18 @@ class DatabaseHelper {
   Future<void> setPrivacyMode(bool isPrivate) async {
     await setSetting('dashboard_privacy_mode', isPrivate ? 'true' : 'false');
   }
+
+  /// Retrieves configured salary / income payday of the month (1-31, defaults to 1).
+  Future<int> getSalaryDay() async {
+    final val = await getSetting('salary_day', defaultValue: '1');
+    final parsed = int.tryParse(val ?? '1') ?? 1;
+    return parsed.clamp(1, 31);
+  }
+
+  /// Persists configured salary / income payday of the month.
+  Future<void> setSalaryDay(int day) async {
+    final clamped = day.clamp(1, 31);
+    await setSetting('salary_day', clamped.toString());
+    notifyDataChanged();
+  }
 }

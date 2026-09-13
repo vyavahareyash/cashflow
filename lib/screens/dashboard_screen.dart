@@ -6,6 +6,7 @@ import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import '../models/goal_model.dart';
+import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
@@ -34,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   bool _isLoading = true;
   bool _isPrivate = false;
+  int _salaryDay = 1;
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -62,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final db = DatabaseHelper.instance;
     final isPrivate = await db.getPrivacyMode();
+    final salaryDay = await db.getSalaryDay();
     final accountsData = await db.readAllAccounts();
     final locked = await db.getTotalLockedAmount();
     final usable = await db.calculateUsableBalance();
@@ -97,6 +100,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _totalBudgetLimit = totalBudget;
         _totalSpentThisMonth = totalSpent;
         _isPrivate = isPrivate;
+        _salaryDay = salaryDay;
         _isLoading = false;
       });
     }
@@ -446,9 +450,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final progress = _totalBudgetLimit > 0
         ? (_totalSpentThisMonth / _totalBudgetLimit)
         : 0.0;
-    final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final daysLeft = (daysInMonth - now.day) + 1;
+    final cycle = SalaryCycle.resolve(salaryDay: _salaryDay);
+    final daysLeft = cycle.daysLeftInCycle;
     final perDayLeft = daysLeft > 0 ? (remainingBudget / daysLeft) : 0.0;
 
     return CustomCard(
