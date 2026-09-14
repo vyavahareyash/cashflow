@@ -3,7 +3,12 @@ import 'dart:html' as html;
 
 import 'package:file_picker/file_picker.dart';
 
-Future<String?> saveBackupBytes(String filename, List<int> bytes) async {
+Future<String?> saveBackupBytes(
+  String filename,
+  List<int> bytes, {
+  String? destinationDirectory,
+  String? fullPath,
+}) async {
   final blob = html.Blob([bytes]);
   final url = html.Url.createObjectUrlFromBlob(blob);
   final anchor = html.AnchorElement(href: url)
@@ -14,6 +19,10 @@ Future<String?> saveBackupBytes(String filename, List<int> bytes) async {
   anchor.remove();
   html.Url.revokeObjectUrl(url);
   return filename;
+}
+
+Future<String?> pickBackupDirectory({String? initialDirectory}) async {
+  return null;
 }
 
 Future<List<int>?> pickBackupBytes() async {

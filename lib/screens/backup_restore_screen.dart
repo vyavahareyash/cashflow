@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
+import 'package:cashflow/services/backup_platform.dart';
 import 'package:cashflow/services/database_helper.dart';
 
 import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
+
+enum ExportFormat {
+  sqlite,
+  json,
+  csv,
+}
 
 class BackupRestoreScreen extends StatefulWidget {
   const BackupRestoreScreen({super.key});
@@ -23,6 +31,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _transactionsCount = 0;
   int _salaryDay = 1;
   String? _lastBackupTimestamp;
+  String _defaultBackupDirectory = '';
+  String _effectiveBackupDirectory = '';
 
   @override
   void initState() {
@@ -39,6 +49,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final transactions = await db.getTransactionHistory();
       final salaryDay = await db.getSalaryDay();
       final lastBackup = await db.getLastBackupTimestamp();
+      final defaultDir = kIsWeb ? '' : await db.getDefaultBackupDirectory();
+      final effectiveDir = await db.getEffectiveBackupDirectory();
 
       if (mounted) {
         setState(() {
@@ -48,6 +60,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _transactionsCount = transactions.length;
           _salaryDay = salaryDay;
           _lastBackupTimestamp = lastBackup;
+          _defaultBackupDirectory = defaultDir;
+          _effectiveBackupDirectory = effectiveDir;
         });
       }
     } catch (_) {}
@@ -133,13 +147,69 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  Future<void> _handleExport() async {
+  Future<void> _showExportDialog(bool isDark) async {
+    final db = DatabaseHelper.instance;
+    final defaultDir = _defaultBackupDirectory.isNotEmpty
+        ? _defaultBackupDirectory
+        : (kIsWeb ? '' : await db.getDefaultBackupDirectory());
+    final selectedDirectory = _effectiveBackupDirectory.isNotEmpty
+        ? _effectiveBackupDirectory
+        : (kIsWeb ? '' : await db.getEffectiveBackupDirectory());
+
+    if (!mounted) return;
+
+    final result = await showDialog<({ExportFormat format, String directory, String fileName})>(
+      context: context,
+      builder: (dialogCtx) => _ExportBackupDialog(
+        isDark: isDark,
+        defaultDirectory: defaultDir,
+        initialDirectory: selectedDirectory,
+      ),
+    );
+
+    if (result != null) {
+      if (!kIsWeb) {
+        if (result.directory == defaultDir) {
+          await DatabaseHelper.instance.setCustomBackupPath(null);
+        } else {
+          await DatabaseHelper.instance.setCustomBackupPath(result.directory);
+        }
+      }
+      await _executeExport(result.format, result.directory, result.fileName);
+    }
+  }
+
+  Future<void> _executeExport(
+    ExportFormat format,
+    String directory,
+    String fileName,
+  ) async {
     setState(() {
       _isProcessing = true;
-      _statusMessage = 'Exporting database...';
+      _statusMessage = 'Exporting ${format.name.toUpperCase()}...';
     });
 
-    final path = await DatabaseHelper.instance.exportDatabase();
+    String? path;
+    switch (format) {
+      case ExportFormat.sqlite:
+        path = await DatabaseHelper.instance.exportDatabase(
+          destinationDirectory: directory.isEmpty ? null : directory,
+          fileName: fileName,
+        );
+        break;
+      case ExportFormat.json:
+        path = await DatabaseHelper.instance.exportDatabaseAsJSON(
+          destinationDirectory: directory.isEmpty ? null : directory,
+          fileName: fileName,
+        );
+        break;
+      case ExportFormat.csv:
+        path = await DatabaseHelper.instance.exportTransactionsAsCSV(
+          destinationDirectory: directory.isEmpty ? null : directory,
+          fileName: fileName,
+        );
+        break;
+    }
 
     if (mounted) {
       setState(() {
@@ -150,12 +220,117 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       });
       _showFeedback(
         path != null
-            ? 'Database exported successfully!'
+            ? '${format.name.toUpperCase()} exported successfully!'
             : 'Export cancelled or failed',
         isError: path == null,
       );
     }
     _loadStats();
+  }
+
+  Future<void> _showImportDialog(bool isDark) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        title: Text(
+          'Import & Restore Data',
+          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select the backup file format you want to restore:',
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark ? AppColors.gray400 : AppColors.gray600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (!kIsWeb) ...[
+              _buildDialogOptionTile(
+                icon: Icons.storage_rounded,
+                iconColor: AppColors.emerald700,
+                title: 'SQLite Database (.db)',
+                subtitle: 'Full binary database restore',
+                isDark: isDark,
+                onTap: () {
+                  Navigator.of(dialogCtx).pop();
+                  _handleImport();
+                },
+              ),
+              const Divider(height: 1),
+            ],
+            _buildDialogOptionTile(
+              icon: Icons.data_object_rounded,
+              iconColor: AppColors.purple,
+              title: 'JSON Backup (.json)',
+              subtitle: 'Restore accounts, categories & transactions',
+              isDark: isDark,
+              onTap: () {
+                Navigator.of(dialogCtx).pop();
+                _handleImportJSON();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogOptionTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        onTap: onTap,
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.xxs,
+        ),
+        leading: Container(
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.12),
+            borderRadius: AppBorderRadius.smallBorder,
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.labelLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isDark ? AppColors.darkText : AppColors.gray900,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTypography.labelSmall.copyWith(
+            color: isDark ? AppColors.gray400 : AppColors.gray600,
+            fontSize: 11,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          size: 18,
+          color: AppColors.gray400,
+        ),
+      ),
+    );
   }
 
   Future<void> _handleImport() async {
@@ -183,31 +358,6 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     _loadStats();
   }
 
-  Future<void> _handleExportJSON() async {
-    setState(() {
-      _isProcessing = true;
-      _statusMessage = 'Exporting JSON backup...';
-    });
-
-    final path = await DatabaseHelper.instance.exportDatabaseAsJSON();
-
-    if (mounted) {
-      setState(() {
-        _isProcessing = false;
-        _statusMessage = path != null
-            ? 'JSON exported successfully to:\n$path'
-            : 'JSON export cancelled';
-      });
-      _showFeedback(
-        path != null
-            ? 'JSON backup exported successfully!'
-            : 'JSON export cancelled',
-        isSuccess: path != null,
-      );
-    }
-    _loadStats();
-  }
-
   Future<void> _handleImportJSON() async {
     setState(() {
       _isProcessing = true;
@@ -228,31 +378,6 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ? 'JSON data imported successfully!'
             : 'JSON import cancelled or failed',
         isError: !success,
-      );
-    }
-    _loadStats();
-  }
-
-  Future<void> _handleExportCSV() async {
-    setState(() {
-      _isProcessing = true;
-      _statusMessage = 'Exporting CSV transactions...';
-    });
-
-    final path = await DatabaseHelper.instance.exportTransactionsAsCSV();
-
-    if (mounted) {
-      setState(() {
-        _isProcessing = false;
-        _statusMessage = path != null
-            ? 'CSV exported successfully to:\n$path'
-            : 'CSV export cancelled';
-      });
-      _showFeedback(
-        path != null
-            ? 'Transactions CSV exported successfully!'
-            : 'CSV export cancelled',
-        isSuccess: path != null,
       );
     }
     _loadStats();
@@ -1130,50 +1255,25 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               backgroundColor: Colors.transparent,
               color: AppColors.emerald600,
             ),
-          if (!kIsWeb) ...[
-            _buildSettingsTile(
-              icon: Icons.storage_rounded,
-              iconColor: AppColors.emerald700,
-              title: 'Export SQLite Database (.db)',
-              subtitle: 'Complete exact binary database backup',
-              onTap: _isProcessing ? null : _handleExport,
-              isDark: isDark,
-            ),
-            const Divider(height: 1),
-            _buildSettingsTile(
-              icon: Icons.restore_page_rounded,
-              iconColor: AppColors.info,
-              title: 'Import SQLite Database (.db)',
-              subtitle: 'Restore database from previous .db file',
-              onTap: _isProcessing ? null : _handleImport,
-              isDark: isDark,
-            ),
-            const Divider(height: 1),
-          ],
           _buildSettingsTile(
-            icon: Icons.data_object_rounded,
-            iconColor: AppColors.purple,
-            title: 'Export as JSON',
-            subtitle: 'Human-readable structured data backup',
-            onTap: _isProcessing ? null : _handleExportJSON,
+            icon: Icons.file_download_outlined,
+            iconColor: AppColors.emerald700,
+            title: 'Export Data & Backups',
+            subtitle: kIsWeb
+                ? 'Export as JSON or CSV spreadsheet'
+                : 'Export as SQLite (.db), JSON, or CSV spreadsheet',
+            onTap: _isProcessing ? null : () => _showExportDialog(isDark),
             isDark: isDark,
           ),
           const Divider(height: 1),
           _buildSettingsTile(
-            icon: Icons.file_upload_rounded,
-            iconColor: AppColors.orange,
-            title: 'Import from JSON',
-            subtitle: 'Restore categories, accounts & transactions',
-            onTap: _isProcessing ? null : _handleImportJSON,
-            isDark: isDark,
-          ),
-          const Divider(height: 1),
-          _buildSettingsTile(
-            icon: Icons.table_chart_rounded,
-            iconColor: AppColors.pink,
-            title: 'Export Transactions as CSV',
-            subtitle: 'Open in Excel, Google Sheets, or Numbers',
-            onTap: _isProcessing ? null : _handleExportCSV,
+            icon: Icons.file_upload_outlined,
+            iconColor: AppColors.info,
+            title: 'Import & Restore Data',
+            subtitle: kIsWeb
+                ? 'Restore categories, accounts & transactions from JSON'
+                : 'Restore from SQLite (.db) or JSON backup',
+            onTap: _isProcessing ? null : () => _showImportDialog(isDark),
             isDark: isDark,
           ),
         ],
@@ -1182,6 +1282,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Widget _buildSettingsTile({
+    Key? key,
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -1192,6 +1293,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     return Material(
       color: Colors.transparent,
       child: ListTile(
+        key: key,
         onTap: onTap,
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
@@ -1440,3 +1542,341 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 }
+
+class _ExportBackupDialog extends StatefulWidget {
+  final bool isDark;
+  final String defaultDirectory;
+  final String initialDirectory;
+
+  const _ExportBackupDialog({
+    required this.isDark,
+    required this.defaultDirectory,
+    required this.initialDirectory,
+  });
+
+  @override
+  State<_ExportBackupDialog> createState() => _ExportBackupDialogState();
+}
+
+class _ExportBackupDialogState extends State<_ExportBackupDialog> {
+  late ExportFormat _selectedFormat;
+  late String _selectedDirectory;
+  late TextEditingController _fileNameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFormat = kIsWeb ? ExportFormat.json : ExportFormat.sqlite;
+    _selectedDirectory = widget.initialDirectory;
+    _fileNameController = TextEditingController(
+      text: _getDefaultName(_selectedFormat),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fileNameController.dispose();
+    super.dispose();
+  }
+
+  String _getDefaultName(ExportFormat fmt) {
+    switch (fmt) {
+      case ExportFormat.sqlite:
+        return 'cashflow_backup.db';
+      case ExportFormat.json:
+        return 'cashflow_backup.json';
+      case ExportFormat.csv:
+        return 'cashflow_transactions.csv';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveName = _fileNameController.text.trim().isEmpty
+        ? _getDefaultName(_selectedFormat)
+        : _fileNameController.text.trim();
+    final previewPath = kIsWeb
+        ? effectiveName
+        : p.join(_selectedDirectory, effectiveName);
+
+    return AlertDialog(
+      backgroundColor: widget.isDark ? AppColors.darkSurface : AppColors.white,
+      title: Text(
+        'Export Data & Backups',
+        style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose File Format',
+              style: AppTypography.labelSmall.copyWith(
+                color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            if (!kIsWeb) ...[
+              _buildOptionCard(
+                title: 'SQLite Database (.db)',
+                subtitle: 'Full binary database backup & restore',
+                icon: Icons.storage_rounded,
+                iconColor: AppColors.emerald700,
+                isSelected: _selectedFormat == ExportFormat.sqlite,
+                isDark: widget.isDark,
+                onTap: () {
+                  setState(() {
+                    _selectedFormat = ExportFormat.sqlite;
+                    _fileNameController.text = _getDefaultName(ExportFormat.sqlite);
+                  });
+                },
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+            _buildOptionCard(
+              title: 'JSON Backup (.json)',
+              subtitle: 'Portable structured accounts & transactions',
+              icon: Icons.data_object_rounded,
+              iconColor: AppColors.purple,
+              isSelected: _selectedFormat == ExportFormat.json,
+              isDark: widget.isDark,
+              onTap: () {
+                setState(() {
+                  _selectedFormat = ExportFormat.json;
+                  _fileNameController.text = _getDefaultName(ExportFormat.json);
+                });
+              },
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            _buildOptionCard(
+              title: 'Transactions CSV (.csv)',
+              subtitle: 'Spreadsheet format for Excel & Google Sheets',
+              icon: Icons.table_chart_rounded,
+              iconColor: AppColors.pink,
+              isSelected: _selectedFormat == ExportFormat.csv,
+              isDark: widget.isDark,
+              onTap: () {
+                setState(() {
+                  _selectedFormat = ExportFormat.csv;
+                  _fileNameController.text = _getDefaultName(ExportFormat.csv);
+                });
+              },
+            ),
+            if (!kIsWeb) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Destination Directory',
+                style: AppTypography.labelSmall.copyWith(
+                  color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: widget.isDark
+                      ? AppColors.darkSurfaceElevated
+                      : AppColors.gray100,
+                  borderRadius: AppBorderRadius.smallBorder,
+                  border: Border.all(
+                    color: widget.isDark ? AppColors.gray700 : AppColors.gray300,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _selectedDirectory,
+                        key: const Key('export_destination_directory_text'),
+                        style: AppTypography.labelSmall.copyWith(
+                          fontFamily: 'monospace',
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton(
+                      key: const Key('export_browse_directory_button'),
+                      icon: const Icon(Icons.folder_open_rounded, size: 20),
+                      tooltip: 'Browse Directory',
+                      onPressed: () async {
+                        final picked = await pickBackupDirectory(
+                          initialDirectory: _selectedDirectory,
+                        );
+                        if (picked != null && picked.trim().isNotEmpty && mounted) {
+                          setState(() {
+                            _selectedDirectory = picked.trim();
+                          });
+                        }
+                      },
+                    ),
+                    if (_selectedDirectory != widget.defaultDirectory) ...[
+                      IconButton(
+                        key: const Key('export_reset_directory_button'),
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                        tooltip: 'Reset to default folder',
+                        onPressed: () {
+                          setState(() {
+                            _selectedDirectory = widget.defaultDirectory;
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'File Name',
+              style: AppTypography.labelSmall.copyWith(
+                color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            TextField(
+              controller: _fileNameController,
+              key: const Key('export_filename_input'),
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.sm,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: AppBorderRadius.smallBorder,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Save Destination Preview:',
+              style: AppTypography.labelSmall.copyWith(
+                color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              decoration: BoxDecoration(
+                color: widget.isDark
+                    ? AppColors.darkSurfaceElevated.withValues(alpha: 0.5)
+                    : AppColors.gray50,
+                borderRadius: AppBorderRadius.smallBorder,
+              ),
+              child: Text(
+                previewPath,
+                key: const Key('export_full_path_preview'),
+                style: AppTypography.labelSmall.copyWith(
+                  color: widget.isDark ? AppColors.emerald400 : AppColors.emerald800,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('export_cancel_button'),
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('export_confirm_button'),
+          onPressed: () {
+            final name = _fileNameController.text.trim();
+            Navigator.of(context).pop((
+              format: _selectedFormat,
+              directory: _selectedDirectory,
+              fileName: name.isEmpty ? _getDefaultName(_selectedFormat) : name,
+            ));
+          },
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.emerald600,
+          ),
+          child: const Text('Confirm & Save'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOptionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppBorderRadius.smallBorder,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                  ? AppColors.emerald600.withValues(alpha: 0.2)
+                  : AppColors.emerald50)
+              : (isDark
+                  ? AppColors.darkSurfaceElevated
+                  : AppColors.gray50),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.emerald600
+                : (isDark ? AppColors.gray700 : AppColors.gray300),
+            width: isSelected ? 1.5 : 1,
+          ),
+          borderRadius: AppBorderRadius.smallBorder,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.labelLarge.copyWith(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isDark ? AppColors.darkText : AppColors.gray900,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.emerald600,
+                size: 18,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
