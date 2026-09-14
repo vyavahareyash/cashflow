@@ -561,49 +561,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Spent so far',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Spent so far',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
                     ),
-                    Text(
-                      AppFormatters.currency(
-                        _totalSpentThisMonth,
-                        isPrivate: _isPrivate,
-                      ),
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: progress > 1.0
-                            ? AppColors.danger
-                            : (isDark ? AppColors.darkText : AppColors.gray900),
-                      ),
+                  ),
+                  Text(
+                    AppFormatters.currency(
+                      _totalSpentThisMonth,
+                      isPrivate: _isPrivate,
                     ),
-                  ],
-                ),
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: progress > 1.0
+                          ? AppColors.danger
+                          : (isDark ? AppColors.darkText : AppColors.gray900),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$daysLeft days left (${AppFormatters.compactCurrency(perDayLeft, isPrivate: _isPrivate)}/day)',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Remaining',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
                     ),
-                    Text(
-                      '${AppFormatters.compactCurrency(remainingBudget, isPrivate: _isPrivate)} left of ${AppFormatters.compactCurrency(_totalBudgetLimit, isPrivate: _isPrivate)}',
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.emerald600,
-                      ),
+                  ),
+                  Text(
+                    '${AppFormatters.compactCurrency(remainingBudget, isPrivate: _isPrivate)} left of ${AppFormatters.compactCurrency(_totalBudgetLimit, isPrivate: _isPrivate)}',
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.emerald600,
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 13,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$daysLeft days left',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${AppFormatters.compactCurrency(perDayLeft, isPrivate: _isPrivate)}/day pace',
+                style: AppTypography.labelSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
               ),
             ],

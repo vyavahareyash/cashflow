@@ -2,16 +2,16 @@ class Category {
   final int? id;
   final String name;
   final double? monthlyBudget;
-  final String? _type;
+  final String _type;
 
   Category({
     this.id,
     required this.name,
     this.monthlyBudget,
     String? type = 'expense',
-  }) : _type = type;
+  }) : _type = (type == null || type.isEmpty) ? 'expense' : type;
 
-  String get type => (_type == null || _type!.isEmpty) ? 'expense' : _type!;
+  String get type => _type;
 
   bool get isExpense => type == 'expense';
   bool get isIncome => type == 'income';

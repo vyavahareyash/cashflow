@@ -5,7 +5,6 @@ import 'package:cashflow/models/goal_model.dart';
 import 'package:cashflow/models/locked_allocation_model.dart';
 import 'package:cashflow/models/salary_cycle.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
-import 'package:cashflow/screens/budget_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
