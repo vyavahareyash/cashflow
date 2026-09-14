@@ -501,5 +501,156 @@ void main() {
         expect(find.text('Confirm Payment'), findsOneWidget);
       },
     );
+
+    test(
+      'settles goal across multiple accounts creating distinct transactions per account',
+      () async {
+        final db = DatabaseHelper.instance;
+        final acc1 = await db.createAccount(
+          Account(name: 'SBI Savings', balance: 25000.0, type: 'Bank'),
+        );
+        final acc2 = await db.createAccount(
+          Account(name: 'HDFC Checking', balance: 18000.0, type: 'Bank'),
+        );
+        final categoryId = await db.createCategory(
+          Category(name: 'Travel', monthlyBudget: 50000.0),
+        );
+        final goalId = await db.createGoal(
+          Goal(
+            name: 'Europe Trip',
+            totalTarget: 50000.0,
+            targetDate: '2026-12-31',
+            currentSaved: 0.0,
+          ),
+        );
+
+        // Lock funds from both accounts
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc1,
+          amount: 15000.0,
+          date: '2026-09-01',
+        );
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc2,
+          amount: 10000.0,
+          date: '2026-09-02',
+        );
+
+        // Verify pre-settlement state
+        var goal = (await db.readAllGoals()).single;
+        expect(goal.currentSaved, 25000.0);
+        expect(await db.getTotalLockedAmount(), 25000.0);
+
+        // Settle across both accounts (10k from SBI, 6k from HDFC)
+        final txIds = await db.createMultiAccountGoalPaymentTransactions(
+          goalId: goalId,
+          amountsPerAccount: {
+            acc1: 10000.0,
+            acc2: 6000.0,
+          },
+          date: '2026-09-14',
+          categoryId: categoryId,
+          note: 'Flight and Hotel Booking',
+        );
+
+        expect(txIds, hasLength(2));
+
+        // Query transactions
+        final txs = await (await db.database).query(
+          'transactions',
+          where: 'type = ?',
+          whereArgs: ['goal_payment'],
+          orderBy: 'account_id ASC',
+        );
+        expect(txs, hasLength(2));
+
+        final tx1 = txs.firstWhere((t) => t['account_id'] == acc1);
+        expect(tx1['amount'], 10000.0);
+        expect(tx1['goal_id'], goalId);
+        expect(tx1['category_id'], categoryId);
+        expect(tx1['note'], 'Flight and Hotel Booking');
+
+        final tx2 = txs.firstWhere((t) => t['account_id'] == acc2);
+        expect(tx2['amount'], 6000.0);
+        expect(tx2['goal_id'], goalId);
+        expect(tx2['category_id'], categoryId);
+        expect(tx2['note'], 'Flight and Hotel Booking');
+
+        // Verify account physical balances deducted properly
+        final accounts = await db.readAllAccounts();
+        final sbi = accounts.firstWhere((a) => a.id == acc1);
+        final hdfc = accounts.firstWhere((a) => a.id == acc2);
+        expect(sbi.balance, 15000.0); // 25k - 10k
+        expect(hdfc.balance, 12000.0); // 18k - 6k
+
+        // Verify remaining locked allocations
+        final contributions = await db.getGoalContributions(goalId);
+        expect(contributions, hasLength(2));
+        final sbiLock = contributions.firstWhere((c) => c['account_id'] == acc1);
+        final hdfcLock = contributions.firstWhere((c) => c['account_id'] == acc2);
+        expect((sbiLock['amount'] as num).toDouble(), 5000.0); // 15k - 10k
+        expect((hdfcLock['amount'] as num).toDouble(), 4000.0); // 10k - 6k
+
+        // Verify goal currentSaved decremented by total 16,000
+        goal = (await db.readAllGoals()).single;
+        expect(goal.currentSaved, 9000.0); // 25k - 16k
+        expect(await db.getTotalLockedAmount(), 9000.0);
+      },
+    );
+
+    test(
+      'fails atomically if any account has insufficient locked funds during multi-account payment',
+      () async {
+        final db = DatabaseHelper.instance;
+        final acc1 = await db.createAccount(
+          Account(name: 'SBI', balance: 20000.0, type: 'Bank'),
+        );
+        final acc2 = await db.createAccount(
+          Account(name: 'HDFC', balance: 10000.0, type: 'Bank'),
+        );
+        final goalId = await db.createGoal(
+          Goal(
+            name: 'Bike',
+            totalTarget: 20000.0,
+            targetDate: '2026-12-31',
+            currentSaved: 0.0,
+          ),
+        );
+
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc1,
+          amount: 5000.0,
+          date: '2026-09-01',
+        );
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc2,
+          amount: 5000.0,
+          date: '2026-09-01',
+        );
+
+        // acc2 only has 5000 locked, trying to pay 8000
+        await expectLater(
+          () => db.createMultiAccountGoalPaymentTransactions(
+            goalId: goalId,
+            amountsPerAccount: {
+              acc1: 3000.0,
+              acc2: 8000.0,
+            },
+            date: '2026-09-14',
+          ),
+          throwsStateError,
+        );
+
+        // Atomicity verification: acc1 should NOT be touched
+        final accounts = await db.readAllAccounts();
+        expect(accounts.firstWhere((a) => a.id == acc1).balance, 20000.0);
+        final goal = (await db.readAllGoals()).single;
+        expect(goal.currentSaved, 10000.0);
+      },
+    );
   });
 }

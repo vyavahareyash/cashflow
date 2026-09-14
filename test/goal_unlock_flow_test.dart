@@ -251,5 +251,134 @@ void main() {
         );
       },
     );
+
+    test(
+      'unlocks goal across multiple accounts creating distinct goal_unlock transactions',
+      () async {
+        final db = DatabaseHelper.instance;
+        final acc1 = await db.createAccount(
+          Account(name: 'Checking', balance: 5000.0, type: 'Bank'),
+        );
+        final acc2 = await db.createAccount(
+          Account(name: 'Savings', balance: 10000.0, type: 'Bank'),
+        );
+        final goalId = await db.createGoal(
+          Goal(
+            name: 'Renovation',
+            totalTarget: 15000.0,
+            targetDate: '2027-01-01',
+            currentSaved: 0.0,
+          ),
+        );
+
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc1,
+          amount: 3000.0,
+          date: '2026-09-10',
+        );
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc2,
+          amount: 7000.0,
+          date: '2026-09-10',
+        );
+
+        expect(await db.calculateUsableBalance(), 5000.0); // 15k - 10k locked
+        expect(await db.getTotalLockedAmount(), 10000.0);
+
+        // Unlock 2,000 from acc1 and 4,000 from acc2
+        final txIds = await db.createMultiAccountGoalUnlockTransactions(
+          goalId: goalId,
+          amountsPerAccount: {
+            acc1: 2000.0,
+            acc2: 4000.0,
+          },
+          date: '2026-09-14',
+          note: 'Partial release',
+        );
+
+        expect(txIds, hasLength(2));
+
+        final txs = await (await db.database).query(
+          'transactions',
+          where: 'type = ?',
+          whereArgs: ['goal_unlock'],
+          orderBy: 'account_id ASC',
+        );
+        expect(txs, hasLength(2));
+        final tx1 = txs.firstWhere((t) => t['account_id'] == acc1);
+        expect(tx1['amount'], 2000.0);
+        expect(tx1['goal_id'], goalId);
+
+        final tx2 = txs.firstWhere((t) => t['account_id'] == acc2);
+        expect(tx2['amount'], 4000.0);
+        expect(tx2['goal_id'], goalId);
+
+        // Physical balances remain unchanged (5k, 10k)
+        final accounts = await db.readAllAccounts();
+        expect(accounts.firstWhere((a) => a.id == acc1).balance, 5000.0);
+        expect(accounts.firstWhere((a) => a.id == acc2).balance, 10000.0);
+
+        // Remaining locked allocations: acc1 has 1000, acc2 has 3000 -> total 4000
+        expect(await db.getTotalLockedAmount(), 4000.0);
+        expect(await db.calculateUsableBalance(), 11000.0); // 15k - 4k locked
+
+        // Goal currentSaved updated to 4000
+        final goal = (await db.readAllGoals()).single;
+        expect(goal.currentSaved, 4000.0);
+      },
+    );
+
+    test(
+      'fails atomically if any account exceeds locked funds during multi-account unlock',
+      () async {
+        final db = DatabaseHelper.instance;
+        final acc1 = await db.createAccount(
+          Account(name: 'Checking', balance: 5000.0, type: 'Bank'),
+        );
+        final acc2 = await db.createAccount(
+          Account(name: 'Savings', balance: 5000.0, type: 'Bank'),
+        );
+        final goalId = await db.createGoal(
+          Goal(
+            name: 'Emergency',
+            totalTarget: 5000.0,
+            targetDate: '2027-01-01',
+            currentSaved: 0.0,
+          ),
+        );
+
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc1,
+          amount: 2000.0,
+          date: '2026-09-10',
+        );
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: acc2,
+          amount: 2000.0,
+          date: '2026-09-10',
+        );
+
+        await expectLater(
+          () => db.createMultiAccountGoalUnlockTransactions(
+            goalId: goalId,
+            amountsPerAccount: {
+              acc1: 1000.0,
+              acc2: 5000.0, // Exceeds 2000 locked
+            },
+            date: '2026-09-14',
+          ),
+          throwsStateError,
+        );
+
+        // Verification: acc1 remains untouched
+        expect(await db.getTotalLockedAmount(), 4000.0);
+        final goal = (await db.readAllGoals()).single;
+        expect(goal.currentSaved, 4000.0);
+      },
+    );
   });
 }

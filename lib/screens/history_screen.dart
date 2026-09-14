@@ -1377,57 +1377,109 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               ],
                                             ),
                                           ),
-                                  const SizedBox(width: AppSpacing.xs),
-                                  Text(
-                                    '${_isCredit(type)
-                                        ? '+'
-                                        : type == 'transfer'
-                                        ? ''
-                                        : '-'}${AppFormatters.currency(amount)}',
-                                    style: AppTypography.titleMedium.copyWith(
-                                      color: _isCredit(type)
-                                          ? AppColors.success
-                                          : type == 'transfer'
-                                          ? AppColors.info
-                                          : AppColors.danger,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    key: Key('edit_tx_${tx['id']}'),
-                                    icon: Icon(
-                                      Icons.edit_outlined,
-                                      size: 18,
-                                      color: isDark
-                                          ? AppColors.gray400
-                                          : AppColors.gray600,
-                                    ),
-                                    visualDensity: VisualDensity.compact,
-                                    constraints: const BoxConstraints(),
-                                    padding: const EdgeInsets.all(AppSpacing.xs),
-                                    tooltip: 'Edit Transaction',
-                                    onPressed: () =>
-                                        _showEditTransactionDialog(tx),
-                                  ),
-                                  IconButton(
-                                    key: Key('delete_tx_${tx['id']}'),
-                                    icon: Icon(
-                                      Icons.delete_outline_rounded,
-                                      size: 18,
-                                      color: isDark
-                                          ? AppColors.gray500
-                                          : AppColors.gray400,
-                                    ),
-                                    visualDensity: VisualDensity.compact,
-                                    constraints: const BoxConstraints(),
-                                    padding: const EdgeInsets.all(AppSpacing.xs),
-                                    tooltip: 'Delete Transaction',
-                                    onPressed: () =>
-                                        _deleteTransaction(tx),
-                                  ),
-                                ],
-                              ),
-                            );
+                                          const SizedBox(width: AppSpacing.xs),
+                                          Text(
+                                            '${_isCredit(type)
+                                                ? '+'
+                                                : type == 'transfer'
+                                                ? ''
+                                                : '-'}${AppFormatters.currency(amount)}',
+                                            style: AppTypography.titleMedium.copyWith(
+                                              color: _isCredit(type)
+                                                  ? AppColors.success
+                                                  : type == 'transfer'
+                                                  ? AppColors.info
+                                                  : AppColors.danger,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          PopupMenuButton<String>(
+                                            key: Key('options_tx_${tx['id']}'),
+                                            icon: Icon(
+                                              Icons.more_vert_rounded,
+                                              size: 18,
+                                              color: isDark
+                                                  ? AppColors.gray400
+                                                  : AppColors.gray600,
+                                            ),
+                                            tooltip: 'Transaction options',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            splashRadius: 16,
+                                            color: isDark
+                                                ? AppColors.darkSurface
+                                                : AppColors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  AppBorderRadius.mediumBorder,
+                                              side: BorderSide(
+                                                color: isDark
+                                                    ? AppColors.darkBorder
+                                                    : AppColors.gray200,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            onSelected: (value) {
+                                              if (value == 'edit') {
+                                                _showEditTransactionDialog(tx);
+                                              } else if (value == 'delete') {
+                                                _deleteTransaction(tx);
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              PopupMenuItem(
+                                                value: 'edit',
+                                                height: 36,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.edit_outlined,
+                                                      size: 16,
+                                                      color: isDark
+                                                          ? AppColors.gray300
+                                                          : AppColors.gray700,
+                                                    ),
+                                                    const SizedBox(
+                                                        width: AppSpacing.sm),
+                                                    Text(
+                                                      'Edit',
+                                                      style: AppTypography.labelMedium
+                                                          .copyWith(
+                                                        color: isDark
+                                                            ? AppColors.darkText
+                                                            : AppColors.gray900,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'delete',
+                                                height: 36,
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.delete_outline_rounded,
+                                                      size: 16,
+                                                      color: AppColors.danger,
+                                                    ),
+                                                    const SizedBox(
+                                                        width: AppSpacing.sm),
+                                                    Text(
+                                                      'Delete',
+                                                      style: AppTypography.labelMedium
+                                                          .copyWith(
+                                                        color: AppColors.danger,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
                           }),
                         ],
                       );

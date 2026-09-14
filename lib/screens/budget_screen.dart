@@ -366,25 +366,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Monthly Budget',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Cycle: ${cycle.cycleLabel} • ${cycle.resetCountdownText} • Zero rollover',
-                    style: AppTypography.labelSmall.copyWith(
-                      fontSize: 11,
-                      color: isDark ? AppColors.gray400 : AppColors.gray600,
-                    ),
-                  ),
-                ],
+              Text(
+                'Total Monthly Budget',
+                style: AppTypography.labelMedium.copyWith(
+                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -405,6 +392,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Tooltip(
+            message:
+                'Cycle: ${cycle.cycleLabel} • ${cycle.resetCountdownText} • Zero rollover across cycles',
+            child: Text(
+              'Cycle: ${cycle.cycleLabel} • ${cycle.resetCountdownText} • Zero rollover',
+              style: AppTypography.labelSmall.copyWith(
+                fontSize: 11,
+                color: isDark ? AppColors.gray400 : AppColors.gray600,
+              ),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
