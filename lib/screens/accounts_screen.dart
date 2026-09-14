@@ -864,6 +864,8 @@ class _AccountCardState extends State<AccountCard> {
     final aggregatedLocks = AccountCard.aggregateLocks(widget.locks);
     final totalLocked =
         widget.locks.fold<double>(0.0, (sum, l) => sum + l.amount);
+    final usableBalance =
+        (acc.balance - totalLocked).clamp(0.0, double.infinity);
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -911,25 +913,37 @@ class _AccountCardState extends State<AccountCard> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    AppFormatters.currency(acc.balance),
+                    AppFormatters.currency(
+                      totalLocked > 0 ? usableBalance : acc.balance,
+                    ),
                     style: AppTypography.titleMedium.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: totalLocked > 0
+                          ? AppColors.emerald600
+                          : (isDark ? AppColors.darkText : AppColors.gray900),
                     ),
                   ),
                   if (totalLocked > 0)
                     Text(
-                      '${AppFormatters.currency(totalLocked)} locked',
+                      'Usable (${AppFormatters.compactCurrency(acc.balance)} total)',
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.warning,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
                         fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  else
+                    Text(
+                      'Balance',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                 ],
               ),
-              if (widget.onTransfer != null)
-                IconButton(
+              if (widget.onTransfer != null || widget.onEdit != null)
+                PopupMenuButton<String>(
                   icon: Icon(
-                    Icons.swap_horiz_rounded,
+                    Icons.more_vert_rounded,
                     size: 20,
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
@@ -938,23 +952,35 @@ class _AccountCardState extends State<AccountCard> {
                     minWidth: AppComponentSizes.minTouchTarget,
                     minHeight: AppComponentSizes.minTouchTarget,
                   ),
-                  tooltip: 'Transfer from this Account',
-                  onPressed: widget.onTransfer,
-                ),
-              if (widget.onEdit != null)
-                IconButton(
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    size: 18,
-                    color: isDark ? AppColors.gray400 : AppColors.gray600,
-                  ),
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  constraints: const BoxConstraints(
-                    minWidth: AppComponentSizes.minTouchTarget,
-                    minHeight: AppComponentSizes.minTouchTarget,
-                  ),
-                  tooltip: 'Edit Account',
-                  onPressed: widget.onEdit,
+                  tooltip: 'Account Options',
+                  onSelected: (action) {
+                    if (action == 'transfer') widget.onTransfer?.call();
+                    if (action == 'edit') widget.onEdit?.call();
+                  },
+                  itemBuilder: (context) => [
+                    if (widget.onTransfer != null)
+                      const PopupMenuItem(
+                        value: 'transfer',
+                        child: Row(
+                          children: [
+                            Icon(Icons.swap_horiz_rounded, size: 18),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('Transfer Funds'),
+                          ],
+                        ),
+                      ),
+                    if (widget.onEdit != null)
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('Edit Account'),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
             ],
           ),

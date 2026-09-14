@@ -26,6 +26,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Account> _accounts = [];
   Map<int, CreditCard> _creditCardsMap = {};
+  Map<int, double> _accountLocksMap = {};
   List<Goal> _goals = [];
   List<Category> _categories = [];
   List<Map<String, dynamic>> _recentTransactions = [];
@@ -38,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   bool _isLoading = true;
   bool _isPrivate = false;
+  bool _showAllAccounts = false;
   int _salaryDay = 1;
   DateTime _selectedDate = DateTime.now();
 
@@ -74,6 +76,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final Map<int, CreditCard> creditCardsMap = {
       for (final cc in creditCardsData) cc.accountId: cc,
     };
+    final Map<int, double> accountLocksMap = {};
+    for (var acc in accountsData) {
+      if (!acc.isCreditCard && acc.id != null) {
+        final locks = await db.getLocksForAccount(acc.id!);
+        accountLocksMap[acc.id!] =
+            locks.fold<double>(0.0, (sum, l) => sum + l.amount);
+      }
+    }
     final locked = await db.getTotalLockedAmount();
     final usable = await db.calculateUsableBalance();
     final goalsData = await db.readAllGoals();
@@ -92,6 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     double totalBudget = 0;
     double totalSpent = 0;
     for (var cat in categoriesData) {
+      if (!cat.isExpense) continue;
       final budget = cat.monthlyBudget;
       final hasBudget = budget != null && budget > 0;
       if (hasBudget) {
@@ -109,6 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _accounts = accountsData;
         _creditCardsMap = creditCardsMap;
+        _accountLocksMap = accountLocksMap;
         _goals = goalsData;
         _categories = categoriesData;
         _recentTransactions = transactionsData.take(5).toList();
@@ -226,6 +238,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Tooltip(
+                    message:
+                        'After goal sinking funds; budgets remain tracking limits',
+                    triggerMode: TooltipTriggerMode.tap,
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
                 ],
               ),
               IconButton(
@@ -252,13 +275,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Colors.white,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'After goal sinking funds; budgets remain tracking limits',
-            style: AppTypography.labelSmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -754,6 +770,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // --- ACCOUNTS SNAPSHOT ---
   Widget _buildAccountsSection(bool isDark) {
+    final displayedAccounts =
+        _showAllAccounts ? _accounts : _accounts.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -795,8 +814,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           )
-        else
-          ..._accounts.map((acc) => _buildAccountItem(acc, isDark)),
+        else ...[
+          ...displayedAccounts.map((acc) => _buildAccountItem(acc, isDark)),
+          if (_accounts.length > 3)
+            Center(
+              child: TextButton.icon(
+                key: const Key('dashboard_accounts_toggle_show_all'),
+                onPressed: () =>
+                    setState(() => _showAllAccounts = !_showAllAccounts),
+                icon: Icon(
+                  _showAllAccounts
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppColors.emerald600,
+                ),
+                label: Text(
+                  _showAllAccounts
+                      ? 'Show Less'
+                      : 'Show More (${_accounts.length - 3} more)',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.emerald600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -804,6 +848,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildAccountItem(Account acc, bool isDark) {
     final isBank = acc.type == 'Bank';
     final isCC = acc.isCreditCard;
+    final totalLocked = _accountLocksMap[acc.id] ?? 0.0;
+    final usableBalance =
+        (acc.balance - totalLocked).clamp(0.0, double.infinity);
+
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.symmetric(
@@ -858,14 +906,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          Text(
-            AppFormatters.currency(acc.balance, isPrivate: _isPrivate),
-            style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.w700,
-              color: (isCC && acc.balance > 0)
-                  ? AppColors.danger
-                  : (isDark ? AppColors.darkText : AppColors.gray900),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                AppFormatters.currency(
+                  (totalLocked > 0 && !isCC) ? usableBalance : acc.balance,
+                  isPrivate: _isPrivate,
+                ),
+                style: AppTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: (isCC && acc.balance > 0)
+                      ? AppColors.danger
+                      : ((totalLocked > 0 && !isCC)
+                          ? AppColors.emerald600
+                          : (isDark ? AppColors.darkText : AppColors.gray900)),
+                ),
+              ),
+              if (totalLocked > 0 && !isCC)
+                Text(
+                  'Usable (${AppFormatters.compactCurrency(acc.balance, isPrivate: _isPrivate)} total)',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    fontSize: 10,
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -999,9 +1065,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int? selectedDestinationAccountId = _accounts.length > 1
         ? _accounts[1].id
         : null;
-    int? selectedCategoryId = _categories.isNotEmpty
-        ? _categories.first.id
-        : null;
+    final expenseCategories = _categories.where((c) => c.isExpense).toList();
+    final incomeCategories = _categories.where((c) => c.isIncome).toList();
+    int? selectedCategoryId = expenseCategories.isNotEmpty
+        ? expenseCategories.first.id
+        : _categories.firstOrNull?.id;
     int? selectedGoalId = _goals.isNotEmpty ? _goals.first.id : null;
 
     final initialCc =
@@ -1021,6 +1089,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setStateSheet) {
+            final availableCats = selectedType == 'income'
+                ? incomeCategories
+                : expenseCategories;
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1125,6 +1196,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     bankAccounts.firstOrNull?.id;
                               }
                             }
+                            if (val == 'income') {
+                              if (!incomeCategories.any((c) => c.id == selectedCategoryId)) {
+                                selectedCategoryId = incomeCategories.firstOrNull?.id;
+                              }
+                            } else if (val == 'expense') {
+                              if (!expenseCategories.any((c) => c.id == selectedCategoryId)) {
+                                selectedCategoryId = expenseCategories.firstOrNull?.id;
+                              }
+                            }
                           });
                         }
                       },
@@ -1155,7 +1235,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       DropdownButtonFormField<int>(
-                        initialValue: selectedCategoryId,
+                        key: ValueKey('tx_cat_dropdown_${selectedType}_$selectedCategoryId'),
+                        initialValue: availableCats.any((c) => c.id == selectedCategoryId)
+                            ? selectedCategoryId
+                            : availableCats.firstOrNull?.id,
                         isExpanded: true,
                         dropdownColor: isDark
                             ? AppColors.darkSurfaceElevated
@@ -1178,7 +1261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             vertical: AppSpacing.md,
                           ),
                         ),
-                        items: _categories
+                        items: availableCats
                             .map(
                               (cat) => DropdownMenuItem(
                                 value: cat.id,
@@ -1676,6 +1759,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     amount: amount,
                                     date: _selectedDate.toIso8601String(),
                                     note: noteController.text.trim(),
+                                    categoryId: selectedCategoryId,
                                   );
                             } else if (selectedType == 'transfer') {
                               if (selectedDestinationAccountId == null) {

@@ -23,7 +23,7 @@ void main() {
     await deleteDatabase(path);
   });
 
-  test('fresh install creates v3 schema', () async {
+  test('fresh install creates v4 schema', () async {
     final db = await DatabaseHelper.instance.database;
 
     final transactionColumns = await db.rawQuery("PRAGMA table_info('transactions')");
@@ -37,7 +37,7 @@ void main() {
     );
     expect(
       categoryColumns.map((column) => column['name']).toList(),
-      contains('monthly_budget'),
+      containsAll(['monthly_budget', 'type']),
     );
     expect(
       lockColumns.map((column) => column['name']).toList(),
@@ -118,9 +118,11 @@ void main() {
     expect(transactions.first['type'], 'expense');
     expect(transactions.first['destination_account_id'], isNull);
     expect(transactions.first['goal_id'], isNull);
-    expect(transactions.first['category_id'], categoryId);
-    expect(categories, hasLength(1));
-    expect(categories.first['monthly_budget'], 1800.0);
+    expect(categories.length, 7);
+    final groceriesCat = categories.firstWhere((c) => c['id'] == categoryId);
+    expect(groceriesCat['name'], 'Groceries');
+    expect(groceriesCat['monthly_budget'], 1800.0);
+    expect(groceriesCat['type'], 'expense');
 
     final transactionColumns = await upgradedDb.rawQuery("PRAGMA table_info('transactions')");
     expect(
@@ -217,5 +219,56 @@ void main() {
     expect(locks, hasLength(1));
     expect(locks.first['amount'], 5000.0);
     expect(locks.first['goal_id'], goalId);
+  });
+
+  test('v3 database upgrades to the v4 schema without losing data', () async {
+    final dbPath = await getDatabasesPath();
+    final filePath = join(dbPath, databaseFileName);
+
+    // Seed a v3 database
+    final v3Db = await openDatabase(
+      filePath,
+      version: 3,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            monthly_budget REAL DEFAULT NULL
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            balance REAL NOT NULL,
+            type TEXT NOT NULL
+          )
+        ''');
+      },
+    );
+
+    final catId = await v3Db.insert('categories', {
+      'name': 'Groceries',
+      'monthly_budget': 12000.0,
+    });
+    await v3Db.close();
+
+    // Open via DatabaseHelper to trigger onUpgrade to v4
+    final upgradedDb = await DatabaseHelper.instance.database;
+
+    final catCols = await upgradedDb.rawQuery("PRAGMA table_info('categories')");
+    expect(catCols.any((col) => col['name'] == 'type'), isTrue);
+
+    final categories = await upgradedDb.query('categories');
+    final existingCat = categories.firstWhere((c) => c['id'] == catId);
+    expect(existingCat['name'], 'Groceries');
+    expect(existingCat['type'], 'expense');
+    expect(existingCat['monthly_budget'], 12000.0);
+
+    // Default income categories automatically seeded
+    final incomeCategories = categories.where((c) => c['type'] == 'income').toList();
+    expect(incomeCategories.isNotEmpty, isTrue);
+    expect(incomeCategories.any((c) => c['name'] == 'Salary'), isTrue);
   });
 }

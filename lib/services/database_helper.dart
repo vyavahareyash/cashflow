@@ -74,7 +74,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -93,6 +93,9 @@ class DatabaseHelper {
         }
         if (oldVersion < 3) {
           await _migrateV2toV3(db);
+        }
+        if (oldVersion < 4) {
+          await _migrateV3toV4(db);
         }
       },
     );
@@ -322,6 +325,37 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> _migrateV3toV4(Database db) async {
+    final catCols = await db.rawQuery("PRAGMA table_info('categories')");
+    final hasType = catCols.any((c) => c['name'] == 'type');
+    if (!hasType) {
+      await db.execute(
+        "ALTER TABLE categories ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'",
+      );
+    }
+
+    final incomeCats = await db.rawQuery(
+      "SELECT id FROM categories WHERE type = 'income'",
+    );
+    if (incomeCats.isEmpty) {
+      final defaultIncome = [
+        'Salary',
+        'Freelance',
+        'Investments',
+        'Rental',
+        'Gifts',
+        'Other Income',
+      ];
+      for (final name in defaultIncome) {
+        await db.insert('categories', {
+          'name': name,
+          'monthly_budget': null,
+          'type': 'income',
+        });
+      }
+    }
+  }
+
   // --- CREATE TABLES ---
   Future _createDB(Database db, int version) async {
     // 1. Accounts Table
@@ -339,7 +373,8 @@ class DatabaseHelper {
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        monthly_budget REAL DEFAULT NULL
+        monthly_budget REAL DEFAULT NULL,
+        type TEXT NOT NULL DEFAULT 'expense'
       )
     ''');
 
@@ -577,10 +612,16 @@ class DatabaseHelper {
     return res;
   }
 
-  Future<List<Category>> readAllCategories() async {
+  Future<List<Category>> readAllCategories({String? type}) async {
     final db = await instance.database;
-    final result = await db.query('categories');
+    final result = type != null
+        ? await db.query('categories', where: 'type = ?', whereArgs: [type])
+        : await db.query('categories');
     return result.map((json) => Category.fromMap(json)).toList();
+  }
+
+  Future<List<Category>> readCategoriesByType(String type) async {
+    return readAllCategories(type: type);
   }
 
   // --- TRANSACTION OPERATIONS ---
@@ -613,10 +654,12 @@ class DatabaseHelper {
     required int accountId,
     required double amount,
     required String date,
+    int? categoryId,
     String note = '',
   }) async {
     return _createTransaction(
       accountId: accountId,
+      categoryId: categoryId,
       amount: amount,
       date: date,
       note: note,
@@ -1609,12 +1652,18 @@ class DatabaseHelper {
   // SEED DATA: Call this once to add default categories
   Future<void> seedDatabase() async {
     final categories = [
-      Category(name: 'Groceries', monthlyBudget: 15000),
-      Category(name: 'Dining Out', monthlyBudget: 8000),
-      Category(name: 'Transport', monthlyBudget: 5000),
-      Category(name: 'Entertainment', monthlyBudget: 4000),
-      Category(name: 'Utilities & Bills', monthlyBudget: 10000),
-      Category(name: 'Shopping', monthlyBudget: 6000),
+      Category(name: 'Groceries', monthlyBudget: 15000, type: 'expense'),
+      Category(name: 'Dining Out', monthlyBudget: 8000, type: 'expense'),
+      Category(name: 'Transport', monthlyBudget: 5000, type: 'expense'),
+      Category(name: 'Entertainment', monthlyBudget: 4000, type: 'expense'),
+      Category(name: 'Utilities & Bills', monthlyBudget: 10000, type: 'expense'),
+      Category(name: 'Shopping', monthlyBudget: 6000, type: 'expense'),
+      Category(name: 'Salary', type: 'income'),
+      Category(name: 'Freelance', type: 'income'),
+      Category(name: 'Investments', type: 'income'),
+      Category(name: 'Rental', type: 'income'),
+      Category(name: 'Gifts', type: 'income'),
+      Category(name: 'Other Income', type: 'income'),
     ];
     for (var cat in categories) {
       await createCategory(cat);
@@ -1662,6 +1711,15 @@ class DatabaseHelper {
     );
     final catEntertainment = await createCategory(
       Category(name: 'Entertainment & Leisure'), // Unbudgeted optional category
+    );
+    final catSalary = await createCategory(
+      Category(name: 'Salary', type: 'income'),
+    );
+    final catFreelance = await createCategory(
+      Category(name: 'Freelance & Consulting', type: 'income'),
+    );
+    final catInvestments = await createCategory(
+      Category(name: 'Investments & Dividends', type: 'income'),
     );
 
     // Date generation helpers
@@ -1742,6 +1800,7 @@ class DatabaseHelper {
       // Monthly Salary Credit (Day 1)
       await createIncomeTransaction(
         accountId: salaryAccId,
+        categoryId: catSalary,
         amount: 95000.0,
         date: monthOffset(now, m, 1, 9, 30).toIso8601String(),
         note: 'Monthly salary deposit',
@@ -1823,12 +1882,38 @@ class DatabaseHelper {
       await createExpenseTransaction(
         accountId: salaryAccId,
         categoryId: catEntertainment,
-        amount: 1499.0,
-        date: monthOffset(now, m, 26, 19, 0).toIso8601String(),
-        note: 'Digital media streaming subscriptions',
+        amount: 5500.0,
+        date: monthOffset(now, m, 15, 15, 0).toIso8601String(),
+        note: 'Online apparel & home items',
       );
 
-      if (m == 4 || m == 1) {
+      // Cash Wallet expenses
+      await createExpenseTransaction(
+        accountId: walletAccId,
+        categoryId: catDining,
+        amount: 650.0,
+        date: monthOffset(now, m, 10, 13, 0).toIso8601String(),
+        note: 'Street food and coffee with colleagues',
+      );
+      await createExpenseTransaction(
+        accountId: walletAccId,
+        categoryId: catTransport,
+        amount: 450.0,
+        date: monthOffset(now, m, 18, 17, 30).toIso8601String(),
+        note: 'Local metro & auto rickshaw rides',
+      );
+
+      // Occasional Health & Leisure spends in select months
+      if (m == 1 || m == 3 || m == 5) {
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catEntertainment,
+          amount: 2200.0,
+          date: monthOffset(now, m, 24, 19, 0).toIso8601String(),
+          note: 'Movie night tickets & weekend arcade',
+        );
+      }
+      if (m == 2 || m == 4) {
         await createExpenseTransaction(
           accountId: walletAccId,
           categoryId: catHealth,
@@ -1841,9 +1926,19 @@ class DatabaseHelper {
       if (m == 2) {
         await createIncomeTransaction(
           accountId: salaryAccId,
+          categoryId: catFreelance,
           amount: 28000.0,
           date: monthOffset(now, m, 12, 15, 0).toIso8601String(),
           note: 'Freelance consulting retainer fee',
+        );
+      }
+      if (m == 3) {
+        await createIncomeTransaction(
+          accountId: salaryAccId,
+          categoryId: catInvestments,
+          amount: 6500.0,
+          date: monthOffset(now, m, 20, 14, 0).toIso8601String(),
+          note: 'Quarterly dividend payout',
         );
       }
     }
@@ -1856,6 +1951,7 @@ class DatabaseHelper {
 
     await createIncomeTransaction(
       accountId: salaryAccId,
+      categoryId: catSalary,
       amount: 95000.0,
       date: d1,
       note: 'Monthly salary deposit',
@@ -2169,6 +2265,11 @@ class DatabaseHelper {
     final locks = await getLocksForAccount(accountId);
     final totalLocked = locks.fold<double>(0.0, (sum, l) => sum + l.amount);
     return (account.balance - totalLocked).clamp(0.0, double.infinity);
+  }
+
+  /// Gets the usable balance for an account (balance - total locked allocations).
+  Future<double> getUsableBalanceForAccount(int accountId) async {
+    return getAccountAvailableToLock(accountId);
   }
 
   // Get locked breakdown for a specific account (for Accounts screen)
@@ -2524,6 +2625,47 @@ class DatabaseHelper {
     return map;
   }
 
+  /// Gets income totals grouped by category_id for a given cycle or month.
+  Future<Map<int, double>> getMonthlyIncomeByCategoryId({
+    int? month,
+    int? year,
+    SalaryCycle? cycle,
+  }) async {
+    final db = await instance.database;
+    String whereClause;
+    List<dynamic> whereArgs;
+
+    if (cycle != null) {
+      whereClause =
+          "WHERE category_id IS NOT NULL AND type = 'income' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
+      whereArgs = [cycle.startDateString, cycle.endDateString];
+    } else {
+      final now = DateTime.now();
+      final targetYear = year ?? now.year;
+      final targetMonth = month ?? now.month;
+      final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
+      whereClause =
+          "WHERE category_id IS NOT NULL AND type = 'income' AND SUBSTR(date, 1, 7) = ?";
+      whereArgs = [monthStr];
+    }
+
+    final result = await db.rawQuery(
+      'SELECT category_id, SUM(amount) as total FROM transactions '
+      '$whereClause '
+      'GROUP BY category_id',
+      whereArgs,
+    );
+
+    final map = <int, double>{};
+    for (final row in result) {
+      final catId = row['category_id'] as int?;
+      if (catId != null) {
+        map[catId] = (row['total'] as num? ?? 0).toDouble();
+      }
+    }
+    return map;
+  }
+
   /// Gets total expense spending across all categories for a given salary cycle.
   Future<double> getTotalSpendingForSalaryCycle(SalaryCycle cycle) async {
     final db = await instance.database;
@@ -2615,7 +2757,30 @@ class DatabaseHelper {
         }
         for (final category
             in data['categories'] as List<Map<String, dynamic>>) {
-          await txn.insert('categories', category);
+          final catMap = Map<String, dynamic>.from(category);
+          catMap['type'] ??= 'expense';
+          await txn.insert('categories', catMap);
+        }
+
+        final incomeCats = await txn.rawQuery(
+          "SELECT id FROM categories WHERE type = 'income'",
+        );
+        if (incomeCats.isEmpty) {
+          const defaultIncome = [
+            'Salary',
+            'Freelance',
+            'Investments',
+            'Rental',
+            'Gifts',
+            'Other Income',
+          ];
+          for (final name in defaultIncome) {
+            await txn.insert('categories', {
+              'name': name,
+              'monthly_budget': null,
+              'type': 'income',
+            });
+          }
         }
         for (final goal in data['goals'] as List<Map<String, dynamic>>) {
           await txn.insert('goals', goal);
