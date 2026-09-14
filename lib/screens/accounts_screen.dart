@@ -9,6 +9,7 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 import '../components/pay_cc_bill_modal.dart';
+import '../components/app_dialogs.dart';
 
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({super.key});
@@ -352,7 +353,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               ),
                             ),
                             value: autoLock,
-                            activeColor: AppColors.purple,
+                            activeThumbColor: AppColors.purple,
                             onChanged: (val) =>
                                 setStateDialog(() => autoLock = val),
                           ),
@@ -420,340 +421,23 @@ class _AccountsScreenState extends State<AccountsScreen> {
   }
 
   void _showEditAccountDialog(Account account) {
-    final nameController = TextEditingController(text: account.name);
-    final balanceController = TextEditingController(
-      text: account.balance.toStringAsFixed(0),
-    );
-    String selectedType = account.type;
-    final isCC = account.isCreditCard;
-    final cc = _creditCardsMap[account.id];
-
-    final creditLimitController = TextEditingController(
-      text: cc?.creditLimit.toStringAsFixed(0) ?? '',
-    );
-    final statementDayController = TextEditingController(
-      text: cc?.statementDay.toString() ?? '1',
-    );
-    final dueDayController = TextEditingController(
-      text: cc?.dueDay.toString() ?? '20',
-    );
-    int? defaultLockAccountId = cc?.defaultLockAccountId;
-    bool autoLock = cc?.autoLock ?? true;
-    final formKey = GlobalKey<FormState>();
-
     showDialog(
       context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
-        return StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
-            backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: AppBorderRadius.xlargeBorder,
-            ),
-            title: Text(
-              isCC ? 'Edit Credit Card' : 'Edit Account',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CustomInputField(
-                      controller: nameController,
-                      label: isCC ? 'Card Name' : 'Account Name',
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? 'Please enter an account name'
-                          : null,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    CustomInputField(
-                      controller: balanceController,
-                      label: isCC ? 'Current Outstanding (Owed)' : 'Balance',
-                      prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter balance';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    if (!isCC)
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedType,
-                        isExpanded: true,
-                        dropdownColor: isDark
-                            ? AppColors.darkSurfaceElevated
-                            : AppColors.white,
-                        decoration: InputDecoration(
-                          labelText: 'Account Type',
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.gray50,
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                          ),
-                        ),
-                        items: ['Bank', 'Cash', 'Savings', 'Wallet']
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) =>
-                            setStateDialog(() => selectedType = val!),
-                      )
-                    else ...[
-                      CustomInputField(
-                        controller: creditLimitController,
-                        label: 'Total Credit Limit',
-                        prefixText: '₹ ',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter credit limit';
-                          }
-                          final numVal = double.tryParse(value);
-                          if (numVal == null || numVal <= 0) {
-                            return 'Please enter a valid positive limit';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: CustomInputField(
-                              controller: statementDayController,
-                              label: 'Statement Day',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                final day = int.tryParse(value ?? '');
-                                if (day == null || day < 1 || day > 31) {
-                                  return '1-31';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: CustomInputField(
-                              controller: dueDayController,
-                              label: 'Due Day',
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                final day = int.tryParse(value ?? '');
-                                if (day == null || day < 1 || day > 31) {
-                                  return '1-31';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (bankAccounts.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'Default Account to Lock Funds',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.gray300
-                                : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        DropdownButtonFormField<int>(
-                          initialValue: defaultLockAccountId,
-                          isExpanded: true,
-                          dropdownColor: isDark
-                              ? AppColors.darkSurfaceElevated
-                              : AppColors.white,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.gray50,
-                            border: OutlineInputBorder(
-                              borderRadius: AppBorderRadius.mediumBorder,
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : AppColors.gray300,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md,
-                            ),
-                          ),
-                          items: bankAccounts
-                              .map(
-                                (a) => DropdownMenuItem(
-                                  value: a.id,
-                                  child: Text(a.name),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) => setStateDialog(
-                            () => defaultLockAccountId = val,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text(
-                            'Auto-lock funds on spend',
-                            style: AppTypography.bodySmall,
-                          ),
-                          subtitle: Text(
-                            'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: isDark
-                                  ? AppColors.gray400
-                                  : AppColors.gray600,
-                            ),
-                          ),
-                          value: autoLock,
-                          activeColor: AppColors.purple,
-                          onChanged: (val) =>
-                              setStateDialog(() => autoLock = val),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => _showDeleteConfirmation(account),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(
-                    color: AppColors.danger,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              CustomButton(
-                label: 'Update',
-                width: 100,
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    await DatabaseHelper.instance.updateAccount(
-                      Account(
-                        id: account.id,
-                        name: nameController.text.trim(),
-                        balance:
-                            double.tryParse(balanceController.text.trim()) ??
-                            0.0,
-                        type: selectedType,
-                      ),
-                    );
-                    if (isCC && cc != null) {
-                      await DatabaseHelper.instance.updateCreditCard(
-                        CreditCard(
-                          id: cc.id,
-                          accountId: account.id!,
-                          creditLimit:
-                              double.tryParse(
-                                creditLimitController.text.trim(),
-                              ) ??
-                              cc.creditLimit,
-                          statementDay:
-                              int.tryParse(
-                                statementDayController.text.trim(),
-                              ) ??
-                              cc.statementDay,
-                          dueDay:
-                              int.tryParse(dueDayController.text.trim()) ??
-                              cc.dueDay,
-                          defaultLockAccountId: defaultLockAccountId,
-                          autoLock: autoLock,
-                        ),
-                      );
-                    }
-                    if (context.mounted) Navigator.pop(context);
-                    _refreshAccounts();
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDeleteConfirmation(Account account) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account?'),
-        content: Text(
-          'Are you sure you want to delete "${account.name}"? Any past transactions referencing this account will remain in ledger.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await DatabaseHelper.instance.deleteAccount(account.id!);
-              Navigator.pop(context); // close delete dialog
-              Navigator.pop(context); // close edit dialog
-              _refreshAccounts();
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(
-                color: AppColors.danger,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+      builder: (dialogCtx) => EditAccountDialog(
+        account: account,
+        creditCard: _creditCardsMap[account.id],
+        bankAccounts: _accounts.where((a) => !a.isCreditCard).toList(),
+        onAccountSaved: _refreshAccounts,
+        onAccountDeleted: _refreshAccounts,
       ),
     );
   }
 
   void _showTransferDialog(Account sourceAccount) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final otherAccounts =
         _accounts.where((a) => a.id != sourceAccount.id && !a.isCreditCard).toList();
     if (otherAccounts.isEmpty) return;
-
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
-    int? destinationAccountId = otherAccounts.first.id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
@@ -762,196 +446,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetCtx) {
-        return StatefulBuilder(
-          builder: (context, setStateSheet) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: AppSpacing.lg,
-                right: AppSpacing.lg,
-                top: AppSpacing.lg,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.gray700 : AppColors.gray300,
-                          borderRadius: AppBorderRadius.pillBorder,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'Transfer from "${sourceAccount.name}"',
-                      style: AppTypography.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Move funds between your physical accounts. Balance: ${AppFormatters.currency(sourceAccount.balance)}',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    CustomInputField(
-                      controller: amountController,
-                      label: 'Amount to Transfer',
-                      prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      prefixIcon: Icons.swap_horiz_rounded,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    Text(
-                      'Destination Account',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: isDark ? AppColors.gray300 : AppColors.gray700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    DropdownButtonFormField<int>(
-                      initialValue: destinationAccountId,
-                      isExpanded: true,
-                      dropdownColor: isDark
-                          ? AppColors.darkSurfaceElevated
-                          : AppColors.white,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.darkSurface
-                            : AppColors.gray50,
-                        border: OutlineInputBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppColors.darkBorder
-                                : AppColors.gray300,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
-                        ),
-                      ),
-                      items: otherAccounts.map((acc) {
-                        return DropdownMenuItem<int>(
-                          value: acc.id,
-                          child: Text(
-                            '${acc.name} (${AppFormatters.currency(acc.balance)})',
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setStateSheet(() => destinationAccountId = val);
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    CustomInputField(
-                      controller: noteController,
-                      label: 'Note (Optional)',
-                      hint: 'e.g. ATM withdrawal, savings transfer',
-                      prefixIcon: Icons.notes_rounded,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: AppComponentSizes.buttonHeightLarge,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (destinationAccountId == null ||
-                              amountController.text.trim().isEmpty) {
-                            return;
-                          }
-                          final amount =
-                              double.tryParse(amountController.text.trim()) ??
-                              0.0;
-                          if (amount <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter an amount > 0'),
-                              ),
-                            );
-                            return;
-                          }
-                          if (amount > sourceAccount.balance) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Cannot transfer more than account balance (${AppFormatters.currency(sourceAccount.balance)})',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          try {
-                            await DatabaseHelper.instance
-                                .createTransferTransaction(
-                              sourceAccountId: sourceAccount.id!,
-                              destinationAccountId: destinationAccountId!,
-                              amount: amount,
-                              date: DateTime.now().toIso8601String(),
-                              note: noteController.text.trim(),
-                            );
-                            if (sheetCtx.mounted) Navigator.pop(sheetCtx);
-                            _refreshAccounts();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Transferred ${AppFormatters.currency(amount)} successfully!',
-                                  ),
-                                  backgroundColor: AppColors.emerald700,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Transfer failed: $e'),
-                                  backgroundColor: AppColors.danger,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.emerald700,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                          ),
-                        ),
-                        child: const Text(
-                          'Complete Transfer',
-                          style: AppTypography.titleMedium,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (sheetCtx) => TransferFundsModal(
+        sourceAccount: sourceAccount,
+        destinationAccounts: otherAccounts,
+        onTransferCompleted: _refreshAccounts,
+      ),
     );
   }
 
@@ -1895,6 +1394,604 @@ class CreditCardAccountCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class EditAccountDialog extends StatefulWidget {
+  final Account account;
+  final CreditCard? creditCard;
+  final List<Account> bankAccounts;
+  final VoidCallback? onAccountSaved;
+  final VoidCallback? onAccountDeleted;
+
+  const EditAccountDialog({
+    super.key,
+    required this.account,
+    this.creditCard,
+    this.bankAccounts = const [],
+    this.onAccountSaved,
+    this.onAccountDeleted,
+  });
+
+  @override
+  State<EditAccountDialog> createState() => _EditAccountDialogState();
+}
+
+class _EditAccountDialogState extends State<EditAccountDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _balanceController;
+  late String _selectedType;
+  late final TextEditingController _creditLimitController;
+  late final TextEditingController _statementDayController;
+  late final TextEditingController _dueDayController;
+  int? _defaultLockAccountId;
+  late bool _autoLock;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.account.name);
+    _balanceController = TextEditingController(
+      text: widget.account.balance.toStringAsFixed(0),
+    );
+    _selectedType = widget.account.type;
+    _creditLimitController = TextEditingController(
+      text: widget.creditCard?.creditLimit.toStringAsFixed(0) ?? '',
+    );
+    _statementDayController = TextEditingController(
+      text: widget.creditCard?.statementDay.toString() ?? '1',
+    );
+    _dueDayController = TextEditingController(
+      text: widget.creditCard?.dueDay.toString() ?? '20',
+    );
+    _defaultLockAccountId = widget.creditCard?.defaultLockAccountId;
+    _autoLock = widget.creditCard?.autoLock ?? true;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _balanceController.dispose();
+    _creditLimitController.dispose();
+    _statementDayController.dispose();
+    _dueDayController.dispose();
+    super.dispose();
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: Text(
+          'Are you sure you want to delete "${widget.account.name}"? Any past transactions referencing this account will remain in ledger.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await DatabaseHelper.instance.deleteAccount(widget.account.id!);
+              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+              if (context.mounted) Navigator.pop(context);
+              widget.onAccountDeleted?.call();
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCC = widget.account.isCreditCard;
+    final bankAccounts = widget.bankAccounts;
+
+    return AlertDialog(
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppBorderRadius.xlargeBorder,
+      ),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              isCC ? 'Edit Credit Card' : 'Edit Account',
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.danger,
+            ),
+            tooltip: 'Delete',
+            onPressed: () => _showDeleteConfirmation(context),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CustomInputField(
+                controller: _nameController,
+                label: isCC ? 'Card Name' : 'Account Name',
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty)
+                        ? 'Please enter an account name'
+                        : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              CustomInputField(
+                controller: _balanceController,
+                label: isCC ? 'Current Outstanding (Owed)' : 'Balance',
+                prefixText: '₹ ',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter balance';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (!isCC)
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedType,
+                  isExpanded: true,
+                  dropdownColor: isDark
+                      ? AppColors.darkSurfaceElevated
+                      : AppColors.white,
+                  decoration: InputDecoration(
+                    labelText: 'Account Type',
+                    filled: true,
+                    fillColor: isDark
+                        ? AppColors.darkSurface
+                        : AppColors.gray50,
+                    border: OutlineInputBorder(
+                      borderRadius: AppBorderRadius.mediumBorder,
+                    ),
+                  ),
+                  items: ['Bank', 'Cash', 'Savings', 'Wallet']
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) =>
+                      setState(() => _selectedType = val!),
+                )
+              else ...[
+                CustomInputField(
+                  controller: _creditLimitController,
+                  label: 'Total Credit Limit',
+                  prefixText: '₹ ',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter credit limit';
+                    }
+                    final numVal = double.tryParse(value);
+                    if (numVal == null || numVal <= 0) {
+                      return 'Please enter a valid positive limit';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomInputField(
+                        controller: _statementDayController,
+                        label: 'Statement Day',
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          final day = int.tryParse(value ?? '');
+                          if (day == null || day < 1 || day > 31) {
+                            return '1-31';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: CustomInputField(
+                        controller: _dueDayController,
+                        label: 'Due Day',
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          final day = int.tryParse(value ?? '');
+                          if (day == null || day < 1 || day > 31) {
+                            return '1-31';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (bankAccounts.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Default Account to Lock Funds',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: isDark
+                          ? AppColors.gray300
+                          : AppColors.gray700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  DropdownButtonFormField<int>(
+                    initialValue: _defaultLockAccountId,
+                    isExpanded: true,
+                    dropdownColor: isDark
+                        ? AppColors.darkSurfaceElevated
+                        : AppColors.white,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.darkSurface
+                          : AppColors.gray50,
+                      border: OutlineInputBorder(
+                        borderRadius: AppBorderRadius.mediumBorder,
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : AppColors.gray300,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
+                    ),
+                    items: bankAccounts
+                        .map(
+                          (a) => DropdownMenuItem(
+                            value: a.id,
+                            child: Text(a.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(
+                      () => _defaultLockAccountId = val,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      'Auto-lock funds on spend',
+                      style: AppTypography.bodySmall,
+                    ),
+                    subtitle: Text(
+                      'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark
+                            ? AppColors.gray400
+                            : AppColors.gray600,
+                      ),
+                    ),
+                    value: _autoLock,
+                    activeThumbColor: AppColors.purple,
+                    onChanged: (val) =>
+                        setState(() => _autoLock = val),
+                  ),
+                ],
+              ],
+            ],
+          ),
+        ),
+      ),
+      actionsPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        CustomButton(
+          label: 'Update',
+          width: 120,
+          onPressed: () async {
+            if (_formKey.currentState!.validate()) {
+              await DatabaseHelper.instance.updateAccount(
+                Account(
+                  id: widget.account.id,
+                  name: _nameController.text.trim(),
+                  balance:
+                      double.tryParse(_balanceController.text.trim()) ??
+                      0.0,
+                  type: _selectedType,
+                ),
+              );
+              if (isCC && widget.creditCard != null) {
+                await DatabaseHelper.instance.updateCreditCard(
+                  CreditCard(
+                    id: widget.creditCard!.id,
+                    accountId: widget.account.id!,
+                    creditLimit:
+                        double.tryParse(
+                          _creditLimitController.text.trim(),
+                        ) ??
+                        widget.creditCard!.creditLimit,
+                    statementDay:
+                        int.tryParse(
+                          _statementDayController.text.trim(),
+                        ) ??
+                        widget.creditCard!.statementDay,
+                    dueDay:
+                        int.tryParse(_dueDayController.text.trim()) ??
+                        widget.creditCard!.dueDay,
+                    defaultLockAccountId: _defaultLockAccountId,
+                    autoLock: _autoLock,
+                  ),
+                );
+              }
+              if (context.mounted) Navigator.pop(context);
+              widget.onAccountSaved?.call();
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class TransferFundsModal extends StatefulWidget {
+  final Account sourceAccount;
+  final List<Account> destinationAccounts;
+  final VoidCallback? onTransferCompleted;
+
+  const TransferFundsModal({
+    super.key,
+    required this.sourceAccount,
+    required this.destinationAccounts,
+    this.onTransferCompleted,
+  });
+
+  @override
+  State<TransferFundsModal> createState() => _TransferFundsModalState();
+}
+
+class _TransferFundsModalState extends State<TransferFundsModal> {
+  final _amountController = TextEditingController();
+  final _noteController = TextEditingController();
+  late int? _destinationAccountId;
+
+  @override
+  void initState() {
+    super.initState();
+    _destinationAccountId = widget.destinationAccounts.isNotEmpty
+        ? widget.destinationAccounts.first.id
+        : null;
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        top: AppSpacing.lg,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.gray700 : AppColors.gray300,
+                  borderRadius: AppBorderRadius.pillBorder,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Transfer from "${widget.sourceAccount.name}"',
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Move funds between your physical accounts. Balance: ${AppFormatters.currency(widget.sourceAccount.balance)}',
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark ? AppColors.gray400 : AppColors.gray600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            CustomInputField(
+              controller: _amountController,
+              label: 'Amount to Transfer',
+              prefixText: '₹ ',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              prefixIcon: Icons.swap_horiz_rounded,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Destination Account',
+              style: AppTypography.labelMedium.copyWith(
+                color: isDark ? AppColors.gray300 : AppColors.gray700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            DropdownButtonFormField<int>(
+              initialValue: _destinationAccountId,
+              isExpanded: true,
+              dropdownColor: isDark
+                  ? AppColors.darkSurfaceElevated
+                  : AppColors.white,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: isDark
+                    ? AppColors.darkSurface
+                    : AppColors.gray50,
+                border: OutlineInputBorder(
+                  borderRadius: AppBorderRadius.mediumBorder,
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? AppColors.darkBorder
+                        : AppColors.gray300,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
+              ),
+              items: widget.destinationAccounts.map((acc) {
+                return DropdownMenuItem<int>(
+                  value: acc.id,
+                  child: Text(
+                    '${acc.name} (${AppFormatters.currency(acc.balance)})',
+                  ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() => _destinationAccountId = val);
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            CustomInputField(
+              controller: _noteController,
+              label: 'Note (Optional)',
+              hint: 'e.g. ATM withdrawal, savings transfer',
+              prefixIcon: Icons.notes_rounded,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            SizedBox(
+              width: double.infinity,
+              height: AppComponentSizes.buttonHeightLarge,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (_destinationAccountId == null) {
+                    await AppDialogs.showWarning(
+                      context,
+                      message: 'Please select a destination account',
+                    );
+                    return;
+                  }
+                  if (_amountController.text.trim().isEmpty) {
+                    await AppDialogs.showWarning(
+                      context,
+                      message: 'Please enter an amount',
+                    );
+                    return;
+                  }
+                  final amount =
+                      double.tryParse(_amountController.text.trim()) ?? 0.0;
+                  if (amount <= 0) {
+                    await AppDialogs.showWarning(
+                      context,
+                      message: 'Please enter an amount > 0',
+                    );
+                    return;
+                  }
+                  if (amount > widget.sourceAccount.balance) {
+                    await AppDialogs.showWarning(
+                      context,
+                      message:
+                          'Cannot transfer more than account balance (${AppFormatters.currency(widget.sourceAccount.balance)})',
+                    );
+                    return;
+                  }
+
+                  try {
+                    await DatabaseHelper.instance.createTransferTransaction(
+                      sourceAccountId: widget.sourceAccount.id!,
+                      destinationAccountId: _destinationAccountId!,
+                      amount: amount,
+                      date: DateTime.now().toIso8601String(),
+                      note: _noteController.text.trim(),
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                    widget.onTransferCompleted?.call();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Transferred ${AppFormatters.currency(amount)} successfully!',
+                          ),
+                          backgroundColor: AppColors.emerald700,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      await AppDialogs.showWarning(
+                        context,
+                        message: 'Transfer failed: $e',
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppBorderRadius.mediumBorder,
+                  ),
+                ),
+                child: const Text(
+                  'Complete Transfer',
+                  style: AppTypography.titleMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
       ),
     );
   }

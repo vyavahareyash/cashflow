@@ -12,6 +12,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/category_badge.dart';
+import '../components/app_dialogs.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int tabIndex)? onNavigateTab;
@@ -1651,22 +1652,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onPressed: () async {
                           if (amountController.text.isEmpty ||
                               selectedAccountId == null) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text('Select an account and amount.'),
-                              ),
+                            await AppDialogs.showWarning(
+                              ctx,
+                              message: 'Select an account and amount.',
                             );
                             return;
                           }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Enter an amount greater than zero.',
-                                ),
-                              ),
+                            await AppDialogs.showWarning(
+                              ctx,
+                              message: 'Enter an amount greater than zero.',
                             );
                             return;
                           }
@@ -1769,9 +1766,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             }
                           } catch (error) {
                             if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text(error.toString())),
-                              );
+                              await AppDialogs.showWarning(ctx, message: error.toString());
                             }
                             return;
                           }
