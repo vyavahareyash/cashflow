@@ -22,6 +22,7 @@ class DatabaseHelper {
   // Singleton pattern: ensures only one database connection exists
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  static Future<Database>? _databaseFuture;
 
   /// Global notifier that broadcasts whenever any financial data or database state changes
   static final ValueNotifier<int> dataRevision = ValueNotifier<int>(0);
@@ -33,8 +34,9 @@ class DatabaseHelper {
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('money_tracker.db');
+    if (_database != null && _database!.isOpen) return _database!;
+    _databaseFuture ??= _initDB('money_tracker.db');
+    _database = await _databaseFuture;
     return _database!;
   }
 
@@ -60,6 +62,7 @@ class DatabaseHelper {
     final path = join(dbPath, 'money_tracker.db');
     await deleteDatabase(path);
     _database = null; // Reset the singleton instance
+    _databaseFuture = null;
     notifyDataChanged();
   }
 
@@ -339,16 +342,21 @@ class DatabaseHelper {
 
   // Close database
   Future close() async {
-    if (_database == null) return;
-    final db = _database!;
-    await db.close();
+    final db = _database;
     _database = null;
+    _databaseFuture = null;
+    if (db != null && db.isOpen) {
+      await db.close();
+    }
   }
 
   // --- DATABASE MANAGEMENT ---
 
-  /// Exports the database file to a user-selected location.
-  Future<String?> exportDatabase() async {
+  /// Exports the database file to a user-selected location or effective backup directory.
+  Future<String?> exportDatabase({
+    String? destinationDirectory,
+    String? fileName,
+  }) async {
     if (kIsWeb) return null;
 
     try {
@@ -360,9 +368,13 @@ class DatabaseHelper {
         throw Exception('Database file not found');
       }
 
-      // Use the Documents directory as a default export location
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final backupPath = join(documentsDir.path, 'cashflow_backup.db');
+      final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
+      final name = fileName ?? 'cashflow_backup.db';
+      final backupDir = Directory(targetDir);
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+      final backupPath = join(targetDir, name);
       final backupFile = await file.copy(backupPath);
       await setLastBackupTimestamp(DateTime.now());
 
@@ -2093,7 +2105,10 @@ class DatabaseHelper {
 
   // --- JSON EXPORT/IMPORT ---
   /// Exports all database tables to a JSON file.
-  Future<String?> exportDatabaseAsJSON() async {
+  Future<String?> exportDatabaseAsJSON({
+    String? destinationDirectory,
+    String? fileName,
+  }) async {
     try {
       final db = await instance.database;
 
@@ -2113,9 +2128,13 @@ class DatabaseHelper {
             .toList(),
       );
 
+      final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
+      final name = fileName ?? 'cashflow_backup.json';
+
       final path = await saveBackupBytes(
-        'cashflow_backup.json',
+        name,
         utf8.encode(jsonString),
+        destinationDirectory: targetDir,
       );
       if (path != null) {
         await setLastBackupTimestamp(DateTime.now());
@@ -2184,15 +2203,21 @@ class DatabaseHelper {
 
   // --- CSV EXPORT ---
   /// Exports transactions to a CSV file.
-  Future<String?> exportTransactionsAsCSV() async {
+  Future<String?> exportTransactionsAsCSV({
+    String? destinationDirectory,
+    String? fileName,
+  }) async {
     try {
       final transactions = await getTransactionHistory();
 
       final csv = BackupCodec.transactionsCsv(transactions);
+      final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
+      final name = fileName ?? 'cashflow_transactions.csv';
 
       return await saveBackupBytes(
-        'cashflow_transactions.csv',
+        name,
         utf8.encode(csv),
+        destinationDirectory: targetDir,
       );
     } catch (e, stackTrace) {
       developer.log(
@@ -2487,5 +2512,55 @@ class DatabaseHelper {
   Future<void> setLastBackupTimestamp(DateTime timestamp) async {
     await setSetting('last_backup_timestamp', timestamp.toIso8601String());
     notifyDataChanged();
+  }
+
+  /// Retrieves configured custom backup directory, or null if using system default.
+  Future<String?> getCustomBackupPath() async {
+    return getSetting('custom_backup_path');
+  }
+
+  /// Persists or clears configured custom backup directory.
+  Future<void> setCustomBackupPath(String? path) async {
+    if (path == null || path.trim().isEmpty) {
+      final db = await instance.database;
+      await db.delete(
+        'app_settings',
+        where: 'key = ?',
+        whereArgs: ['custom_backup_path'],
+      );
+    } else {
+      await setSetting('custom_backup_path', path.trim());
+    }
+    notifyDataChanged();
+  }
+
+  /// Retrieves the default backup directory for this platform.
+  Future<String> getDefaultBackupDirectory() async {
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+      try {
+        return await getDatabasesPath();
+      } catch (_) {
+        return Directory.systemTemp.path;
+      }
+    }
+    try {
+      final documentsDir = await getApplicationDocumentsDirectory();
+      return documentsDir.path;
+    } catch (_) {
+      try {
+        return await getDatabasesPath();
+      } catch (_) {
+        return Directory.systemTemp.path;
+      }
+    }
+  }
+
+  /// Retrieves effective backup directory (custom if set, otherwise default).
+  Future<String> getEffectiveBackupDirectory() async {
+    final custom = await getCustomBackupPath();
+    if (custom != null && custom.trim().isNotEmpty) {
+      return custom.trim();
+    }
+    return getDefaultBackupDirectory();
   }
 }

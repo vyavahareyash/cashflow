@@ -4,11 +4,46 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<String?> saveBackupBytes(String filename, List<int> bytes) async {
-  final documentsDir = await getApplicationDocumentsDirectory();
-  final file = File(join(documentsDir.path, filename));
+Future<String?> saveBackupBytes(
+  String filename,
+  List<int> bytes, {
+  String? destinationDirectory,
+  String? fullPath,
+}) async {
+  String resolvedPath;
+  if (fullPath != null && fullPath.isNotEmpty) {
+    resolvedPath = fullPath;
+  } else if (destinationDirectory != null && destinationDirectory.isNotEmpty) {
+    resolvedPath = join(destinationDirectory, filename);
+  } else {
+    String docsPath;
+    if (Platform.environment.containsKey('FLUTTER_TEST')) {
+      docsPath = Directory.systemTemp.path;
+    } else {
+      try {
+        final documentsDir = await getApplicationDocumentsDirectory();
+        docsPath = documentsDir.path;
+      } catch (_) {
+        docsPath = Directory.systemTemp.path;
+      }
+    }
+    resolvedPath = join(docsPath, filename);
+  }
+
+  final file = File(resolvedPath);
+  final parentDir = file.parent;
+  if (!await parentDir.exists()) {
+    await parentDir.create(recursive: true);
+  }
   await file.writeAsBytes(bytes, flush: true);
   return file.path;
+}
+
+Future<String?> pickBackupDirectory({String? initialDirectory}) async {
+  return await FilePicker.getDirectoryPath(
+    dialogTitle: 'Select Backup Directory',
+    initialDirectory: initialDirectory,
+  );
 }
 
 Future<List<int>?> pickBackupBytes() async {
