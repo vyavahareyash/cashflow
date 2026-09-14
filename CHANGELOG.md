@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-09-14
+
+### Added
+- **Multi-Account Goal Settlement**: Settle goals funded by multiple accounts simultaneously, debiting physical balances and locked allocations proportionally and recording individual `goal_payment` transactions per account (#63).
+- **Account-Specific Goal Unlock with Real-Time Validation**: Select specific accounts to unlock funds to with strict real-time balance limit checks, instant "Max" quick-fill action, and an "Unlock All Accounts" batch release option (#63).
+- **Multi-Month Timeline Demo Data**: Expanded demo dataset across 6 historical months ($M_{-5} \dots M_0$) exercising over-budget, untouched, completed goals, goal unlocks, and goal payments (#63).
+- **Scrolled Analytics Visual Testing**: Added scrolled trend chart capture markers (`16b`, `26b`) for complete automated screenshot coverage (#63).
+
+### Changed
+- **Activity Ledger Row Optimization**: Consolidated transaction edit and delete actions into a clean popup menu button (`⋮`), freeing ~40px horizontal space per row for long notes and accounts (#63).
+- **Visual Capture Timing**: Added a 4-second delay before dashboard capture to ensure sample data SnackBars cleanly dismiss (#63).
+
+### Fixed
+- **Budget Screen Cycle Metadata Layout**: Resolved RenderFlex overflow and text clipping on total monthly budget card; cycle metadata now spans full width with informative Tooltips (#63).
+
+---
+
 ## [2.0.0] - 2026-09-14
 
 ### Added
