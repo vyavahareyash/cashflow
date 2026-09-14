@@ -480,5 +480,60 @@ void main() {
       final spentInMonth = await db.getCategorySpendingForMonth(catId, cycle: cycle);
       expect(spentInMonth, 25000.0);
     });
+
+    test('Dashboard calculation excludes unbudgeted categories from budget envelope', () async {
+      final db = DatabaseHelper.instance;
+
+      final accId = await db.createAccount(
+        Account(name: 'Checking', balance: 50000.0, type: 'Bank'),
+      );
+
+      final budgetedCat = await db.createCategory(
+        Category(name: 'Groceries', monthlyBudget: 15000.0),
+      );
+      final unbudgetedCat = await db.createCategory(
+        Category(name: 'Emergency', monthlyBudget: null),
+      );
+
+      final today = DateTime.now().toIso8601String();
+      await db.createExpenseTransaction(
+        accountId: accId,
+        categoryId: budgetedCat,
+        amount: 4000.0,
+        date: today,
+        note: 'Supermarket',
+      );
+      await db.createExpenseTransaction(
+        accountId: accId,
+        categoryId: unbudgetedCat,
+        amount: 8000.0,
+        date: today,
+        note: 'Doctor visit',
+      );
+
+      final categories = await db.readAllCategories();
+      final cycle = SalaryCycle.resolve(salaryDay: 1);
+      final spendingMap = await db.getMonthlySpendingByCategoryId(cycle: cycle);
+
+      double totalBudget = 0;
+      double totalBudgetedSpent = 0;
+      for (var cat in categories) {
+        final budget = cat.monthlyBudget;
+        final hasBudget = budget != null && budget > 0;
+        if (hasBudget) {
+          totalBudget += budget;
+        }
+        if (cat.id != null) {
+          final spent = spendingMap[cat.id!] ?? 0.0;
+          if (hasBudget) {
+            totalBudgetedSpent += spent;
+          }
+        }
+      }
+
+      expect(totalBudget, 15000.0);
+      expect(totalBudgetedSpent, 4000.0);
+      expect(totalBudgetedSpent / totalBudget, closeTo(0.2667, 0.001));
+    });
   });
 }

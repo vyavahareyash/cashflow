@@ -56,11 +56,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
     Map<int, double> spendingMap = {};
 
     for (var cat in categories) {
-      totalBudgetLimit += cat.monthlyBudget ?? 0.0;
+      final budget = cat.monthlyBudget;
+      final hasBudget = budget != null && budget > 0;
+      if (hasBudget) {
+        totalBudgetLimit += budget;
+      }
       if (cat.id != null) {
         final spent = monthlySpending[cat.id!] ?? 0.0;
         spendingMap[cat.id!] = spent;
-        totalSpent += spent;
+        if (hasBudget) {
+          totalSpent += spent;
+        }
       }
     }
 

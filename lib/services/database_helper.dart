@@ -426,6 +426,19 @@ class DatabaseHelper {
     return result.map((json) => Account.fromMap(json)).toList();
   }
 
+  Future<Account?> readAccount(int id) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'accounts',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (result.isNotEmpty) {
+      return Account.fromMap(result.first);
+    }
+    return null;
+  }
+
   Future<int> updateAccountBalance(int id, double newBalance) async {
     final db = await instance.database;
     final res = await db.update(
@@ -2122,13 +2135,40 @@ class DatabaseHelper {
     notifyDataChanged();
   }
 
-  // Get total locked amount across all accounts (for Dashboard)
+  // Get total locked amount across all accounts (for Dashboard usable balance)
   Future<double> getTotalLockedAmount() async {
     final db = await instance.database;
     final result = await db.rawQuery(
       'SELECT SUM(amount) as total FROM locked_allocations',
     );
     return (result.first['total'] as num? ?? 0).toDouble();
+  }
+
+  /// Gets total locked amount specifically for goals (excluding credit card locks).
+  Future<double> getTotalGoalLockedAmount() async {
+    final db = await instance.database;
+    final result = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM locked_allocations WHERE goal_id IS NOT NULL',
+    );
+    return (result.first['total'] as num? ?? 0).toDouble();
+  }
+
+  /// Gets total locked amount specifically for credit card reserves.
+  Future<double> getTotalCreditCardLockedAmount() async {
+    final db = await instance.database;
+    final result = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM locked_allocations WHERE credit_card_id IS NOT NULL',
+    );
+    return (result.first['total'] as num? ?? 0).toDouble();
+  }
+
+  /// Gets the free unreserved funds available to lock in a physical account.
+  Future<double> getAccountAvailableToLock(int accountId) async {
+    final account = await readAccount(accountId);
+    if (account == null || account.isCreditCard) return 0.0;
+    final locks = await getLocksForAccount(accountId);
+    final totalLocked = locks.fold<double>(0.0, (sum, l) => sum + l.amount);
+    return (account.balance - totalLocked).clamp(0.0, double.infinity);
   }
 
   // Get locked breakdown for a specific account (for Accounts screen)
