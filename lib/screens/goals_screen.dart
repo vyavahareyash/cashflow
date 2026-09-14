@@ -47,7 +47,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       setState(() => _isLoading = true);
     }
     final goals = await DatabaseHelper.instance.readAllGoals();
-    final locked = await DatabaseHelper.instance.getTotalLockedAmount();
+    final locked = await DatabaseHelper.instance.getTotalGoalLockedAmount();
     final salaryDay = await DatabaseHelper.instance.getSalaryDay();
 
     double totalTarget = 0.0;
@@ -1083,7 +1083,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   void _showContributionDialog(Goal goal) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accounts = await DatabaseHelper.instance.readAllAccounts();
+    final allAccounts = await DatabaseHelper.instance.readAllAccounts();
+    final accounts = allAccounts.where((a) => !a.isCreditCard).toList();
+    final Map<int, double> availableToLockMap = {};
+    for (final acc in accounts) {
+      if (acc.id != null) {
+        availableToLockMap[acc.id!] =
+            await DatabaseHelper.instance.getAccountAvailableToLock(acc.id!);
+      }
+    }
     final amountController = TextEditingController();
     int? selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
 
@@ -1196,7 +1204,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   ),
                                   const SizedBox(width: AppSpacing.sm),
                                   Text(
-                                    '₹${acc.balance.toStringAsFixed(0)}',
+                                    'Avail: ₹${(availableToLockMap[acc.id] ?? acc.balance).toStringAsFixed(0)}',
                                     style: AppTypography.labelSmall.copyWith(
                                       color: isDark
                                           ? AppColors.gray400
@@ -1246,9 +1254,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               orElse: () =>
                                   throw ArgumentError('Select an account.'),
                             );
-                            if (amount > selectedAcc.balance) {
+                            final available = availableToLockMap[selectedAccountId] ??
+                                selectedAcc.balance;
+                            if (amount > available) {
                               throw ArgumentError(
-                                'Lock amount cannot exceed account balance (₹${selectedAcc.balance.toStringAsFixed(0)}).',
+                                'Lock amount cannot exceed available account balance (₹${available.toStringAsFixed(0)}).',
                               );
                             }
 

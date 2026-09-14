@@ -91,10 +91,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     double totalBudget = 0;
     double totalSpent = 0;
     for (var cat in categoriesData) {
-      totalBudget += cat.monthlyBudget ?? 0;
+      final budget = cat.monthlyBudget;
+      final hasBudget = budget != null && budget > 0;
+      if (hasBudget) {
+        totalBudget += budget;
+      }
       if (cat.id != null) {
         final spent = categorySpendingMap[cat.id!] ?? 0.0;
-        totalSpent += spent;
+        if (hasBudget) {
+          totalSpent += spent;
+        }
       }
     }
 
