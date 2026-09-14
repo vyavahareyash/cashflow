@@ -8,6 +8,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
+import '../components/app_dialogs.dart';
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -1228,22 +1229,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         onPressed: () async {
                           if (selectedAccountId == null ||
                               amountController.text.isEmpty) {
-                            ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                              const SnackBar(
-                                content: Text('Select an account and amount.'),
-                              ),
+                            await AppDialogs.showWarning(
+                              sheetCtx,
+                              message: 'Select an account and amount.',
                             );
                             return;
                           }
                           final amount =
                               double.tryParse(amountController.text) ?? 0.0;
                           if (amount <= 0) {
-                            ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Enter an amount greater than zero.',
-                                ),
-                              ),
+                            await AppDialogs.showWarning(
+                              sheetCtx,
+                              message: 'Enter an amount greater than zero.',
                             );
                             return;
                           }
@@ -1277,8 +1274,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             _loadData();
                           } catch (error) {
                             if (sheetCtx.mounted) {
-                              ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                                SnackBar(content: Text(error.toString())),
+                              await AppDialogs.showWarning(
+                                sheetCtx,
+                                message: error.toString(),
                               );
                             }
                           }
@@ -1938,12 +1936,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                     }
 
                                     if (amountsPerAccount.isEmpty) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Please enter an amount > 0'),
-                                        ),
+                                      await AppDialogs.showWarning(
+                                        context,
+                                        message: 'Please enter an amount > 0',
                                       );
                                       return;
                                     }
@@ -2002,12 +1997,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   }
                                 } catch (e) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text('Payment failed: $e'),
-                                        backgroundColor: AppColors.danger,
-                                      ),
+                                    await AppDialogs.showWarning(
+                                      context,
+                                      title: 'Payment Failed',
+                                      message: e.toString(),
                                     );
                                   }
                                 }
@@ -2504,12 +2497,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   }
                                 } catch (e) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text('Unlock failed: $e'),
-                                        backgroundColor: AppColors.danger,
-                                      ),
+                                    await AppDialogs.showWarning(
+                                      context,
+                                      title: 'Unlock Failed',
+                                      message: e.toString(),
                                     );
                                   }
                                 }

@@ -3,6 +3,7 @@ import '../models/account_model.dart';
 import '../models/credit_card_model.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
+import 'app_dialogs.dart';
 
 class PayCcBillModal extends StatefulWidget {
   final Account ccAccount;
@@ -93,15 +94,17 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
   Future<void> _handlePayment() async {
     final amount = _computeAmount();
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid payment amount.')),
+      await AppDialogs.showWarning(
+        context,
+        message: 'Please enter a valid payment amount.',
       );
       return;
     }
 
     if (_selectedBankAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a bank account to pay from.')),
+      await AppDialogs.showWarning(
+        context,
+        message: 'Please select a bank account to pay from.',
       );
       return;
     }
@@ -112,12 +115,10 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
     );
 
     if (amount > bankAcc.balance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      await AppDialogs.showWarning(
+        context,
+        message:
             'Insufficient balance in ${bankAcc.name} (${AppFormatters.currency(bankAcc.balance)} available).',
-          ),
-        ),
       );
       return;
     }
@@ -145,8 +146,10 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment failed: $e')),
+        await AppDialogs.showWarning(
+          context,
+          title: 'Payment Failed',
+          message: e.toString(),
         );
       }
     }

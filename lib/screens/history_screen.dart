@@ -5,6 +5,7 @@ import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/category_badge.dart';
+import '../components/app_dialogs.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -771,22 +772,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         final parsed =
                             double.tryParse(amountController.text.trim());
                         if (parsed == null || parsed <= 0) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content: Text(
+                          await AppDialogs.showWarning(
+                            sheetContext,
+                            message:
                                 'Please enter a valid amount greater than 0',
-                              ),
-                            ),
                           );
                           return;
                         }
                         if (isTransfer && selectedDestAccountId == null) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Please select a destination account',
-                              ),
-                            ),
+                          await AppDialogs.showWarning(
+                            sheetContext,
+                            message: 'Please select a destination account',
                           );
                           return;
                         }
@@ -814,10 +810,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           );
                         } catch (e) {
                           if (sheetContext.mounted) {
-                            ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              SnackBar(
-                                content: Text('Error updating transaction: $e'),
-                              ),
+                            await AppDialogs.showWarning(
+                              sheetContext,
+                              message: 'Error updating transaction: $e',
                             );
                           }
                         }
