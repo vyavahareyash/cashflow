@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-09-14
+
+### Added
+- **Custom Destination Directory for Backups**: User-configurable backup folder path with system file picker, persistent storage in `app_settings`, and automatic fallback to platform documents/databases directory (#59, #64).
+- **Export Confirmation Dialog**: Modal confirmation before exporting SQLite (`.db`), JSON, or CSV files, with format selection, directory picker, editable filename, and live destination path preview (#59, #64).
+- **Isolated Backup Path Testing**: Comprehensive automated test suite (`test/custom_backup_path_test.dart`) covering default resolution, custom path overrides, directory creation, reset to default, and all export formats (#59, #64).
+
+### Changed
+- **Consolidated Settings & Data UI**: Replaced cluttered granular export/import tiles and directory settings with two streamlined cards: "Export Data & Backups" and "Import & Restore Data" (#59, #64).
+- **Stateful Dialog Architecture**: Refactored export dialog into `_ExportBackupDialog` to guarantee clean controller lifecycle and prevent memory leaks (#64).
+
+---
+
 ## [2.1.0] - 2026-09-14
 
 ### Added
