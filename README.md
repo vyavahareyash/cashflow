@@ -13,7 +13,7 @@ Track real balances across cash and bank accounts, align budgets with your actua
 
 ## Download for Android
 
-[Download the latest APK: Cashflow v2.0.0](https://github.com/vyavahareyash/cashflow/releases/download/v2.0.0/app-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
+[Download the latest APK: Cashflow](https://github.com/vyavahareyash/cashflow/releases/latest/download/cashflow-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
 
 <p align="center">
   <img src="screenshots/01-dashboard-light.png" alt="Cashflow Dashboard" width="400">

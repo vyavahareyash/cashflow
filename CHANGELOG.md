@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-09-15
+
+### Added
+- **Per-Account Usable Balance Display**: Prominently display usable balance (`balance - totalLocked`) on accounts screen cards and dashboard when funds are locked for goals or credit cards (#66, #74).
+- **Income vs Expense Category Separation**: First-class category separation with `type` property, automatic seeding of standard income streams (`Salary`, `Freelance`, `Investments`, `Rental`, `Gifts`, `Other Income`), segmented tabs on `BudgetScreen`, and type-filtered category pickers across transaction flows (#70, #74).
+- **Database Schema v4 Migration**: Automatic SQLite schema migration adding `type` column to `categories` with full backward-compatible JSON export/import fallbacks (#70, #74).
+- **Comprehensive P2 Test Suite**: Added `test/p2_categories_and_usable_balance_test.dart` and expanded `test/database_migration_test.dart` with v1→v4, v2→v3, and v3→v4 migration validation (#74).
+
+### Changed
+- **Decluttered Accounts UI**: Consolidated action buttons (`Transfer Funds`, `Edit Account`) into header popup menus and added a collapsible top-3 dashboard accounts toggle with `Show More` / `Show Less` (#66, #74).
+- **Tooltip Informational Headers**: Replaced bulky explanatory text under dashboard and budget headers with compact tap tooltip icons (#74).
+- **Modal Dialog Confirmations for Account Validation**: Replaced transient SnackBars with explicit modal dialogs and fixed edit account dialog sizing to prevent keyboard layout overflow (#67, #71, #73).
+
+### Fixed
+- **Lock Segregation & Unbudgeted Category Calculations**: Corrected dashboard balance metrics to properly isolate goal locks vs credit card locks and accurately calculate remaining budgets (#68, #69, #72).
+- **Monthly Budget Pace Text Wrapping**: Re-architected pace card layout with symmetric metrics and full-width pace row to prevent 2-line wrapping on compact or high-DPI screens (#74).
+- **Salary Cycle Header RenderFlex Overflow**: Replaced `Row` with `Wrap` in settings salary cycle card to eliminate layout overflow on narrow viewports (#74).
+
+---
+
 ## [3.0.0] - 2026-09-14
 
 ### Added

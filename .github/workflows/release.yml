@@ -40,11 +40,19 @@ jobs:
       - name: Build Universal Release APK
         run: flutter build apk --release
 
+      - name: Rename APKs with app name
+        run: |
+          cd build/app/outputs/flutter-apk
+          for f in app*.apk; do
+            [ -f "$f" ] && mv "$f" "${f/#app/cashflow}"
+          done
+          ls -la
+
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
-          path: build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/cashflow*.apk
           retention-days: 1
 
   build-web:
