@@ -119,13 +119,14 @@ void main() {
         ),
       );
 
-      // Account name and balance with thousand separator
+      // Account name and usable balance with thousand separator (150,000 - 25,000 locked = 125,000)
       expect(find.text('Main Checking'), findsOneWidget);
-      expect(find.text(AppFormatters.currency(150000.0)), findsOneWidget);
+      expect(find.text(AppFormatters.currency(125000.0)), findsOneWidget);
 
-      // Balance subtitle shows total locked with thousand separator (₹25,000 locked)
+      // Balance subtitle shows total balance when locks are active
       expect(
-          find.text('${AppFormatters.currency(25000.0)} locked'), findsOneWidget);
+          find.text('Usable (${AppFormatters.compactCurrency(150000.0)} total)'),
+          findsOneWidget);
 
       // Toggle button is visible with aggregate summary
       final toggleFinder =
