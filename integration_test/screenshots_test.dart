@@ -34,6 +34,10 @@ void main() {
     await tester.pageBack();
     await _waitForScreen(tester, 'Cashflow');
 
+    // Wait for the sample data feedback snackbar to dismiss before capturing dashboard
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
     // ==========================================
     // PASS 1: LIGHT MODE EXHAUSTIVE CAPTURE
     // ==========================================
@@ -166,6 +170,15 @@ void main() {
     }
     await _markScreen('16-analytics-trends-light');
 
+    // 16b: Insights Monthly Spending Trends Chart Scrolled (Light)
+    final analyticsScrollable = find.byType(Scrollable).last;
+    await tester.drag(analyticsScrollable, const Offset(0, -550));
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _markScreen('16b-analytics-trends-scroll-light');
+
     // 17: Backup & Restore Screen (Light)
     await tester.tap(find.byTooltip('Settings & Data Backup'));
     await _waitForScreen(tester, 'Settings & Data');
@@ -253,6 +266,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await _markScreen('26-analytics-trends-dark');
+
+    // 26b: Insights Monthly Spending Trends Chart Scrolled (Dark)
+    final darkAnalyticsScrollable = find.byType(Scrollable).last;
+    await tester.drag(darkAnalyticsScrollable, const Offset(0, -550));
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _markScreen('26b-analytics-trends-scroll-dark');
 
     // 27: Backup & Restore Screen (Dark)
     await tester.tap(find.byTooltip('Settings & Data Backup'));

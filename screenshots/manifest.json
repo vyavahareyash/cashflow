@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-13T19:27:05.227Z",
+  "generatedAt": "2026-09-14T04:02:48.829Z",
   "device": "emulator-5554",
-  "totalScreenshots": 29,
+  "totalScreenshots": 31,
   "markers": [
     {
       "id": "01-dashboard-light",
@@ -157,6 +157,15 @@
       "file": "16-analytics-trends-light.png"
     },
     {
+      "id": "16b-analytics-trends-scroll-light",
+      "name": "Monthly Trends & Stats (Scrolled)",
+      "group": "Insights",
+      "theme": "light",
+      "type": "chart",
+      "description": "Scrolled analytics view showing the 6-month spending trends chart and detailed financial metrics statistics.",
+      "file": "16b-analytics-trends-scroll-light.png"
+    },
+    {
       "id": "17-backup-restore-light",
       "name": "Settings & Data Backup",
       "group": "Settings",
@@ -254,6 +263,15 @@
       "type": "chart",
       "description": "Dark mode analytics screen with interactive chart and expenditure distribution.",
       "file": "26-analytics-trends-dark.png"
+    },
+    {
+      "id": "26b-analytics-trends-scroll-dark",
+      "name": "Monthly Trends & Stats (Scrolled, Dark)",
+      "group": "Insights",
+      "theme": "dark",
+      "type": "chart",
+      "description": "Dark mode scrolled analytics view showing the 6-month spending trends chart and detailed financial metrics statistics.",
+      "file": "26b-analytics-trends-scroll-dark.png"
     },
     {
       "id": "27-backup-restore-dark",

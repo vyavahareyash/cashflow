@@ -157,6 +157,14 @@ const markers = [
         description: 'Monthly spending interactive line/bar trend charts and category expenditure breakdown.'
     },
     {
+        id: '16b-analytics-trends-scroll-light',
+        name: 'Monthly Trends & Stats (Scrolled)',
+        group: 'Insights',
+        theme: 'light',
+        type: 'chart',
+        description: 'Scrolled analytics view showing the 6-month spending trends chart and detailed financial metrics statistics.'
+    },
+    {
         id: '17-backup-restore-light',
         name: 'Settings & Data Backup',
         group: 'Settings',
@@ -243,6 +251,14 @@ const markers = [
         theme: 'dark',
         type: 'chart',
         description: 'Dark mode analytics screen with interactive chart and expenditure distribution.'
+    },
+    {
+        id: '26b-analytics-trends-scroll-dark',
+        name: 'Monthly Trends & Stats (Scrolled, Dark)',
+        group: 'Insights',
+        theme: 'dark',
+        type: 'chart',
+        description: 'Dark mode scrolled analytics view showing the 6-month spending trends chart and detailed financial metrics statistics.'
     },
     {
         id: '27-backup-restore-dark',
@@ -351,6 +367,7 @@ const PAIRS = [
     { id: 'accounts-dropdown', title: 'Account Card Dropdown (Expanded)', group: 'Accounts', light: '13-accounts-dropdown-expanded-light', dark: '24-accounts-dropdown-expanded-dark', description: 'Bank account card with smooth accordion expanded, displaying aggregated locked funds per goal.' },
     { id: 'activity-ledger', title: 'Activity Ledger Tab', group: 'Insights', light: '15-activity-ledger-light', dark: '25-activity-ledger-dark', description: 'Activity Ledger tab displaying chronological transaction history with search, category badges, and filter controls.' },
     { id: 'analytics-trends', title: 'Monthly Spending Trends Chart', group: 'Insights', light: '16-analytics-trends-light', dark: '26-analytics-trends-dark', description: 'Interactive monthly spending trend line charts and category expenditure breakdown.' },
+    { id: 'analytics-trends-scroll', title: 'Monthly Spending Trends & Stats (Scrolled)', group: 'Insights', light: '16b-analytics-trends-scroll-light', dark: '26b-analytics-trends-scroll-dark', description: 'Scrolled analytics view displaying multi-month spending trend line chart and 2x2 statistics grid.' },
     { id: 'settings', title: 'Settings & Data Backup', group: 'Settings', light: '17-backup-restore-light', dark: '27-backup-restore-dark', description: 'Data management screen offering JSON export, import, sample data seeding, and database reset.' }
 ];
 
