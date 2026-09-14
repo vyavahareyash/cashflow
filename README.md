@@ -16,7 +16,7 @@ Track real balances across cash and bank accounts, align budgets with your actua
 [Download the latest APK: Cashflow v2.0.0](https://github.com/vyavahareyash/cashflow/releases/download/v2.0.0/app-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
 
 <p align="center">
-  <img src="screenshots/01-dashboard.png" alt="Cashflow Dashboard" width="400">
+  <img src="screenshots/01-dashboard-light.png" alt="Cashflow Dashboard" width="400">
 </p>
 
 ---
@@ -52,24 +52,24 @@ Usable Balance = Total Account Money - Locked Goal Allocations
 
 <table>
   <tr>
-    <td><img src="screenshots/02-budget.png" alt="Monthly budget screen"></td>
-    <td><img src="screenshots/03-goals.png" alt="Savings goals screen"></td>
+    <td><img src="screenshots/05-budget-light.png" alt="Monthly budget screen"></td>
+    <td><img src="screenshots/08-goals-light.png" alt="Savings goals screen"></td>
   </tr>
   <tr>
     <td align="center"><b>Track spending by category & payday cycle</b></td>
     <td align="center"><b>Lock virtual funds for savings goals</b></td>
   </tr>
   <tr>
-    <td><img src="screenshots/04-accounts.png" alt="Accounts screen"></td>
-    <td><img src="screenshots/05-analytics.png" alt="Analytics screen"></td>
+    <td><img src="screenshots/12-accounts-light.png" alt="Accounts screen"></td>
+    <td><img src="screenshots/15-activity-ledger-light.png" alt="Activity ledger screen"></td>
   </tr>
   <tr>
     <td align="center"><b>Manage cash & bank accounts with transfers</b></td>
-    <td align="center"><b>Analyze category distribution & cashflow</b></td>
+    <td align="center"><b>Analyze transaction history & cashflow</b></td>
   </tr>
   <tr>
-    <td><img src="screenshots/06-analytics-trends.png" alt="Spending trends screen"></td>
-    <td><img src="screenshots/07-backup-restore.png" alt="Backup and restore screen"></td>
+    <td><img src="screenshots/16-analytics-trends-light.png" alt="Spending trends screen"></td>
+    <td><img src="screenshots/17-backup-restore-light.png" alt="Backup and restore screen"></td>
   </tr>
   <tr>
     <td align="center"><b>Review monthly trends & burn velocity</b></td>
