@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-09-14
+
+### Added
+- **Credit Card Management**: First-class support for credit cards with configurable credit limits, statement days, due dates, and auto-lock preferences (#65).
+- **Credit Card Expense Fund Locking**: Optional automated fund reservation into bank accounts on credit card spend, ensuring funds are set aside for upcoming bill due dates (#65).
+- **Bill Payment Flow**: Settle credit card balances through `PayCcBillModal` using locked reserves, direct bank debits, or hybrid payment combinations (#65).
+- **Interactive Credit Card UI Cards**: Dedicated credit card summary cards with credit limit, current liability, available credit, and utilization percentage indicators (#65).
+- **Database Schema v3 Migration**: Automatic migration supporting `credit_cards` table, extended `locked_allocations` foreign keys, and new transaction types (`cc_payment`, `cc_lock`, `cc_unlock`) (#65).
+- **Comprehensive CC Test Suite**: Full database and UI test coverage (`test/credit_card_database_test.dart`, `test/credit_card_ui_test.dart`, `test/database_migration_test.dart`) (#65).
+
+---
+
 ## [2.2.0] - 2026-09-14
 
 ### Added
