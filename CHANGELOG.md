@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-09-15
+
+### Changed
+- **Accounts Screen Balance Hierarchy**: Reversed account card balance hierarchy to always prominently display actual physical balance on top and secondary usable balance (`balance - totalLocked`) below.
+
+### Fixed
+- **Settings Version Synchronization**: Synchronized application version display in Settings & Data Backup screen to reflect current release `3.1.1 (Build 9)`.
+
 ## [3.1.0] - 2026-09-15
 
 ### Added

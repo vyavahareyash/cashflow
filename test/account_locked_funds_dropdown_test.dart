@@ -119,13 +119,13 @@ void main() {
         ),
       );
 
-      // Account name and usable balance with thousand separator (150,000 - 25,000 locked = 125,000)
+      // Account name and actual balance (150,000) as primary number
       expect(find.text('Main Checking'), findsOneWidget);
-      expect(find.text(AppFormatters.currency(125000.0)), findsOneWidget);
+      expect(find.text(AppFormatters.currency(150000.0)), findsOneWidget);
 
-      // Balance subtitle shows total balance when locks are active
+      // Balance subtitle shows usable balance when locks are active (150,000 - 25,000 = 125,000)
       expect(
-          find.text('Usable (${AppFormatters.compactCurrency(150000.0)} total)'),
+          find.text('${AppFormatters.compactCurrency(125000.0)} usable'),
           findsOneWidget);
 
       // Toggle button is visible with aggregate summary

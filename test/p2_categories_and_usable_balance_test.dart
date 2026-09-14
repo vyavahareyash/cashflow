@@ -191,9 +191,9 @@ void main() {
         ),
       );
 
-      // Usable balance = 50,000 - 12,000 = 38,000
-      expect(find.text('₹38,000'), findsOneWidget);
-      expect(find.textContaining('Usable'), findsOneWidget);
+      // Actual balance = 50,000 (primary), usable balance = 50,000 - 12,000 = 38,000 (subtitle)
+      expect(find.text('₹50,000'), findsOneWidget);
+      expect(find.textContaining('usable'), findsOneWidget);
       // Popup action menu exists
       expect(find.byType(PopupMenuButton<String>), findsOneWidget);
     });
@@ -213,7 +213,7 @@ void main() {
       );
 
       expect(find.text('₹5,000'), findsOneWidget);
-      expect(find.textContaining('Usable'), findsNothing);
+      expect(find.textContaining('usable'), findsNothing);
     });
   });
 

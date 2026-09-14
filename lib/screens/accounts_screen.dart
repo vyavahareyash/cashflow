@@ -913,21 +913,19 @@ class _AccountCardState extends State<AccountCard> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    AppFormatters.currency(
-                      totalLocked > 0 ? usableBalance : acc.balance,
-                    ),
+                    AppFormatters.currency(acc.balance),
                     style: AppTypography.titleMedium.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: totalLocked > 0
-                          ? AppColors.emerald600
-                          : (isDark ? AppColors.darkText : AppColors.gray900),
+                      color: isDark ? AppColors.darkText : AppColors.gray900,
                     ),
                   ),
                   if (totalLocked > 0)
                     Text(
-                      'Usable (${AppFormatters.compactCurrency(acc.balance)} total)',
+                      '${AppFormatters.compactCurrency(usableBalance)} usable',
                       style: AppTypography.labelSmall.copyWith(
-                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        color: isDark
+                            ? AppColors.emerald400
+                            : AppColors.emerald600,
                         fontWeight: FontWeight.w600,
                       ),
                     )
