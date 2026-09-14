@@ -120,6 +120,12 @@ class AppTypography {
     height: 1.4,
   );
 
+  static const TextStyle bodySmall = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.35,
+  );
+
   static const TextStyle labelLarge = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
@@ -265,6 +271,8 @@ class CategoryStyle {
       return const CategoryStyle(icon: Icons.trending_up_rounded, color: AppColors.emerald700);
     } else if (lower.contains('edu') || lower.contains('course') || lower.contains('book')) {
       return const CategoryStyle(icon: Icons.school_rounded, color: Color(0xFF0284C7));
+    } else if (lower.contains('credit') || lower.contains('card')) {
+      return const CategoryStyle(icon: Icons.credit_card_rounded, color: AppColors.purple);
     }
     return const CategoryStyle(icon: Icons.category_rounded, color: AppColors.emerald700);
   }

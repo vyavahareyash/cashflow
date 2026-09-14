@@ -31,6 +31,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     'goal_lock': 'Goal locks',
     'goal_unlock': 'Goal unlocks',
     'goal_payment': 'Goal payments',
+    'cc_payment': 'Card bill payments',
+    'cc_lock': 'Card locks',
+    'cc_unlock': 'Card unlocks',
   };
 
   @override
@@ -335,10 +338,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  String _transactionLabel(String type) =>
-      _transactionTypes[type] ?? 'Transaction';
+  String _transactionLabel(String type) {
+    switch (type) {
+      case 'cc_payment':
+        return 'Card Bill Payment';
+      case 'cc_lock':
+        return 'Card Lock';
+      case 'cc_unlock':
+        return 'Card Unlock';
+      default:
+        return _transactionTypes[type] ?? 'Transaction';
+    }
+  }
 
-  bool _isCredit(String type) => type == 'income' || type == 'goal_unlock';
+  bool _isCredit(String type) =>
+      type == 'income' || type == 'goal_unlock' || type == 'cc_unlock';
 
   void _setPeriod(DateTime? period) {
     setState(() {
@@ -423,6 +437,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
             'This will refund ${AppFormatters.currency(amount)} to $accountName and restore the locked goal balance.';
         actionText = 'Delete & Restore';
         break;
+      case 'cc_payment':
+        title = 'Delete Card Bill Payment?';
+        content =
+            'This will reverse the bill payment: refund ${AppFormatters.currency(amount)} to $destName and restore liability on $accountName.';
+        actionText = 'Delete & Reverse';
+        break;
+      case 'cc_lock':
+        title = 'Delete Card Lock?';
+        content =
+            'This will delete the card lock record and release ${AppFormatters.currency(amount)} back to spendable bank funds.';
+        actionText = 'Delete & Release';
+        break;
+      case 'cc_unlock':
+        title = 'Delete Card Unlock?';
+        content =
+            'This will delete the card unlock record and re-lock ${AppFormatters.currency(amount)} for credit card bill payment.';
+        actionText = 'Delete & Re-lock';
+        break;
       default:
         title = 'Delete Transaction?';
         content =
@@ -478,6 +510,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _showEditTransactionDialog(Map<String, dynamic> tx) async {
     final type = tx['type'] as String? ?? 'expense';
+    if (type == 'cc_payment' || type == 'cc_lock' || type == 'cc_unlock') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Card bill payment and lock records cannot be edited directly. Delete to reverse instead.',
+          ),
+        ),
+      );
+      return;
+    }
     final isTransfer = type == 'transfer';
     final isGoal =
         type == 'goal_lock' || type == 'goal_unlock' || type == 'goal_payment';
@@ -826,9 +868,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     for (final tx in filtered) {
       final amt = (tx['amount'] as num?)?.toDouble() ?? 0.0;
       final type = tx['type'] as String? ?? 'expense';
-      if (type == 'expense' || type == 'goal_payment' || type == 'goal_lock') {
+      if (type == 'expense' ||
+          type == 'goal_payment' ||
+          type == 'goal_lock' ||
+          type == 'cc_payment' ||
+          type == 'cc_lock') {
         totalOutflow += amt;
-      } else if (type == 'income' || type == 'goal_unlock') {
+      } else if (type == 'income' ||
+          type == 'goal_unlock' ||
+          type == 'cc_unlock') {
         totalInflow += amt;
       }
     }
@@ -1427,32 +1475,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               }
                                             },
                                             itemBuilder: (context) => [
-                                              PopupMenuItem(
-                                                value: 'edit',
-                                                height: 36,
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.edit_outlined,
-                                                      size: 16,
-                                                      color: isDark
-                                                          ? AppColors.gray300
-                                                          : AppColors.gray700,
-                                                    ),
-                                                    const SizedBox(
-                                                        width: AppSpacing.sm),
-                                                    Text(
-                                                      'Edit',
-                                                      style: AppTypography.labelMedium
-                                                          .copyWith(
+                                              if (tx['type'] != 'cc_payment' &&
+                                                  tx['type'] != 'cc_lock' &&
+                                                  tx['type'] != 'cc_unlock')
+                                                PopupMenuItem(
+                                                  value: 'edit',
+                                                  height: 36,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.edit_outlined,
+                                                        size: 16,
                                                         color: isDark
-                                                            ? AppColors.darkText
-                                                            : AppColors.gray900,
+                                                            ? AppColors.gray300
+                                                            : AppColors.gray700,
                                                       ),
-                                                    ),
-                                                  ],
+                                                      const SizedBox(
+                                                          width: AppSpacing.sm),
+                                                      Text(
+                                                        'Edit',
+                                                        style: AppTypography.labelMedium
+                                                            .copyWith(
+                                                          color: isDark
+                                                              ? AppColors.darkText
+                                                              : AppColors.gray900,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
                                               PopupMenuItem(
                                                 value: 'delete',
                                                 height: 36,

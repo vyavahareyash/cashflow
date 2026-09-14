@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../services/database_helper.dart';
 import '../models/account_model.dart';
+import '../models/credit_card_model.dart';
 import '../models/locked_allocation_model.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
+import '../components/pay_cc_bill_modal.dart';
 
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({super.key});
@@ -17,8 +19,11 @@ class AccountsScreen extends StatefulWidget {
 
 class _AccountsScreenState extends State<AccountsScreen> {
   List<Account> _accounts = [];
+  Map<int, CreditCard> _creditCardsMap = {};
+  Map<int, double> _ccLockedMap = {};
   Map<int, List<LockedAllocation>> _accountLocks = {};
   double _totalPhysical = 0.0;
+  double _totalCreditOutstanding = 0.0;
   double _totalLocked = 0.0;
   bool _isLoading = true;
   final Set<int> _expandedAccountIds = {};
@@ -47,12 +52,29 @@ class _AccountsScreenState extends State<AccountsScreen> {
       setState(() => _isLoading = true);
     }
     final data = await DatabaseHelper.instance.readAllAccounts();
-    double total = 0.0;
+    final ccList = await DatabaseHelper.instance.readAllCreditCards();
+    final Map<int, CreditCard> ccMap = {
+      for (final cc in ccList) cc.accountId: cc,
+    };
+    final Map<int, double> ccLocks = {};
+    for (final cc in ccList) {
+      if (cc.id != null) {
+        ccLocks[cc.id!] =
+            await DatabaseHelper.instance.getLockedAmountForCreditCard(cc.id!);
+      }
+    }
+
+    double physicalTotal = 0.0;
+    double ccTotal = 0.0;
     double lockedTotal = 0.0;
     Map<int, List<LockedAllocation>> locksMap = {};
 
     for (var acc in data) {
-      total += acc.balance;
+      if (acc.isCreditCard) {
+        ccTotal += acc.balance;
+      } else {
+        physicalTotal += acc.balance;
+      }
       if (acc.id != null) {
         final locks = await DatabaseHelper.instance.getLocksForAccount(acc.id!);
         locksMap[acc.id!] = locks;
@@ -65,8 +87,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
     if (mounted) {
       setState(() {
         _accounts = data;
+        _creditCardsMap = ccMap;
+        _ccLockedMap = ccLocks;
         _accountLocks = locksMap;
-        _totalPhysical = total;
+        _totalPhysical = physicalTotal;
+        _totalCreditOutstanding = ccTotal;
         _totalLocked = lockedTotal;
         _isLoading = false;
       });
@@ -76,13 +101,351 @@ class _AccountsScreenState extends State<AccountsScreen> {
   void _showAddAccountDialog() {
     final nameController = TextEditingController();
     final balanceController = TextEditingController();
+    final creditLimitController = TextEditingController();
+    final statementDayController = TextEditingController(text: '1');
+    final dueDayController = TextEditingController(text: '20');
     String selectedType = 'Bank';
+    int? defaultLockAccountId =
+        _accounts.where((a) => !a.isCreditCard).firstOrNull?.id;
+    bool autoLock = true;
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            final isCC = selectedType == 'Credit Card';
+            return AlertDialog(
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppBorderRadius.xlargeBorder,
+              ),
+              title: Text(
+                'Add New Account',
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomInputField(
+                        controller: nameController,
+                        label: isCC ? 'Card Name' : 'Account Name',
+                        hint: isCC
+                            ? 'e.g. HDFC Regalia, ICICI Amazon Pay'
+                            : 'e.g. HDFC Bank, Cash Wallet, Salary A/C',
+                        prefixIcon: isCC
+                            ? Icons.credit_card_rounded
+                            : Icons.account_balance_rounded,
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                            ? 'Please enter an account name'
+                            : null,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Account Type',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: isDark
+                                  ? AppColors.gray300
+                                  : AppColors.gray700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedType,
+                            isExpanded: true,
+                            dropdownColor: isDark
+                                ? AppColors.darkSurfaceElevated
+                                : AppColors.white,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: isDark
+                                  ? AppColors.darkSurface
+                                  : AppColors.gray50,
+                              border: OutlineInputBorder(
+                                borderRadius: AppBorderRadius.mediumBorder,
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.gray300,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.md,
+                              ),
+                            ),
+                            items: [
+                              'Bank',
+                              'Cash',
+                              'Savings',
+                              'Wallet',
+                              'Credit Card',
+                            ]
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setStateDialog(() => selectedType = val);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      CustomInputField(
+                        controller: balanceController,
+                        label: isCC
+                            ? 'Current Outstanding (Owed)'
+                            : 'Current Physical Balance',
+                        hint: '0.00',
+                        prefixText: '₹ ',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a balance';
+                          }
+                          if (double.tryParse(value) == null) {
+                            return 'Please enter a valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (isCC) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        CustomInputField(
+                          controller: creditLimitController,
+                          label: 'Total Credit Limit',
+                          hint: 'e.g. 100000',
+                          prefixText: '₹ ',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter credit limit';
+                            }
+                            final numVal = double.tryParse(value);
+                            if (numVal == null || numVal <= 0) {
+                              return 'Please enter a valid positive limit';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CustomInputField(
+                                controller: statementDayController,
+                                label: 'Statement Day',
+                                hint: '1 - 31',
+                                keyboardType: TextInputType.number,
+                                validator: (value) {
+                                  final day = int.tryParse(value ?? '');
+                                  if (day == null || day < 1 || day > 31) {
+                                    return '1-31';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: CustomInputField(
+                                controller: dueDayController,
+                                label: 'Due Day',
+                                hint: '1 - 31',
+                                keyboardType: TextInputType.number,
+                                validator: (value) {
+                                  final day = int.tryParse(value ?? '');
+                                  if (day == null || day < 1 || day > 31) {
+                                    return '1-31';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (bankAccounts.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'Default Account to Lock Funds',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: isDark
+                                  ? AppColors.gray300
+                                  : AppColors.gray700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          DropdownButtonFormField<int>(
+                            initialValue: defaultLockAccountId,
+                            isExpanded: true,
+                            dropdownColor: isDark
+                                ? AppColors.darkSurfaceElevated
+                                : AppColors.white,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: isDark
+                                  ? AppColors.darkSurface
+                                  : AppColors.gray50,
+                              border: OutlineInputBorder(
+                                borderRadius: AppBorderRadius.mediumBorder,
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.gray300,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.md,
+                              ),
+                            ),
+                            items: bankAccounts
+                                .map(
+                                  (a) => DropdownMenuItem(
+                                    value: a.id,
+                                    child: Text(a.name),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) => setStateDialog(
+                              () => defaultLockAccountId = val,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text(
+                              'Auto-lock funds on spend',
+                              style: AppTypography.bodySmall,
+                            ),
+                            subtitle: Text(
+                              'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                              ),
+                            ),
+                            value: autoLock,
+                            activeColor: AppColors.purple,
+                            onChanged: (val) =>
+                                setStateDialog(() => autoLock = val),
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                CustomButton(
+                  label: 'Save Account',
+                  width: 130,
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      final accountId = await DatabaseHelper.instance
+                          .createAccount(
+                            Account(
+                              name: nameController.text.trim(),
+                              balance:
+                                  double.tryParse(
+                                    balanceController.text.trim(),
+                                  ) ??
+                                  0.0,
+                              type: selectedType,
+                            ),
+                          );
+                      if (selectedType == 'Credit Card') {
+                        await DatabaseHelper.instance.createCreditCard(
+                          CreditCard(
+                            accountId: accountId,
+                            creditLimit:
+                                double.tryParse(
+                                  creditLimitController.text.trim(),
+                                ) ??
+                                0.0,
+                            statementDay:
+                                int.tryParse(
+                                  statementDayController.text.trim(),
+                                ) ??
+                                1,
+                            dueDay:
+                                int.tryParse(dueDayController.text.trim()) ??
+                                20,
+                            defaultLockAccountId: defaultLockAccountId,
+                            autoLock: autoLock,
+                          ),
+                        );
+                      }
+                      if (context.mounted) Navigator.pop(context);
+                      _refreshAccounts();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditAccountDialog(Account account) {
+    final nameController = TextEditingController(text: account.name);
+    final balanceController = TextEditingController(
+      text: account.balance.toStringAsFixed(0),
+    );
+    String selectedType = account.type;
+    final isCC = account.isCreditCard;
+    final cc = _creditCardsMap[account.id];
+
+    final creditLimitController = TextEditingController(
+      text: cc?.creditLimit.toStringAsFixed(0) ?? '',
+    );
+    final statementDayController = TextEditingController(
+      text: cc?.statementDay.toString() ?? '1',
+    );
+    final dueDayController = TextEditingController(
+      text: cc?.dueDay.toString() ?? '20',
+    );
+    int? defaultLockAccountId = cc?.defaultLockAccountId;
+    bool autoLock = cc?.autoLock ?? true;
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
         return StatefulBuilder(
           builder: (context, setStateDialog) => AlertDialog(
             backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
@@ -90,7 +453,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               borderRadius: AppBorderRadius.xlargeBorder,
             ),
             title: Text(
-              'Add New Account',
+              isCC ? 'Edit Credit Card' : 'Edit Account',
               style: AppTypography.titleLarge.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -100,12 +463,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CustomInputField(
                       controller: nameController,
-                      label: 'Account Name',
-                      hint: 'e.g. HDFC Bank, Cash Wallet, Salary A/C',
-                      prefixIcon: Icons.account_balance_rounded,
+                      label: isCC ? 'Card Name' : 'Account Name',
                       validator: (value) =>
                           (value == null || value.trim().isEmpty)
                           ? 'Please enter an account name'
@@ -114,15 +476,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     const SizedBox(height: AppSpacing.md),
                     CustomInputField(
                       controller: balanceController,
-                      label: 'Current Physical Balance',
-                      hint: '0.00',
+                      label: isCC ? 'Current Outstanding (Owed)' : 'Balance',
                       prefixText: '₹ ',
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a balance';
+                          return 'Please enter balance';
                         }
                         if (double.tryParse(value) == null) {
                           return 'Please enter a valid number';
@@ -131,11 +492,91 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    if (!isCC)
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedType,
+                        isExpanded: true,
+                        dropdownColor: isDark
+                            ? AppColors.darkSurfaceElevated
+                            : AppColors.white,
+                        decoration: InputDecoration(
+                          labelText: 'Account Type',
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurface
+                              : AppColors.gray50,
+                          border: OutlineInputBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                          ),
+                        ),
+                        items: ['Bank', 'Cash', 'Savings', 'Wallet']
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) =>
+                            setStateDialog(() => selectedType = val!),
+                      )
+                    else ...[
+                      CustomInputField(
+                        controller: creditLimitController,
+                        label: 'Total Credit Limit',
+                        prefixText: '₹ ',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter credit limit';
+                          }
+                          final numVal = double.tryParse(value);
+                          if (numVal == null || numVal <= 0) {
+                            return 'Please enter a valid positive limit';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomInputField(
+                              controller: statementDayController,
+                              label: 'Statement Day',
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                final day = int.tryParse(value ?? '');
+                                if (day == null || day < 1 || day > 31) {
+                                  return '1-31';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: CustomInputField(
+                              controller: dueDayController,
+                              label: 'Due Day',
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                final day = int.tryParse(value ?? '');
+                                if (day == null || day < 1 || day > 31) {
+                                  return '1-31';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (bankAccounts.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
                         Text(
-                          'Account Type',
+                          'Default Account to Lock Funds',
                           style: AppTypography.labelMedium.copyWith(
                             color: isDark
                                 ? AppColors.gray300
@@ -144,8 +585,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedType,
+                        DropdownButtonFormField<int>(
+                          initialValue: defaultLockAccountId,
                           isExpanded: true,
                           dropdownColor: isDark
                               ? AppColors.darkSurfaceElevated
@@ -168,138 +609,40 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               vertical: AppSpacing.md,
                             ),
                           ),
-                          items: ['Bank', 'Cash', 'Savings', 'Wallet']
+                          items: bankAccounts
                               .map(
-                                (type) => DropdownMenuItem(
-                                  value: type,
-                                  child: Text(type),
+                                (a) => DropdownMenuItem(
+                                  value: a.id,
+                                  child: Text(a.name),
                                 ),
                               )
                               .toList(),
+                          onChanged: (val) => setStateDialog(
+                            () => defaultLockAccountId = val,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Auto-lock funds on spend',
+                            style: AppTypography.bodySmall,
+                          ),
+                          subtitle: Text(
+                            'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
+                            ),
+                          ),
+                          value: autoLock,
+                          activeColor: AppColors.purple,
                           onChanged: (val) =>
-                              setStateDialog(() => selectedType = val!),
+                              setStateDialog(() => autoLock = val),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              CustomButton(
-                label: 'Save Account',
-                width: 130,
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    await DatabaseHelper.instance.createAccount(
-                      Account(
-                        name: nameController.text.trim(),
-                        balance:
-                            double.tryParse(balanceController.text.trim()) ??
-                            0.0,
-                        type: selectedType,
-                      ),
-                    );
-                    Navigator.pop(context);
-                    _refreshAccounts();
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showEditAccountDialog(Account account) {
-    final nameController = TextEditingController(text: account.name);
-    final balanceController = TextEditingController(
-      text: account.balance.toStringAsFixed(0),
-    );
-    String selectedType = account.type;
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
-            backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: AppBorderRadius.xlargeBorder,
-            ),
-            title: Text(
-              'Edit Account',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CustomInputField(
-                      controller: nameController,
-                      label: 'Account Name',
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? 'Please enter an account name'
-                          : null,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    CustomInputField(
-                      controller: balanceController,
-                      label: 'Balance',
-                      prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter balance';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedType,
-                      isExpanded: true,
-                      dropdownColor: isDark
-                          ? AppColors.darkSurfaceElevated
-                          : AppColors.white,
-                      decoration: InputDecoration(
-                        labelText: 'Account Type',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.darkSurface
-                            : AppColors.gray50,
-                        border: OutlineInputBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                        ),
-                      ),
-                      items: ['Bank', 'Cash', 'Savings', 'Wallet']
-                          .map(
-                            (type) => DropdownMenuItem(
-                              value: type,
-                              child: Text(type),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setStateDialog(() => selectedType = val!),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -334,7 +677,30 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         type: selectedType,
                       ),
                     );
-                    Navigator.pop(context);
+                    if (isCC && cc != null) {
+                      await DatabaseHelper.instance.updateCreditCard(
+                        CreditCard(
+                          id: cc.id,
+                          accountId: account.id!,
+                          creditLimit:
+                              double.tryParse(
+                                creditLimitController.text.trim(),
+                              ) ??
+                              cc.creditLimit,
+                          statementDay:
+                              int.tryParse(
+                                statementDayController.text.trim(),
+                              ) ??
+                              cc.statementDay,
+                          dueDay:
+                              int.tryParse(dueDayController.text.trim()) ??
+                              cc.dueDay,
+                          defaultLockAccountId: defaultLockAccountId,
+                          autoLock: autoLock,
+                        ),
+                      );
+                    }
+                    if (context.mounted) Navigator.pop(context);
                     _refreshAccounts();
                   }
                 },
@@ -382,7 +748,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
   void _showTransferDialog(Account sourceAccount) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final otherAccounts =
-        _accounts.where((a) => a.id != sourceAccount.id).toList();
+        _accounts.where((a) => a.id != sourceAccount.id && !a.isCreditCard).toList();
     if (otherAccounts.isEmpty) return;
 
     final amountController = TextEditingController();
@@ -596,6 +962,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
       0.0,
       double.infinity,
     );
+    final physicalAccounts = _accounts.where((a) => !a.isCreditCard).toList();
+    final creditAccounts = _accounts.where((a) => a.isCreditCard).toList();
 
     return Scaffold(
       body: _isLoading
@@ -613,27 +981,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   _buildHeaderCard(isDark, availableLiquidity),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // 2. SECTION TITLE
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'All Accounts',
-                        style: AppTypography.titleLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${_accounts.length} Total',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark ? AppColors.gray400 : AppColors.gray600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // 3. ACCOUNTS LIST
                   if (_accounts.isEmpty)
                     CustomCard(
                       child: Center(
@@ -657,7 +1004,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(
-                                'Add your physical bank accounts, cash wallets, or savings accounts below.',
+                                'Add your physical bank accounts, cash wallets, or credit cards below.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
                                   color: isDark
@@ -670,8 +1017,47 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         ),
                       ),
                     )
-                  else
-                    ..._accounts.map((acc) => AccountCard(
+                  else ...[
+                    // 2. BANK & CASH ACCOUNTS SECTION
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Bank & Cash Accounts',
+                          style: AppTypography.titleLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '${physicalAccounts.length} Total',
+                          style: AppTypography.labelSmall.copyWith(
+                            color:
+                                isDark ? AppColors.gray400 : AppColors.gray600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    if (physicalAccounts.isEmpty)
+                      CustomCard(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Text(
+                              'No bank or cash accounts added yet.',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...physicalAccounts.map(
+                        (acc) => AccountCard(
                           account: acc,
                           locks: _accountLocks[acc.id] ?? [],
                           isExpanded: acc.id != null &&
@@ -687,11 +1073,76 @@ class _AccountsScreenState extends State<AccountsScreen> {
                               });
                             }
                           },
-                          onTransfer: _accounts.length > 1
+                          onTransfer: physicalAccounts.length > 1
                               ? () => _showTransferDialog(acc)
                               : null,
                           onEdit: () => _showEditAccountDialog(acc),
-                        )),
+                        ),
+                      ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // 3. CREDIT CARDS SECTION
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Credit Cards',
+                          style: AppTypography.titleLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '${creditAccounts.length} Total',
+                          style: AppTypography.labelSmall.copyWith(
+                            color:
+                                isDark ? AppColors.gray400 : AppColors.gray600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    if (creditAccounts.isEmpty)
+                      CustomCard(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Text(
+                              'No credit cards added. Tap Add Account to add a card.',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...creditAccounts.map((acc) {
+                        final cc = _creditCardsMap[acc.id];
+                        final lockedAmount = cc?.id != null
+                            ? (_ccLockedMap[cc!.id!] ?? 0.0)
+                            : 0.0;
+                        return CreditCardAccountCard(
+                          account: acc,
+                          creditCard: cc,
+                          lockedAmount: lockedAmount,
+                          onEdit: () => _showEditAccountDialog(acc),
+                          onPayBill: cc != null
+                              ? () => PayCcBillModal.show(
+                                    context,
+                                    ccAccount: acc,
+                                    creditCard: cc,
+                                    lockedAmount: lockedAmount,
+                                    bankAccounts: physicalAccounts,
+                                    onPaymentCompleted: _refreshAccounts,
+                                  )
+                              : null,
+                        );
+                      }),
+                  ],
 
                   const SizedBox(height: AppSpacing.huge),
                 ],
@@ -782,6 +1233,39 @@ class _AccountsScreenState extends State<AccountsScreen> {
               ),
             ],
           ),
+          if (_totalCreditOutstanding > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Divider(),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.credit_card_rounded,
+                      size: 16,
+                      color: AppColors.danger,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'Card Liabilities (Money Owed)',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  AppFormatters.currency(_totalCreditOutstanding),
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.danger,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -793,11 +1277,13 @@ class AggregatedGoalLock {
   final int goalId;
   final String goalName;
   final double amount;
+  final bool isCreditCard;
 
   const AggregatedGoalLock({
     required this.goalId,
     required this.goalName,
     required this.amount,
+    this.isCreditCard = false,
   });
 }
 
@@ -820,21 +1306,31 @@ class AccountCard extends StatefulWidget {
   });
 
   static List<AggregatedGoalLock> aggregateLocks(List<LockedAllocation> locks) {
-    final Map<int, AggregatedGoalLock> map = {};
+    final Map<String, AggregatedGoalLock> map = {};
     for (final lock in locks) {
-      if (map.containsKey(lock.goalId)) {
-        final existing = map[lock.goalId]!;
-        map[lock.goalId] = AggregatedGoalLock(
-          goalId: lock.goalId,
+      final key = lock.isCreditCardLock
+          ? 'cc_${lock.creditCardId ?? 0}'
+          : 'goal_${lock.goalId ?? 0}';
+      final id = lock.isCreditCardLock
+          ? (lock.creditCardId ?? 0)
+          : (lock.goalId ?? 0);
+      final name = lock.displayName;
+
+      if (map.containsKey(key)) {
+        final existing = map[key]!;
+        map[key] = AggregatedGoalLock(
+          goalId: id,
           goalName:
-              existing.goalName.isNotEmpty ? existing.goalName : lock.goalName,
+              existing.goalName.isNotEmpty ? existing.goalName : name,
           amount: existing.amount + lock.amount,
+          isCreditCard: lock.isCreditCardLock,
         );
       } else {
-        map[lock.goalId] = AggregatedGoalLock(
-          goalId: lock.goalId,
-          goalName: lock.goalName,
+        map[key] = AggregatedGoalLock(
+          goalId: id,
+          goalName: name,
           amount: lock.amount,
+          isCreditCard: lock.isCreditCardLock,
         );
       }
     }
@@ -1038,7 +1534,9 @@ class _AccountCardState extends State<AccountCard> {
                                     child: Row(
                                       children: [
                                         Icon(
-                                          Icons.savings_outlined,
+                                          lock.isCreditCard
+                                              ? Icons.credit_card_rounded
+                                              : Icons.savings_outlined,
                                           size: 14,
                                           color: isDark
                                               ? AppColors.gray400
@@ -1047,7 +1545,9 @@ class _AccountCardState extends State<AccountCard> {
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            lock.goalName,
+                                            lock.isCreditCard
+                                                ? '${lock.goalName} (Card Reserve)'
+                                                : lock.goalName,
                                             style: AppTypography.labelSmall,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -1073,6 +1573,327 @@ class _AccountCardState extends State<AccountCard> {
                   : const SizedBox.shrink(),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class CreditCardAccountCard extends StatelessWidget {
+  final Account account;
+  final CreditCard? creditCard;
+  final double lockedAmount;
+  final VoidCallback? onPayBill;
+  final VoidCallback? onEdit;
+
+  const CreditCardAccountCard({
+    super.key,
+    required this.account,
+    this.creditCard,
+    this.lockedAmount = 0.0,
+    this.onPayBill,
+    this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final limit = creditCard?.creditLimit ?? 0.0;
+    final outstanding = account.balance;
+    final availableCredit = (limit - outstanding).clamp(0.0, double.infinity);
+    final utilization =
+        limit > 0 ? (outstanding / limit).clamp(0.0, 1.0) : 0.0;
+
+    final isFullyBacked = outstanding > 0 && lockedAmount >= outstanding;
+    final isPartiallyBacked =
+        outstanding > 0 && lockedAmount > 0 && !isFullyBacked;
+
+    return CustomCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.purple.withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: const Icon(
+                  Icons.credit_card_rounded,
+                  color: AppColors.purple,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.name,
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (creditCard != null)
+                      Text(
+                        'Due on ${creditCard!.dueDay}th • Stmt ${creditCard!.statementDay}th',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Credit Card',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    AppFormatters.currency(outstanding),
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: outstanding > 0
+                          ? AppColors.danger
+                          : (isDark ? AppColors.darkText : AppColors.gray900),
+                    ),
+                  ),
+                  Text(
+                    'Outstanding',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                    ),
+                  ),
+                ],
+              ),
+              if (onEdit != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  constraints: const BoxConstraints(
+                    minWidth: AppComponentSizes.minTouchTarget,
+                    minHeight: AppComponentSizes.minTouchTarget,
+                  ),
+                  tooltip: 'Edit Card',
+                  onPressed: onEdit,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Utilization & Available limit
+          if (limit > 0) ...[
+            ClipRRect(
+              borderRadius: AppBorderRadius.pillBorder,
+              child: LinearProgressIndicator(
+                value: utilization,
+                minHeight: 6,
+                backgroundColor:
+                    isDark ? AppColors.darkBorder : AppColors.gray200,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  utilization > 0.8
+                      ? AppColors.danger
+                      : (utilization > 0.5 ? AppColors.warning : AppColors.purple),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${AppFormatters.currency(availableCredit)} available',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray300 : AppColors.gray700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Limit: ${AppFormatters.currency(limit)}',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+
+          const Divider(height: 16),
+
+          // Bottom Bar: Cash-backed badge & Pay Bill button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    if (outstanding <= 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald600.withValues(alpha: 0.12),
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 14,
+                              color: AppColors.emerald600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Settled (₹0 Due)',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.emerald600,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (isFullyBacked)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald600.withValues(alpha: 0.12),
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock_rounded,
+                              size: 14,
+                              color: AppColors.emerald600,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                '${AppFormatters.currency(lockedAmount)} Locked (100% Backed)',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.emerald600,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (isPartiallyBacked)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock_clock_rounded,
+                              size: 14,
+                              color: AppColors.warning,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                '${AppFormatters.currency(lockedAmount)} Locked (${((lockedAmount / outstanding) * 100).toInt()}% Backed)',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gray200.withValues(alpha: 0.5),
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lock_open_rounded,
+                              size: 14,
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Unbacked',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (onPayBill != null)
+                ElevatedButton.icon(
+                  onPressed: onPayBill,
+                  icon: const Icon(Icons.payment_rounded, size: 16),
+                  label: const Text('Pay Bill'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 6,
+                    ),
+                    minimumSize: const Size(0, 34),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppBorderRadius.smallBorder,
+                    ),
+                    textStyle: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

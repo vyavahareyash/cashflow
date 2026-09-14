@@ -5,6 +5,7 @@ import '../services/database_helper.dart';
 import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/transaction_model.dart';
+import '../models/credit_card_model.dart';
 import '../models/goal_model.dart';
 import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
@@ -23,6 +24,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Account> _accounts = [];
+  Map<int, CreditCard> _creditCardsMap = {};
   List<Goal> _goals = [];
   List<Category> _categories = [];
   List<Map<String, dynamic>> _recentTransactions = [];
@@ -67,6 +69,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final salaryDay = await db.getSalaryDay();
     final cycle = SalaryCycle.resolve(salaryDay: salaryDay);
     final accountsData = await db.readAllAccounts();
+    final creditCardsData = await db.readAllCreditCards();
+    final Map<int, CreditCard> creditCardsMap = {
+      for (final cc in creditCardsData) cc.accountId: cc,
+    };
     final locked = await db.getTotalLockedAmount();
     final usable = await db.calculateUsableBalance();
     final goalsData = await db.readAllGoals();
@@ -75,7 +81,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     double totalPhysical = 0;
     for (var acc in accountsData) {
-      totalPhysical += acc.balance;
+      if (!acc.isCreditCard) {
+        totalPhysical += acc.balance;
+      }
     }
 
     final categorySpendingMap =
@@ -93,6 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) {
       setState(() {
         _accounts = accountsData;
+        _creditCardsMap = creditCardsMap;
         _goals = goalsData;
         _categories = categoriesData;
         _recentTransactions = transactionsData.take(5).toList();
@@ -787,6 +796,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildAccountItem(Account acc, bool isDark) {
     final isBank = acc.type == 'Bank';
+    final isCC = acc.isCreditCard;
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.symmetric(
@@ -801,13 +811,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: (isBank ? AppColors.info : AppColors.emerald600)
+              color: (isCC
+                      ? AppColors.purple
+                      : (isBank ? AppColors.info : AppColors.emerald600))
                   .withValues(alpha: 0.12),
               borderRadius: AppBorderRadius.mediumBorder,
             ),
             child: Icon(
-              isBank ? Icons.account_balance_rounded : Icons.wallet_rounded,
-              color: isBank ? AppColors.info : AppColors.emerald600,
+              isCC
+                  ? Icons.credit_card_rounded
+                  : (isBank
+                      ? Icons.account_balance_rounded
+                      : Icons.wallet_rounded),
+              color: isCC
+                  ? AppColors.purple
+                  : (isBank ? AppColors.info : AppColors.emerald600),
               size: 20,
             ),
           ),
@@ -825,7 +843,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  acc.type,
+                  isCC ? 'Credit Card (Liability)' : acc.type,
                   style: AppTypography.labelSmall.copyWith(
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
@@ -837,6 +855,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             AppFormatters.currency(acc.balance, isPrivate: _isPrivate),
             style: AppTypography.titleMedium.copyWith(
               fontWeight: FontWeight.w700,
+              color: (isCC && acc.balance > 0)
+                  ? AppColors.danger
+                  : (isDark ? AppColors.darkText : AppColors.gray900),
             ),
           ),
         ],
@@ -976,6 +997,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : null;
     int? selectedGoalId = _goals.isNotEmpty ? _goals.first.id : null;
 
+    final initialCc =
+        selectedAccountId != null ? _creditCardsMap[selectedAccountId] : null;
+    bool lockCcFunds = initialCc?.autoLock ?? true;
+    final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
+    int? selectedLockBankAccountId = initialCc?.defaultLockAccountId ??
+        bankAccounts.firstOrNull?.id;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1079,7 +1107,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                       onChanged: (val) {
                         if (val != null) {
-                          setStateSheet(() => selectedType = val);
+                          setStateSheet(() {
+                            selectedType = val;
+                            if (val != 'expense') {
+                              final acc = _accounts
+                                  .where((a) => a.id == selectedAccountId)
+                                  .firstOrNull;
+                              if (acc?.isCreditCard == true) {
+                                selectedAccountId =
+                                    bankAccounts.firstOrNull?.id;
+                              }
+                            }
+                          });
                         }
                       },
                     ),
@@ -1216,69 +1255,251 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
 
                     // Account Selector
-                    Text(
-                      selectedType == 'income' ? 'To Account' : 'From Account',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: isDark ? AppColors.gray300 : AppColors.gray700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedAccountId,
-                      isExpanded: true,
-                      dropdownColor: isDark
-                          ? AppColors.darkSurfaceElevated
-                          : AppColors.white,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.darkSurface
-                            : AppColors.gray50,
-                        border: OutlineInputBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppColors.darkBorder
-                                : AppColors.gray300,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
-                        ),
-                      ),
-                      items: _accounts
-                          .map(
-                            (acc) => DropdownMenuItem(
-                              value: acc.id,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      acc.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Text(
-                                    '₹${acc.balance.toStringAsFixed(0)}',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      color: isDark
-                                          ? AppColors.gray400
-                                          : AppColors.gray500,
-                                    ),
-                                  ),
-                                ],
+                    Builder(
+                      builder: (context) {
+                        final eligibleAccounts =
+                            selectedType == 'expense' ? _accounts : bankAccounts;
+                        final currentAccId =
+                            eligibleAccounts.any((a) => a.id == selectedAccountId)
+                                ? selectedAccountId
+                                : eligibleAccounts.firstOrNull?.id;
+                        selectedAccountId = currentAccId;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              selectedType == 'income'
+                                  ? 'To Account'
+                                  : 'From Account',
+                              style: AppTypography.labelMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.gray300
+                                    : AppColors.gray700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setStateSheet(() => selectedAccountId = val),
+                            const SizedBox(height: AppSpacing.xs),
+                            DropdownButtonFormField<int>(
+                              initialValue: selectedAccountId,
+                              isExpanded: true,
+                              dropdownColor: isDark
+                                  ? AppColors.darkSurfaceElevated
+                                  : AppColors.white,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.darkSurface
+                                    : AppColors.gray50,
+                                border: OutlineInputBorder(
+                                  borderRadius: AppBorderRadius.mediumBorder,
+                                  borderSide: BorderSide(
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.md,
+                                ),
+                              ),
+                              items: eligibleAccounts
+                                  .map(
+                                    (acc) => DropdownMenuItem(
+                                      value: acc.id,
+                                      child: Row(
+                                        children: [
+                                          if (acc.isCreditCard) ...[
+                                            const Icon(
+                                              Icons.credit_card_rounded,
+                                              size: 16,
+                                              color: AppColors.purple,
+                                            ),
+                                            const SizedBox(width: AppSpacing.xs),
+                                          ],
+                                          Expanded(
+                                            child: Text(
+                                              acc.name,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                          ),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          Text(
+                                            acc.isCreditCard
+                                                ? 'Due: ₹${acc.balance.toStringAsFixed(0)}'
+                                                : '₹${acc.balance.toStringAsFixed(0)}',
+                                            style: AppTypography.labelSmall
+                                                .copyWith(
+                                              color: acc.isCreditCard
+                                                  ? AppColors.purple
+                                                  : (isDark
+                                                      ? AppColors.gray400
+                                                      : AppColors.gray500),
+                                              fontWeight: acc.isCreditCard
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                setStateSheet(() {
+                                  selectedAccountId = val;
+                                  if (val != null) {
+                                    final cc = _creditCardsMap[val];
+                                    if (cc != null) {
+                                      lockCcFunds = cc.autoLock;
+                                      if (cc.defaultLockAccountId != null &&
+                                          bankAccounts.any((b) =>
+                                              b.id == cc.defaultLockAccountId)) {
+                                        selectedLockBankAccountId =
+                                            cc.defaultLockAccountId;
+                                      } else if (selectedLockBankAccountId ==
+                                              null ||
+                                          !bankAccounts.any((b) =>
+                                              b.id ==
+                                              selectedLockBankAccountId)) {
+                                        selectedLockBankAccountId =
+                                            bankAccounts.firstOrNull?.id;
+                                      }
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
+
+                    // Credit Card Fund Lock Section (for CC expense)
+                    if (selectedType == 'expense' &&
+                        _accounts
+                                .where((a) => a.id == selectedAccountId)
+                                .firstOrNull
+                                ?.isCreditCard ==
+                            true) ...[
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.purple.withValues(alpha: 0.12)
+                              : AppColors.purple.withValues(alpha: 0.06),
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          border: Border.all(
+                            color: AppColors.purple.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                'Lock Funds in Bank Account',
+                                style: AppTypography.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Reserve cash to pay this credit card bill',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                ),
+                              ),
+                              value: lockCcFunds,
+                              activeThumbColor: AppColors.purple,
+                              onChanged: (val) {
+                                setStateSheet(() => lockCcFunds = val);
+                              },
+                            ),
+                            if (lockCcFunds) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'Reserve From Account',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xxs),
+                              DropdownButtonFormField<int>(
+                                initialValue: bankAccounts.any(
+                                        (b) => b.id == selectedLockBankAccountId)
+                                    ? selectedLockBankAccountId
+                                    : bankAccounts.firstOrNull?.id,
+                                isExpanded: true,
+                                dropdownColor: isDark
+                                    ? AppColors.darkSurfaceElevated
+                                    : AppColors.white,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? AppColors.darkSurface
+                                      : AppColors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: AppBorderRadius.mediumBorder,
+                                    borderSide: BorderSide(
+                                      color: isDark
+                                          ? AppColors.darkBorder
+                                          : AppColors.gray300,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.sm,
+                                  ),
+                                ),
+                                items: bankAccounts
+                                    .map(
+                                      (acc) => DropdownMenuItem(
+                                        value: acc.id,
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                acc.name,
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                            const SizedBox(
+                                                width: AppSpacing.sm),
+                                            Text(
+                                              '₹${acc.balance.toStringAsFixed(0)}',
+                                              style: AppTypography.labelSmall
+                                                  .copyWith(
+                                                color: isDark
+                                                    ? AppColors.gray400
+                                                    : AppColors.gray500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) {
+                                  setStateSheet(
+                                      () => selectedLockBankAccountId = val);
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
 
                     if (selectedType == 'transfer') ...[
                       Text(
@@ -1289,61 +1510,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedDestinationAccountId,
-                        isExpanded: true,
-                        dropdownColor: isDark
-                            ? AppColors.darkSurfaceElevated
-                            : AppColors.white,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.gray50,
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            borderSide: BorderSide(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : AppColors.gray300,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
-                          ),
-                        ),
-                        items: _accounts
-                            .map(
-                              (acc) => DropdownMenuItem(
-                                value: acc.id,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        acc.name,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Text(
-                                      '₹${acc.balance.toStringAsFixed(0)}',
-                                      style:
-                                          AppTypography.labelSmall.copyWith(
-                                        color: isDark
-                                            ? AppColors.gray400
-                                            : AppColors.gray500,
-                                      ),
-                                    ),
-                                  ],
+                      Builder(
+                        builder: (context) {
+                          final eligibleDestinations = bankAccounts
+                              .where((acc) => acc.id != selectedAccountId)
+                              .toList();
+                          final currentDestId = eligibleDestinations.any(
+                                  (a) => a.id == selectedDestinationAccountId)
+                              ? selectedDestinationAccountId
+                              : eligibleDestinations.firstOrNull?.id;
+                          selectedDestinationAccountId = currentDestId;
+
+                          return DropdownButtonFormField<int>(
+                            initialValue: selectedDestinationAccountId,
+                            isExpanded: true,
+                            dropdownColor: isDark
+                                ? AppColors.darkSurfaceElevated
+                                : AppColors.white,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: isDark
+                                  ? AppColors.darkSurface
+                                  : AppColors.gray50,
+                              border: OutlineInputBorder(
+                                borderRadius: AppBorderRadius.mediumBorder,
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.gray300,
                                 ),
                               ),
-                            )
-                            .toList(),
-                        onChanged: (val) => setStateSheet(
-                          () => selectedDestinationAccountId = val,
-                        ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.md,
+                              ),
+                            ),
+                            items: eligibleDestinations
+                                .map(
+                                  (acc) => DropdownMenuItem(
+                                    value: acc.id,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            acc.name,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Text(
+                                          '₹${acc.balance.toStringAsFixed(0)}',
+                                          style:
+                                              AppTypography.labelSmall.copyWith(
+                                            color: isDark
+                                                ? AppColors.gray400
+                                                : AppColors.gray500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) => setStateSheet(
+                              () => selectedDestinationAccountId = val,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: AppSpacing.md),
                     ],
@@ -1481,19 +1715,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               if (selectedCategoryId == null) {
                                 throw ArgumentError('Select a category.');
                               }
-                              await DatabaseHelper.instance.insertTransaction(
-                                TransactionModel(
-                                  accountId: selectedAccountId!,
+                              final currentSelectedAcc = _accounts
+                                  .where((a) => a.id == selectedAccountId)
+                                  .firstOrNull;
+                              if (currentSelectedAcc?.isCreditCard == true) {
+                                final cc = _creditCardsMap[selectedAccountId];
+                                final availableCredit =
+                                    (cc?.creditLimit ?? 0) -
+                                        currentSelectedAcc!.balance;
+                                if (amount > availableCredit) {
+                                  throw ArgumentError(
+                                    'Transaction amount exceeds available credit limit (₹${availableCredit.toStringAsFixed(0)} available).',
+                                  );
+                                }
+                                if (lockCcFunds &&
+                                    selectedLockBankAccountId == null) {
+                                  throw ArgumentError(
+                                    'Please select a bank account to lock funds in.',
+                                  );
+                                }
+                                await DatabaseHelper.instance
+                                    .createCreditCardExpenseTransaction(
+                                  ccAccountId: selectedAccountId!,
                                   categoryId: selectedCategoryId!,
                                   amount: amount,
                                   date: _selectedDate.toIso8601String(),
                                   note: noteController.text.trim(),
-                                ),
-                              );
-                              await DatabaseHelper.instance.subtractFromAccount(
-                                selectedAccountId!,
-                                amount,
-                              );
+                                  lockBankAccountId: lockCcFunds
+                                      ? selectedLockBankAccountId
+                                      : null,
+                                );
+                              } else {
+                                await DatabaseHelper.instance.insertTransaction(
+                                  TransactionModel(
+                                    accountId: selectedAccountId!,
+                                    categoryId: selectedCategoryId!,
+                                    amount: amount,
+                                    date: _selectedDate.toIso8601String(),
+                                    note: noteController.text.trim(),
+                                  ),
+                                );
+                                await DatabaseHelper.instance.subtractFromAccount(
+                                  selectedAccountId!,
+                                  amount,
+                                );
+                              }
                             }
                           } catch (error) {
                             if (ctx.mounted) {

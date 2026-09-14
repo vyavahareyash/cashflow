@@ -2,7 +2,9 @@ class Account {
   final int? id;
   final String name;
   final double balance;
-  final String type; // 'Bank' or 'Cash'
+  final String type; // 'Bank', 'Cash', 'Savings', 'Wallet', or 'Credit Card'
+
+  bool get isCreditCard => type == 'Credit Card';
 
   Account({
     this.id,
