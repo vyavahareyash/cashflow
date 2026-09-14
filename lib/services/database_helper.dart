@@ -15,6 +15,7 @@ import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/transaction_model.dart';
 import 'package:cashflow/models/goal_model.dart';
+import 'package:cashflow/models/credit_card_model.dart';
 import 'package:cashflow/models/locked_allocation_model.dart';
 import 'package:cashflow/models/salary_cycle.dart';
 
@@ -47,6 +48,7 @@ class DatabaseHelper {
         await txn.delete('locked_allocations');
         await txn.delete('transactions');
         await txn.delete('goals');
+        await txn.delete('credit_cards');
         await txn.delete('categories');
         await txn.delete('accounts');
         await txn.execute(
@@ -72,7 +74,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -88,6 +90,9 @@ class DatabaseHelper {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await _migrateV1toV2(db);
+        }
+        if (oldVersion < 3) {
+          await _migrateV2toV3(db);
         }
       },
     );
@@ -222,6 +227,101 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> _migrateV2toV3(Database db) async {
+    final ccExists = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'credit_cards'",
+    );
+    if (ccExists.isEmpty) {
+      await db.execute('''
+        CREATE TABLE credit_cards (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          account_id INTEGER NOT NULL UNIQUE,
+          credit_limit REAL NOT NULL,
+          statement_day INTEGER NOT NULL DEFAULT 1,
+          due_day INTEGER NOT NULL DEFAULT 20,
+          default_lock_account_id INTEGER,
+          auto_lock INTEGER NOT NULL DEFAULT 1,
+          FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE,
+          FOREIGN KEY (default_lock_account_id) REFERENCES accounts (id)
+        )
+      ''');
+    }
+
+    final lockTableExists = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'locked_allocations'",
+    );
+    if (lockTableExists.isEmpty) {
+      await db.execute('''
+        CREATE TABLE locked_allocations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          goal_id INTEGER DEFAULT NULL,
+          credit_card_id INTEGER DEFAULT NULL,
+          account_id INTEGER NOT NULL,
+          amount REAL NOT NULL,
+          FOREIGN KEY (goal_id) REFERENCES goals (id),
+          FOREIGN KEY (credit_card_id) REFERENCES credit_cards (id) ON DELETE CASCADE,
+          FOREIGN KEY (account_id) REFERENCES accounts (id)
+        )
+      ''');
+    } else {
+      final lockCols = await db.rawQuery("PRAGMA table_info('locked_allocations')");
+      final hasCreditCardId = lockCols.any((c) => c['name'] == 'credit_card_id');
+      if (!hasCreditCardId) {
+        await db.execute('''
+          CREATE TABLE locked_allocations_v3 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            goal_id INTEGER DEFAULT NULL,
+            credit_card_id INTEGER DEFAULT NULL,
+            account_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            FOREIGN KEY (goal_id) REFERENCES goals (id),
+            FOREIGN KEY (credit_card_id) REFERENCES credit_cards (id) ON DELETE CASCADE,
+            FOREIGN KEY (account_id) REFERENCES accounts (id)
+          )
+        ''');
+        await db.execute('''
+          INSERT INTO locked_allocations_v3 (id, goal_id, credit_card_id, account_id, amount)
+          SELECT id, goal_id, NULL, account_id, amount FROM locked_allocations
+        ''');
+        await db.execute('DROP TABLE locked_allocations');
+        await db.execute('ALTER TABLE locked_allocations_v3 RENAME TO locked_allocations');
+      }
+    }
+
+    final txSql = await db.rawQuery(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'transactions'",
+    );
+    if (txSql.isNotEmpty) {
+      final sql = (txSql.first['sql'] as String? ?? '').toLowerCase();
+      if (!sql.contains('cc_payment')) {
+        await db.execute('''
+          CREATE TABLE transactions_v3 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL,
+            destination_account_id INTEGER DEFAULT NULL,
+            category_id INTEGER DEFAULT NULL,
+            goal_id INTEGER DEFAULT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            note TEXT,
+            type TEXT NOT NULL DEFAULT 'expense'
+              CHECK (type IN ('expense', 'income', 'transfer', 'goal_lock', 'goal_unlock', 'goal_payment', 'cc_payment', 'cc_lock', 'cc_unlock')),
+            FOREIGN KEY (account_id) REFERENCES accounts (id),
+            FOREIGN KEY (destination_account_id) REFERENCES accounts (id),
+            FOREIGN KEY (category_id) REFERENCES categories (id),
+            FOREIGN KEY (goal_id) REFERENCES goals (id)
+          )
+        ''');
+        await db.execute('''
+          INSERT INTO transactions_v3 (id, account_id, destination_account_id, category_id, goal_id, amount, date, note, type)
+          SELECT id, account_id, destination_account_id, category_id, goal_id, amount, date, note, type FROM transactions
+        ''');
+        await db.execute('DROP TABLE transactions');
+        await db.execute('ALTER TABLE transactions_v3 RENAME TO transactions');
+      }
+    }
+  }
+
   // --- CREATE TABLES ---
   Future _createDB(Database db, int version) async {
     // 1. Accounts Table
@@ -255,7 +355,7 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         note TEXT,
         type TEXT NOT NULL DEFAULT 'expense'
-          CHECK (type IN ('expense', 'income', 'transfer', 'goal_lock', 'goal_unlock', 'goal_payment')),
+          CHECK (type IN ('expense', 'income', 'transfer', 'goal_lock', 'goal_unlock', 'goal_payment', 'cc_payment', 'cc_lock', 'cc_unlock')),
         FOREIGN KEY (account_id) REFERENCES accounts (id),
         FOREIGN KEY (destination_account_id) REFERENCES accounts (id),
         FOREIGN KEY (category_id) REFERENCES categories (id),
@@ -274,19 +374,36 @@ class DatabaseHelper {
       )
     ''');
 
-    // 5. Locked Allocations Table (The Bridge)
+    // 5. Credit Cards Table
+    await db.execute('''
+      CREATE TABLE credit_cards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL UNIQUE,
+        credit_limit REAL NOT NULL,
+        statement_day INTEGER NOT NULL DEFAULT 1,
+        due_day INTEGER NOT NULL DEFAULT 20,
+        default_lock_account_id INTEGER,
+        auto_lock INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE,
+        FOREIGN KEY (default_lock_account_id) REFERENCES accounts (id)
+      )
+    ''');
+
+    // 6. Locked Allocations Table (The Bridge)
     await db.execute('''
       CREATE TABLE locked_allocations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        goal_id INTEGER NOT NULL,
+        goal_id INTEGER DEFAULT NULL,
+        credit_card_id INTEGER DEFAULT NULL,
         account_id INTEGER NOT NULL,
         amount REAL NOT NULL,
         FOREIGN KEY (goal_id) REFERENCES goals (id),
+        FOREIGN KEY (credit_card_id) REFERENCES credit_cards (id) ON DELETE CASCADE,
         FOREIGN KEY (account_id) REFERENCES accounts (id)
       )
     ''');
 
-    // 6. App Settings Table
+    // 7. App Settings Table
     await db.execute('''
       CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,
@@ -837,10 +954,60 @@ class DatabaseHelper {
     int accountId,
     double adjustment,
   ) async {
-    await txn.rawUpdate(
-      'UPDATE accounts SET balance = balance + ? WHERE id = ?',
-      [adjustment, accountId],
+    final acc = await txn.query(
+      'accounts',
+      columns: ['type'],
+      where: 'id = ?',
+      whereArgs: [accountId],
     );
+    if (acc.isNotEmpty && acc.first['type'] == 'Credit Card') {
+      // For credit cards, balance is liability.
+      // Negative adjustment (expense) increases liability; positive adjustment (payment) decreases liability.
+      await txn.rawUpdate(
+        'UPDATE accounts SET balance = MAX(0.0, balance - ?) WHERE id = ?',
+        [adjustment, accountId],
+      );
+    } else {
+      await txn.rawUpdate(
+        'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+        [adjustment, accountId],
+      );
+    }
+  }
+
+  Future<void> _reduceLockedAllocationByCreditCard(
+    Transaction txn,
+    int creditCardId,
+    double amount,
+  ) async {
+    final locks = await txn.query(
+      'locked_allocations',
+      where: 'credit_card_id = ?',
+      whereArgs: [creditCardId],
+      orderBy: 'id DESC',
+    );
+    double remaining = amount;
+    for (final lock in locks) {
+      if (remaining <= 0) break;
+      final lockId = lock['id'] as int;
+      final lockAmount = (lock['amount'] as num).toDouble();
+      if (lockAmount <= remaining) {
+        await txn.delete(
+          'locked_allocations',
+          where: 'id = ?',
+          whereArgs: [lockId],
+        );
+        remaining -= lockAmount;
+      } else {
+        await txn.update(
+          'locked_allocations',
+          {'amount': lockAmount - remaining},
+          where: 'id = ?',
+          whereArgs: [lockId],
+        );
+        remaining = 0;
+      }
+    }
   }
 
   Future<void> _reduceLockedAllocation(
@@ -938,18 +1105,24 @@ class DatabaseHelper {
   Future<void> subtractFromAccount(int accountId, double amount) async {
     final db = await instance.database;
 
-    // 1. Get current balance
+    // 1. Get current balance and type
     List<Map> result = await db.query(
       'accounts',
       where: 'id = ?',
       whereArgs: [accountId],
     );
-    double currentBalance = result.first['balance'];
+    if (result.isEmpty) return;
+    double currentBalance = (result.first['balance'] as num).toDouble();
+    String type = result.first['type'] as String? ?? 'Bank';
+
+    final newBalance = type == 'Credit Card'
+        ? currentBalance + amount
+        : currentBalance - amount;
 
     // 2. Update with new balance
     await db.update(
       'accounts',
-      {'balance': currentBalance - amount},
+      {'balance': newBalance},
       where: 'id = ?',
       whereArgs: [accountId],
     );
@@ -1075,6 +1248,34 @@ class DatabaseHelper {
       switch (type) {
         case 'expense':
           await _adjustAccountBalance(txn, accountId, amount);
+          final ccRows = await txn.query(
+            'credit_cards',
+            where: 'account_id = ?',
+            whereArgs: [accountId],
+          );
+          if (ccRows.isNotEmpty) {
+            final ccId = ccRows.first['id'] as int;
+            await _reduceLockedAllocationByCreditCard(txn, ccId, amount);
+          }
+          break;
+
+        case 'cc_payment':
+          await _adjustAccountBalance(txn, accountId, amount);
+          if (destinationAccountId != null) {
+            await _adjustAccountBalance(txn, destinationAccountId, -amount);
+          }
+          break;
+
+        case 'cc_lock':
+          final ccRows = await txn.query(
+            'credit_cards',
+            where: 'account_id = ?',
+            whereArgs: [accountId],
+          );
+          if (ccRows.isNotEmpty) {
+            final ccId = ccRows.first['id'] as int;
+            await _reduceLockedAllocationByCreditCard(txn, ccId, amount);
+          }
           break;
 
         case 'income':
@@ -1933,18 +2134,190 @@ class DatabaseHelper {
   // Get locked breakdown for a specific account (for Accounts screen)
   Future<List<LockedAllocation>> getLocksForAccount(int accountId) async {
     final db = await instance.database;
-    // JOIN query to get the goal name along with the amount
     final result = await db.rawQuery(
       '''
-      SELECT la.*, g.name as goal_name 
+      SELECT 
+        la.*, 
+        g.name as goal_name,
+        acc.name as credit_card_name
       FROM locked_allocations la 
-      JOIN goals g ON la.goal_id = g.id 
+      LEFT JOIN goals g ON la.goal_id = g.id 
+      LEFT JOIN credit_cards cc ON la.credit_card_id = cc.id
+      LEFT JOIN accounts acc ON cc.account_id = acc.id
       WHERE la.account_id = ?
     ''',
       [accountId],
     );
 
     return result.map((json) => LockedAllocation.fromMap(json)).toList();
+  }
+
+  // --- CREDIT CARD OPERATIONS ---
+
+  Future<int> createCreditCard(CreditCard card) async {
+    final db = await instance.database;
+    final id = await db.insert('credit_cards', card.toMap());
+    notifyDataChanged();
+    return id;
+  }
+
+  Future<CreditCard?> getCreditCardByAccountId(int accountId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'credit_cards',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return CreditCard.fromMap(result.first);
+  }
+
+  Future<List<CreditCard>> readAllCreditCards() async {
+    final db = await instance.database;
+    final result = await db.query('credit_cards');
+    return result.map((m) => CreditCard.fromMap(m)).toList();
+  }
+
+  Future<int> updateCreditCard(CreditCard card) async {
+    if (card.id == null) throw ArgumentError('Credit card ID cannot be null');
+    final db = await instance.database;
+    final res = await db.update(
+      'credit_cards',
+      card.toMap(),
+      where: 'id = ?',
+      whereArgs: [card.id],
+    );
+    notifyDataChanged();
+    return res;
+  }
+
+  Future<int> deleteCreditCard(int id) async {
+    final db = await instance.database;
+    final res = await db.delete(
+      'credit_cards',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    notifyDataChanged();
+    return res;
+  }
+
+  /// Returns total locked funds reserved for a specific credit card.
+  Future<double> getLockedAmountForCreditCard(int creditCardId) async {
+    final db = await instance.database;
+    final res = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM locked_allocations WHERE credit_card_id = ?',
+      [creditCardId],
+    );
+    return (res.first['total'] as num? ?? 0.0).toDouble();
+  }
+
+  /// Records a credit card expense and optionally locks funds in a bank account.
+  Future<int> createCreditCardExpenseTransaction({
+    required int ccAccountId,
+    required int? categoryId,
+    required double amount,
+    required String date,
+    required String note,
+    int? lockBankAccountId,
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+
+    final txId = await db.transaction((txn) async {
+      await _requireAccount(txn, ccAccountId);
+      if (categoryId != null) {
+        await _requireCategory(txn, categoryId);
+      }
+
+      // 1. Adjust CC balance (increases liability)
+      await _adjustAccountBalance(txn, ccAccountId, -amount);
+
+      // 2. Insert expense transaction
+      final id = await txn.insert('transactions', {
+        'account_id': ccAccountId,
+        'destination_account_id': null,
+        'category_id': categoryId,
+        'goal_id': null,
+        'amount': amount,
+        'date': date,
+        'note': note,
+        'type': 'expense',
+      });
+
+      // 3. Lock funds in bank account if specified
+      if (lockBankAccountId != null) {
+        final ccRows = await txn.query(
+          'credit_cards',
+          where: 'account_id = ?',
+          whereArgs: [ccAccountId],
+        );
+        if (ccRows.isNotEmpty) {
+          final ccId = ccRows.first['id'] as int;
+          await txn.insert('locked_allocations', {
+            'goal_id': null,
+            'credit_card_id': ccId,
+            'account_id': lockBankAccountId,
+            'amount': amount,
+          });
+        }
+      }
+
+      return id;
+    });
+
+    notifyDataChanged();
+    return txId;
+  }
+
+  /// Pays a credit card bill from a bank account, releasing matching locked funds.
+  Future<int> payCreditCardBill({
+    required int ccAccountId,
+    required int bankAccountId,
+    required double amount,
+    String? date,
+    String? note,
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+
+    final txId = await db.transaction((txn) async {
+      await _requireAccount(txn, ccAccountId);
+      await _requireAccount(txn, bankAccountId);
+
+      // 1. Deduct money from bank account
+      await _adjustAccountBalance(txn, bankAccountId, -amount);
+
+      // 2. Reduce credit card outstanding liability
+      await _adjustAccountBalance(txn, ccAccountId, amount);
+
+      // 3. Release locked funds for this credit card
+      final ccRows = await txn.query(
+        'credit_cards',
+        where: 'account_id = ?',
+        whereArgs: [ccAccountId],
+      );
+      if (ccRows.isNotEmpty) {
+        final ccId = ccRows.first['id'] as int;
+        await _reduceLockedAllocationByCreditCard(txn, ccId, amount);
+      }
+
+      // 4. Record cc_payment transaction
+      return await txn.insert('transactions', {
+        'account_id': bankAccountId,
+        'destination_account_id': ccAccountId,
+        'category_id': null,
+        'goal_id': null,
+        'amount': amount,
+        'date': date ?? DateTime.now().toIso8601String(),
+        'note': note != null && note.isNotEmpty ? note : 'Credit Card Bill Payment',
+        'type': 'cc_payment',
+      });
+    });
+
+    notifyDataChanged();
+    return txId;
   }
 
   Future<List<Map<String, dynamic>>> getGoalContributions(int goalId) async {
@@ -1983,24 +2356,43 @@ class DatabaseHelper {
   // --- CORE CALCULATION LOGIC ---
 
   /// Calculates usable cash after excluding funds locked for goals.
-  /// Monthly budgets are tracking limits and do not reserve physical cash.
+  /// Calculates usable cash after excluding funds locked for goals and CC bills.
+  /// Credit card balances represent liabilities and are excluded from physical cash.
   Future<double> calculateUsableBalance() async {
     final db = await instance.database;
 
-    // 1. Sum of all account balances
+    // 1. Sum of all physical cash / bank account balances
     final accountResult = await db.rawQuery(
-      'SELECT SUM(balance) as total FROM accounts',
+      "SELECT SUM(balance) as total FROM accounts WHERE type != 'Credit Card'",
     );
     double totalPhysical = (accountResult.first['total'] as num? ?? 0)
         .toDouble();
 
-    // 2. Total locked for goals
+    // 2. Total locked for goals and CC bills
     final lockedResult = await db.rawQuery(
       'SELECT SUM(amount) as total FROM locked_allocations',
     );
     double totalLocked = (lockedResult.first['total'] as num? ?? 0).toDouble();
 
     return (totalPhysical - totalLocked).clamp(0.0, double.infinity);
+  }
+
+  /// Calculates total physical cash (excluding credit card liabilities).
+  Future<double> calculatePhysicalBalance() async {
+    final db = await instance.database;
+    final res = await db.rawQuery(
+      "SELECT SUM(balance) as total FROM accounts WHERE type != 'Credit Card'",
+    );
+    return (res.first['total'] as num? ?? 0.0).toDouble();
+  }
+
+  /// Calculates total outstanding credit card liabilities.
+  Future<double> getTotalCreditCardOutstanding() async {
+    final db = await instance.database;
+    final res = await db.rawQuery(
+      "SELECT SUM(balance) as total FROM accounts WHERE type = 'Credit Card'",
+    );
+    return (res.first['total'] as num? ?? 0.0).toDouble();
   }
 
   /// Gets the total spent in a specific category for the specified calendar month and year,
@@ -2117,6 +2509,7 @@ class DatabaseHelper {
       final transactions = await db.query('transactions');
       final goals = await db.query('goals');
       final lockedAllocations = await db.query('locked_allocations');
+      final creditCards = await db.query('credit_cards');
 
       final jsonString = BackupCodec.encode(
         accounts: accounts.map(Map<String, dynamic>.from).toList(),
@@ -2124,6 +2517,9 @@ class DatabaseHelper {
         transactions: transactions.map(Map<String, dynamic>.from).toList(),
         goals: goals.map(Map<String, dynamic>.from).toList(),
         lockedAllocations: lockedAllocations
+            .map(Map<String, dynamic>.from)
+            .toList(),
+        creditCards: creditCards
             .map(Map<String, dynamic>.from)
             .toList(),
       );
@@ -2165,11 +2561,17 @@ class DatabaseHelper {
         await txn.delete('locked_allocations');
         await txn.delete('transactions');
         await txn.delete('goals');
+        await txn.delete('credit_cards');
         await txn.delete('categories');
         await txn.delete('accounts');
 
         for (final account in data['accounts'] as List<Map<String, dynamic>>) {
           await txn.insert('accounts', account);
+        }
+        if (data['credit_cards'] != null) {
+          for (final cc in data['credit_cards'] as List<Map<String, dynamic>>) {
+            await txn.insert('credit_cards', cc);
+          }
         }
         for (final category
             in data['categories'] as List<Map<String, dynamic>>) {

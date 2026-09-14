@@ -9,6 +9,7 @@ class BackupCodec {
     'transactions',
     'goals',
     'locked_allocations',
+    'credit_cards',
   ];
 
   static String encode({
@@ -17,6 +18,7 @@ class BackupCodec {
     required List<Map<String, dynamic>> transactions,
     required List<Map<String, dynamic>> goals,
     required List<Map<String, dynamic>> lockedAllocations,
+    List<Map<String, dynamic>>? creditCards,
   }) {
     return jsonEncode({
       'formatVersion': formatVersion,
@@ -27,6 +29,7 @@ class BackupCodec {
       'transactions': transactions,
       'goals': goals,
       'locked_allocations': lockedAllocations,
+      'credit_cards': creditCards ?? [],
     });
   }
 
