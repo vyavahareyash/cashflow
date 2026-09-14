@@ -543,6 +543,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     int? selectedDestAccountId = tx['destination_account_id'] as int?;
     int? selectedCategoryId = tx['category_id'] as int?;
 
+    final filteredCategories = categories.where((c) {
+      if (type == 'income') return c.isIncome;
+      if (type == 'expense') return c.isExpense;
+      return true;
+    }).toList();
+
     if (!accounts.any((a) => a.id == selectedAccountId) && accounts.isNotEmpty) {
       selectedAccountId = accounts.first.id!;
     }
@@ -553,7 +559,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           accounts.where((a) => a.id != selectedAccountId).firstOrNull?.id;
     }
     if (selectedCategoryId != null &&
-        !categories.any((c) => c.id == selectedCategoryId)) {
+        !filteredCategories.any((c) => c.id == selectedCategoryId)) {
       selectedCategoryId = null;
     }
 
@@ -727,10 +733,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     if (!isTransfer &&
                         type != 'goal_lock' &&
                         type != 'goal_unlock' &&
-                        categories.isNotEmpty) ...[
+                        filteredCategories.isNotEmpty) ...[
                       DropdownButtonFormField<int?>(
                         key: const Key('edit_transaction_category_dropdown'),
-                        initialValue: selectedCategoryId,
+                        initialValue: filteredCategories.any((c) => c.id == selectedCategoryId)
+                            ? selectedCategoryId
+                            : null,
                         decoration: const InputDecoration(
                           labelText: 'Category',
                           border: OutlineInputBorder(
@@ -742,7 +750,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             value: null,
                             child: Text('Uncategorized'),
                           ),
-                          ...categories.map((c) {
+                          ...filteredCategories.map((c) {
                             return DropdownMenuItem<int?>(
                               value: c.id,
                               child: Text(c.name),

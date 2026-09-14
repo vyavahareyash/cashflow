@@ -273,6 +273,14 @@ class CategoryStyle {
       return const CategoryStyle(icon: Icons.school_rounded, color: Color(0xFF0284C7));
     } else if (lower.contains('credit') || lower.contains('card')) {
       return const CategoryStyle(icon: Icons.credit_card_rounded, color: AppColors.purple);
+    } else if (lower.contains('salar') || lower.contains('wage') || lower.contains('paycheck')) {
+      return const CategoryStyle(icon: Icons.account_balance_wallet_rounded, color: AppColors.emerald600);
+    } else if (lower.contains('freelance') || lower.contains('consult') || lower.contains('gig')) {
+      return const CategoryStyle(icon: Icons.laptop_mac_rounded, color: AppColors.info);
+    } else if (lower.contains('gift') || lower.contains('reward') || lower.contains('bonus')) {
+      return const CategoryStyle(icon: Icons.card_giftcard_rounded, color: AppColors.pink);
+    } else if (lower.contains('income')) {
+      return const CategoryStyle(icon: Icons.savings_rounded, color: AppColors.emerald700);
     }
     return const CategoryStyle(icon: Icons.category_rounded, color: AppColors.emerald700);
   }

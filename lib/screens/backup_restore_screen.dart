@@ -768,7 +768,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               'Day $_salaryDay of month',
@@ -776,8 +779,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (_salaryDay == 1) ...[
-                              const SizedBox(width: 6),
+                            if (_salaryDay == 1)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
@@ -792,9 +794,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                     fontSize: 10,
                                   ),
                                 ),
-                              ),
-                            ] else if (_salaryDay >= 28) ...[
-                              const SizedBox(width: 6),
+                              )
+                            else if (_salaryDay >= 28)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
@@ -810,7 +811,6 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                   ),
                                 ),
                               ),
-                            ],
                           ],
                         ),
                         const SizedBox(height: 2),
