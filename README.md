@@ -84,10 +84,12 @@ Usable Balance = Total Account Money - Locked Goal Allocations
 Comprehensive guides and architectural specifications are available in the [`docs/`](docs/INDEX.md) directory:
 
 - [User Feature Guide](docs/user/FEATURE_GUIDE.md) — Comprehensive user manual for every feature and workflow.
-- [Calculations & Formulas](docs/user/CALCULATIONS.md) — Exact mathematical definitions for Usable Balance, Payday Cycles, and Daily Burn Pace.
 - [Onboarding & FAQ](docs/user/FAQ_AND_ONBOARDING.md) — 3-step setup guide and answers to common questions.
-- [System Architecture](docs/architecture/ARCHITECTURE.md) — Three-tier architecture, reactive state model, and SQLite schema ER diagram.
-- [Development Guide](docs/development.md) — Developer setup, command cheatsheet, emulator guide, and screenshot automation.
+- [System Architecture](docs/engineering/ARCHITECTURE.md) — Three-tier architecture, reactive state model, and SQLite schema ER diagram.
+- [Calculations & Formulas](docs/engineering/CALCULATIONS.md) — Exact mathematical definitions for Usable Balance, Payday Cycles, and Daily Burn Pace.
+- [Development Guide](docs/engineering/DEVELOPMENT.md) — Developer setup, command cheatsheet, emulator guide, and screenshot automation.
+- [Architecture Decisions (ADRs)](docs/adr/) — Key technical tradeoffs and decisions.
+- [Product Specification](docs/product/SPECIFICATION.md) — Feature specifications and rules.
 
 ---
 
