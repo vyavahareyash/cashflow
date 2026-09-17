@@ -6,7 +6,7 @@ This document specifies the exact mathematical formulas, constraints, boundary l
 
 ## 1. Safe-to-Spend Usable Balance
 
-The core metric displayed on the dashboard hero card.
+The core metric displayed on the dashboard hero card ([ADR-0003](../adr/0003-tracking-only-budget-model.md)).
 
 ### Mathematical Definition
 

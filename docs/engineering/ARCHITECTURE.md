@@ -44,7 +44,7 @@ graph TD
 - Immutable Dart model classes representing system entities:
   - `Account`: Bank or cash repository with running balance.
   - `Category`: Spending group with icon, color, and optional monthly spending budget.
-  - `TransactionItem`: Financial event (Expense, Income, or Account Transfer).
+  - `TransactionItem`: Financial event (Expense, Income, Account Transfer, Goal Lock, Goal Unlock, Goal Payment).
   - `Goal`: Savings target with deadline and status (active, completed, archived).
   - `LockedAllocation`: Virtual envelope lock binding account funds to a goal.
   - `AppSettings`: Key-value store for user preferences (payday cycle start day, privacy mode, theme).
@@ -59,7 +59,7 @@ graph TD
 
 ## Reactive State Management (`dataRevision`)
 
-Cashflow avoids heavy external state containers in favor of a lean, reliable event notifier:
+Cashflow avoids heavy external state containers in favor of a lean, reliable event notifier ([ADR-0001](../adr/0001-reactive-state-model.md)):
 
 ```dart
 class DatabaseHelper {
@@ -162,8 +162,8 @@ erDiagram
 ## Core Invariants & Business Logic
 
 ### 1. Safe-to-Spend Usable Balance
-Usable balance reflects cash that is not committed to any goal.
-$$\\text{Usable Balance} = \\sum \\text{Physical Accounts Balance} - \\sum \\text{Active Locked Allocations}$$
+Usable balance reflects cash that is not committed to any goal. See [CALCULATIONS.md](CALCULATIONS.md) and [ADR-0003](../adr/0003-tracking-only-budget-model.md).
+$$\text{Usable Balance} = \max\left(\sum \text{Physical Accounts Balance} - \sum \text{Active Locked Allocations},\, 0.0\right)$$
 
 ### 2. Atomic Balance Updates
 Transaction mutations must be executed inside database transactions:
@@ -173,7 +173,7 @@ Transaction mutations must be executed inside database transactions:
 - **Transaction Deletion**: Performs exact mathematical reversal on affected accounts before deleting the row.
 
 ### 3. Virtual Envelopes (No Inter-Bank Movement)
-- Locking funds toward a goal inserts a row in `locked_allocations`.
+- Locking funds toward a goal inserts a row in `locked_allocations` ([ADR-0002](../adr/0002-logical-goal-allocation.md)).
 - The physical account balance in `accounts` is unaffected.
 - The total locked for that goal increments, and usable balance decrements.
 - Allocating more than the account's physical balance or more than the goal's remaining target is rejected.
