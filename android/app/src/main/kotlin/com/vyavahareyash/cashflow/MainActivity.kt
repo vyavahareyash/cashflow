@@ -1,4 +1,4 @@
-package com.example.cashflow
+package com.vyavahareyash.cashflow
 
 import io.flutter.embedding.android.FlutterActivity
 

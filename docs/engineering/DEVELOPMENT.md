@@ -104,7 +104,7 @@ The repository provides automated screenshot generation driven by Flutter integr
 ```bash
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
-adb shell pm clear com.example.cashflow >/dev/null
+adb shell pm clear com.vyavahareyash.cashflow >/dev/null
 node scripts/capture_screenshots.mjs
 ```
 
