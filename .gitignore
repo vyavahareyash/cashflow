@@ -49,3 +49,12 @@ app.*.map.json
 
 node_modules/
 *.zip
+
+# Android Signing & Play Store Secrets
+*.jks
+*.keystore
+key.properties
+**/android/key.properties
+**/android/app/key.properties
+*play-service-account*.json
+*.aab

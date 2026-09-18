@@ -34,25 +34,53 @@ jobs:
       - name: Run unit tests
         run: flutter test -j 1
 
+      - name: Configure Keystore
+        if: env.PLAY_KEYSTORE_BASE64 != ''
+        env:
+          PLAY_KEYSTORE_BASE64: ${{ secrets.PLAY_KEYSTORE_BASE64 }}
+          PLAY_KEYSTORE_PASSWORD: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
+          PLAY_KEY_ALIAS: ${{ secrets.PLAY_KEY_ALIAS }}
+          PLAY_KEY_PASSWORD: ${{ secrets.PLAY_KEY_PASSWORD }}
+        run: |
+          echo "$PLAY_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          cat <<EOF > android/key.properties
+          storePassword=$PLAY_KEYSTORE_PASSWORD
+          keyPassword=$PLAY_KEY_PASSWORD
+          keyAlias=$PLAY_KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+
       - name: Build Split APKs
         run: flutter build apk --split-per-abi
 
       - name: Build Universal Release APK
         run: flutter build apk --release
 
-      - name: Rename APKs with app name
+      - name: Build Android App Bundle (AAB)
+        run: flutter build appbundle --release
+
+      - name: Rename APKs and App Bundle
         run: |
           cd build/app/outputs/flutter-apk
           for f in app*.apk; do
             [ -f "$f" ] && mv "$f" "${f/#app/cashflow}"
           done
           ls -la
+          cd -
+          cd build/app/outputs/bundle/release
+          if [ -f "app-release.aab" ]; then
+            cp app-release.aab cashflow-release.aab
+          fi
+          ls -la
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-apks
-          path: build/app/outputs/flutter-apk/cashflow*.apk
+          name: android-artifacts
+          path: |
+            build/app/outputs/flutter-apk/cashflow*.apk
+            build/app/outputs/bundle/release/cashflow-release.aab
+            build/app/outputs/bundle/release/app-release.aab
           retention-days: 1
 
   build-web:
@@ -146,3 +174,48 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-play-store:
+    name: Publish to Google Play Store
+    needs: [build-android]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-artifacts
+          path: android-artifacts
+
+      - name: Locate AAB
+        id: locate-aab
+        run: |
+          AAB_FILE=$(find android-artifacts -name "*release.aab" | head -n 1)
+          if [ -z "$AAB_FILE" ]; then
+            echo "Error: No release .aab found" >&2
+            exit 1
+          fi
+          echo "aab_file=$AAB_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Check Play Store Service Account Secret
+        id: check-secret
+        run: |
+          if [ -z "${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
+            echo "has_secret=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PLAY_SERVICE_ACCOUNT_JSON secret is not set. Skipping Play Store upload."
+          else
+            echo "has_secret=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to Google Play (Internal Track)
+        if: steps.check-secret.outputs.has_secret == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.vyavahareyash.cashflow
+          releaseFiles: ${{ steps.locate-aab.outputs.aab_file }}
+          track: internal
+          status: completed
+
