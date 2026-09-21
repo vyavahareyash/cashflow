@@ -4,7 +4,7 @@ Guidance for autonomous agents working in this repository. Keep modifications ti
 
 ## Invariants & Rules
 
-- **Offline-only**: Cashflow has zero cloud backends and zero network dependencies. Never add remote telemetry, analytics, or network-dependent packages.
+- **Offline-only**: Cashflow has zero cloud backends and zero network dependencies. Never add remote telemetry, analytics, or network-dependent packages. The sole permitted network interaction is user-initiated downloading of static, verified open-source AI model weights (Whisper / SLM) with SHA-256 checks.
 - **SQLite Concurrency**: Always run tests with `--concurrency=1` (`flutter test --concurrency=1`) to prevent database file lock collisions.
 - **State Flow**: State mutations must increment `DatabaseHelper.dataRevision`. UI screens listen via `ListenableBuilder` or `AnimatedBuilder`.
 - **Domain Terms**: Consult [CONTEXT.md](./CONTEXT.md) before naming new concepts, models, or UI copy.

@@ -39,3 +39,17 @@ _Avoid_: Incognito, secret mode, hidden mode
 **Inter-Account Transfer**:
 An atomic dual-entry transaction moving funds between two physical accounts without altering net worth or category spending.
 _Avoid_: Payment, rebalance, wire
+
+**Draft Transaction**:
+An uncommitted, ephemeral in-memory transaction record parsed from voice or text input awaiting user review, editing, and approval before database insertion.
+_Avoid_: Pending transaction, unapproved log, temp entry, provisional transaction
+
+**Offline AI Model Pack**:
+A verified, locally stored neural weight bundle (Whisper STT and GBNF-constrained SLM) downloaded via explicit user initiation to perform zero-telemetry local inference.
+_Avoid_: Cloud AI, backend service, remote model, telemetry bundle
+
+**Voice Transaction Staging**:
+An interactive in-memory review interface displaying parsed Draft Transactions for visual audit, inline correction, and atomic commit to SQLite.
+_Avoid_: Voice recorder, auto-commit log, staging database
+
+
