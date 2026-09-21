@@ -66,9 +66,6 @@ android {
 
     buildTypes {
         release {
-            ndk {
-                debugSymbolLevel = "none"
-            }
             val releaseConfig = signingConfigs.getByName("release")
             signingConfig = if (releaseConfig.storeFile != null) {
                 releaseConfig
