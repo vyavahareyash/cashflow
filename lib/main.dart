@@ -15,6 +15,7 @@ Future<void> main() async {
   await configurePlatformDatabase();
 
   final dbHelper = DatabaseHelper.instance;
+  await dbHelper.initStartupPrivacyMode();
   // Seed categories if DB is empty
   final cats = await dbHelper.readAllCategories();
   if (cats.isEmpty) {

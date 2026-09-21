@@ -19,11 +19,20 @@ class DashboardScreen extends StatefulWidget {
 
   const DashboardScreen({super.key, this.onNavigateTab});
 
+  /// Tracks whether startup privacy mode has been synchronized for this app session.
+  static bool _startupPrivacyInitialized = false;
+
+  /// Resets the startup privacy initialization flag (useful for testing).
+  @visibleForTesting
+  static void resetStartupPrivacyFlag() {
+    _startupPrivacyInitialized = false;
+  }
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
   List<Account> _accounts = [];
   Map<int, CreditCard> _creditCardsMap = {};
   Map<int, double> _accountLocksMap = {};
@@ -46,14 +55,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAllData();
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     DatabaseHelper.dataRevision.removeListener(_onDataChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.resumed) {
+      _handleLifecyclePrivacy();
+    }
+  }
+
+  Future<void> _handleLifecyclePrivacy() async {
+    final startInPrivacy = await DatabaseHelper.instance.getStartInPrivacyMode();
+    if (startInPrivacy && !_isPrivate && mounted) {
+      setState(() {
+        _isPrivate = true;
+      });
+      await DatabaseHelper.instance.setPrivacyMode(true);
+    }
   }
 
   void _onDataChanged() {
@@ -68,6 +98,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final db = DatabaseHelper.instance;
+    if (!DashboardScreen._startupPrivacyInitialized) {
+      DashboardScreen._startupPrivacyInitialized = true;
+      await db.initStartupPrivacyMode();
+    }
     final isPrivate = await db.getPrivacyMode();
     final salaryDay = await db.getSalaryDay();
     final cycle = SalaryCycle.resolve(salaryDay: salaryDay);

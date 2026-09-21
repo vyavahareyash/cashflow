@@ -3096,6 +3096,25 @@ class DatabaseHelper {
     await setSetting('dashboard_privacy_mode', isPrivate ? 'true' : 'false');
   }
 
+  /// Retrieves configured startup privacy mode preference (defaults to false).
+  Future<bool> getStartInPrivacyMode() async {
+    final val = await getSetting('start_in_privacy_mode', defaultValue: 'false');
+    return val == 'true';
+  }
+
+  /// Persists configured startup privacy mode preference.
+  Future<void> setStartInPrivacyMode(bool enabled) async {
+    await setSetting('start_in_privacy_mode', enabled ? 'true' : 'false');
+    notifyDataChanged();
+  }
+
+  /// Synchronizes runtime dashboard privacy mode on application startup
+  /// according to the startup privacy mode preference.
+  Future<void> initStartupPrivacyMode() async {
+    final startInPrivacy = await getStartInPrivacyMode();
+    await setPrivacyMode(startInPrivacy);
+  }
+
   /// Retrieves configured salary / income payday of the month (1-31, defaults to 1).
   Future<int> getSalaryDay() async {
     final val = await getSetting('salary_day', defaultValue: '1');
