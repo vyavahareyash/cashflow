@@ -30,6 +30,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   int _goalsCount = 0;
   int _transactionsCount = 0;
   int _salaryDay = 1;
+  bool _startInPrivacyMode = false;
   String? _lastBackupTimestamp;
   String _defaultBackupDirectory = '';
   String _effectiveBackupDirectory = '';
@@ -48,6 +49,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final goals = await db.readAllGoals();
       final transactions = await db.getTransactionHistory();
       final salaryDay = await db.getSalaryDay();
+      final startInPrivacy = await db.getStartInPrivacyMode();
       final lastBackup = await db.getLastBackupTimestamp();
       final defaultDir = kIsWeb ? '' : await db.getDefaultBackupDirectory();
       final effectiveDir = await db.getEffectiveBackupDirectory();
@@ -59,12 +61,28 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _goalsCount = goals.length;
           _transactionsCount = transactions.length;
           _salaryDay = salaryDay;
+          _startInPrivacyMode = startInPrivacy;
           _lastBackupTimestamp = lastBackup;
           _defaultBackupDirectory = defaultDir;
           _effectiveBackupDirectory = effectiveDir;
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _updateStartInPrivacyMode(bool value) async {
+    await DatabaseHelper.instance.setStartInPrivacyMode(value);
+    if (mounted) {
+      setState(() {
+        _startInPrivacyMode = value;
+      });
+      _showFeedback(
+        value
+            ? 'Balances will be masked on app startup'
+            : 'Balances will be visible on app startup',
+        isSuccess: true,
+      );
+    }
   }
 
   String _formatBackupFreshness(String? isoString) {
@@ -516,6 +534,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         children: [
           // 1. PRIVACY HERO CARD
           _buildPrivacyHeroCard(isDark),
+          const SizedBox(height: AppSpacing.md),
+          _buildPrivacyPreferencesCard(isDark),
           const SizedBox(height: AppSpacing.xl),
 
           // 2. FINANCIAL & CYCLE PREFERENCES
@@ -652,6 +672,55 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 1b. PRIVACY PREFERENCES CARD ---
+  Widget _buildPrivacyPreferencesCard(bool isDark) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald500.withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: const Icon(
+                  Icons.visibility_off_outlined,
+                  color: AppColors.emerald600,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Start in Privacy Mode', style: AppTypography.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Mask balances and financial figures whenever the app launches',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                key: const Key('start_in_privacy_mode_switch'),
+                value: _startInPrivacyMode,
+                activeTrackColor: AppColors.emerald600,
+                onChanged: (val) => _updateStartInPrivacyMode(val),
+              ),
+            ],
           ),
         ],
       ),
