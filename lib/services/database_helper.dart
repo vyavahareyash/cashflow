@@ -3189,4 +3189,16 @@ class DatabaseHelper {
     }
     return getDefaultBackupDirectory();
   }
+
+  /// Retrieves configured preference for downloading Voice AI models over Wi-Fi only (defaults to true).
+  Future<bool> getVoiceModelsWifiOnly() async {
+    final val = await getSetting('voice_models_wifi_only', defaultValue: 'true');
+    return val != 'false';
+  }
+
+  /// Persists configured preference for downloading Voice AI models over Wi-Fi only.
+  Future<void> setVoiceModelsWifiOnly(bool wifiOnly) async {
+    await setSetting('voice_models_wifi_only', wifiOnly ? 'true' : 'false');
+    notifyDataChanged();
+  }
 }
