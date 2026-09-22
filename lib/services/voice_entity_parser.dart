@@ -1,0 +1,505 @@
+import 'dart:convert';
+import 'package:intl/intl.dart';
+
+import '../models/account_model.dart';
+import '../models/category_model.dart';
+import '../models/draft_transaction.dart';
+import 'voice_grammar.dart';
+
+/// Transforms speech transcription or SLM-generated JSON into structured,
+/// validated [DraftTransaction] domain models (ADR-0005, US 1, 4, 5, 6, 7, 17).
+class VoiceEntityParser {
+  static const List<String> _weekdays = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+
+  /// Resolves relative date phrases ("today", "yesterday", "last Friday") deterministically
+  /// relative to [anchorDate] (US 6). Returns formatted 'YYYY-MM-DD'.
+  static String resolveRelativeDate(String phrase, DateTime anchorDate) {
+    final lower = phrase.trim().toLowerCase();
+
+    // Already in YYYY-MM-DD format
+    if (RegExp(r'^20\d{2}-[0-1]\d-[0-3]\d$').hasMatch(lower)) {
+      return lower;
+    }
+
+    if (lower == 'today') {
+      return DateFormat('yyyy-MM-dd').format(anchorDate);
+    }
+
+    if (lower == 'yesterday') {
+      final target = anchorDate.subtract(const Duration(days: 1));
+      return DateFormat('yyyy-MM-dd').format(target);
+    }
+
+    if (lower == 'the day before yesterday') {
+      final target = anchorDate.subtract(const Duration(days: 2));
+      return DateFormat('yyyy-MM-dd').format(target);
+    }
+
+    // Check for weekday names (e.g. "last Friday", "Friday", "last Sunday")
+    for (int i = 0; i < _weekdays.length; i++) {
+      final weekdayName = _weekdays[i];
+      if (lower.contains(weekdayName)) {
+        final targetWeekday = i + 1; // 1 = Monday ... 7 = Sunday
+        int daysAgo = ((anchorDate.weekday - targetWeekday) % 7 + 7) % 7;
+        if (daysAgo == 0) {
+          // "last [weekday]" or "[weekday]" refers strictly to previous occurrence
+          daysAgo = 7;
+        }
+        final target = anchorDate.subtract(Duration(days: daysAgo));
+        return DateFormat('yyyy-MM-dd').format(target);
+      }
+    }
+
+    // Default to anchor date if unparseable
+    return DateFormat('yyyy-MM-dd').format(anchorDate);
+  }
+
+  /// Identifies the default primary account ID from [accounts] (US 7).
+  static int? resolvePrimaryAccountId(List<Account> accounts, [int? preferredId]) {
+    if (preferredId != null && accounts.any((a) => a.id == preferredId)) {
+      return preferredId;
+    }
+    if (accounts.isEmpty) return null;
+
+    // Prefer non-credit-card bank/checking/cash account
+    final bankOrCash = accounts.firstWhere(
+      (a) => !a.isCreditCard,
+      orElse: () => accounts.first,
+    );
+    return bankOrCash.id;
+  }
+
+  /// Matches spoken text against active [accounts] (US 4).
+  static Account? matchAccount(String speech, List<Account> accounts) {
+    final lower = speech.toLowerCase();
+
+    // 1. Exact match
+    for (final acc in accounts) {
+      if (lower == acc.name.toLowerCase()) return acc;
+    }
+
+    // 2. Account name contained in speech
+    for (final acc in accounts) {
+      if (lower.contains(acc.name.toLowerCase())) return acc;
+    }
+
+    // 3. Significant word in account name contained in speech (e.g. "Chase" in "Chase Sapphire")
+    const genericWords = {'bank', 'account', 'card', 'the', 'my'};
+    for (final acc in accounts) {
+      final words = acc.name.toLowerCase().split(RegExp(r'\s+'));
+      for (final word in words) {
+        if (word.length >= 3 && !genericWords.contains(word)) {
+          final pattern = RegExp(r'\b' + RegExp.escape(word) + r'\b');
+          if (pattern.hasMatch(lower)) {
+            return acc;
+          }
+        }
+      }
+    }
+
+    // 4. Speech contained in account name
+    for (final acc in accounts) {
+      if (acc.name.toLowerCase().contains(lower) && lower.length >= 3) {
+        return acc;
+      }
+    }
+
+    // 5. Fallback heuristics for common types
+    if (RegExp(r'\b(?:credit|card)\b').hasMatch(lower)) {
+      final cc = accounts.where((a) => a.isCreditCard).firstOrNull;
+      if (cc != null) return cc;
+    }
+    if (RegExp(r'\b(?:checking|bank)\b').hasMatch(lower)) {
+      final chk = accounts
+          .where((a) => a.name.toLowerCase().contains('checking') || a.type == 'Bank')
+          .firstOrNull;
+      if (chk != null) return chk;
+    }
+    if (RegExp(r'\b(?:savings|save)\b').hasMatch(lower)) {
+      final sav = accounts
+          .where((a) => a.name.toLowerCase().contains('savings') || a.type == 'Savings')
+          .firstOrNull;
+      if (sav != null) return sav;
+    }
+    if (RegExp(r'\b(?:cash|wallet)\b').hasMatch(lower)) {
+      final c = accounts
+          .where((a) => a.type == 'Cash' || a.name.toLowerCase().contains('cash'))
+          .firstOrNull;
+      if (c != null) return c;
+    }
+
+    return null;
+  }
+
+  /// Matches spoken text or item keywords against active [categories] (US 5).
+  static Category? matchCategory(String speech, List<Category> categories) {
+    final lower = speech.toLowerCase();
+
+    // 1. Exact category name match
+    for (final cat in categories) {
+      if (lower == cat.name.toLowerCase()) return cat;
+    }
+
+    // 2. Category name contained in speech
+    for (final cat in categories) {
+      if (lower.contains(cat.name.toLowerCase())) return cat;
+    }
+
+    // 3. Keyword semantic associations
+    final foodKeywords = [
+      'coffee', 'latte', 'starbucks', 'diner', 'lunch', 'dinner',
+      'breakfast', 'subway', 'mcdonalds', 'burger', 'pizza', 'restaurant',
+      'cafe', 'food', 'tea', 'bakery', 'snack'
+    ];
+    final groceryKeywords = [
+      'grocery', 'groceries', 'walmart', 'supermarket', 'market',
+      'target', 'costco', 'trader joe', 'kroger', 'safeway'
+    ];
+    final transportKeywords = [
+      'gas', 'fuel', 'petrol', 'uber', 'lyft', 'taxi', 'transit',
+      'bus', 'train', 'metro', 'subway fare', 'parking', 'toll'
+    ];
+    final billKeywords = [
+      'rent', 'electricity', 'water', 'internet', 'utility', 'utilities',
+      'wifi', 'bill', 'insurance'
+    ];
+    final entertainmentKeywords = [
+      'movie', 'cinema', 'game', 'netflix', 'spotify', 'concert',
+      'entertainment', 'subscription'
+    ];
+
+    bool containsAny(List<String> list) => list.any((k) => lower.contains(k));
+
+    if (containsAny(foodKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('food') || n.contains('dining') || n.contains('coffee') || n.contains('restaurant');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
+    if (containsAny(groceryKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('grocer') || n.contains('food') || n.contains('supermarket');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
+    if (containsAny(transportKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('transport') || n.contains('gas') || n.contains('travel') || n.contains('car');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
+    if (containsAny(billKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('bill') || n.contains('util') || n.contains('rent');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
+    if (containsAny(entertainmentKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('entertain') || n.contains('leisure') || n.contains('fun');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
+    return null;
+  }
+
+  /// Maps SLM-generated JSON output conforming to [VoiceGrammar.transactionGrammar]
+  /// into a list of [DraftTransaction] domain objects with default fallbacks (US 7, US 8).
+  static List<DraftTransaction> parseJsonOutput(
+    String jsonString, {
+    required DateTime anchorDate,
+    required List<Account> accounts,
+    required List<Category> categories,
+    int? primaryAccountId,
+  }) {
+    final effectivePrimaryId = resolvePrimaryAccountId(accounts, primaryAccountId);
+    final trimmed = jsonString.trim();
+
+    List<dynamic> list;
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is List) {
+        list = decoded;
+      } else if (decoded is Map<String, dynamic>) {
+        list = [decoded];
+      } else {
+        return [];
+      }
+    } catch (_) {
+      // If direct jsonDecode fails, try extracting array via regex
+      final match = RegExp(r'\[[\s\S]*\]').firstMatch(trimmed);
+      if (match != null) {
+        try {
+          list = jsonDecode(match.group(0)!) as List;
+        } catch (_) {
+          return [];
+        }
+      } else {
+        return [];
+      }
+    }
+
+    final drafts = <DraftTransaction>[];
+
+    for (final raw in list) {
+      if (raw is! Map) continue;
+      final map = Map<String, dynamic>.from(raw);
+
+      final double amount = (map['amount'] as num?)?.toDouble() ?? 0.0;
+      final String type = (map['type'] as String?)?.toLowerCase() ?? 'expense';
+      final String note = (map['note'] as String?)?.trim() ?? '';
+
+      // Date resolution
+      String date = (map['date'] as String?) ?? '';
+      if (!RegExp(r'^20\d{2}-[0-1]\d-[0-3]\d$').hasMatch(date)) {
+        date = resolveRelativeDate(date.isNotEmpty ? date : 'today', anchorDate);
+      }
+
+      // Account resolution & fallback (US 7)
+      int? accountId = map['account_id'] as int?;
+      bool hasUnassignedAccount = false;
+
+      if (accountId == null || !accounts.any((a) => a.id == accountId)) {
+        accountId = effectivePrimaryId;
+        hasUnassignedAccount = true;
+      }
+
+      // Destination account for transfers (US 17)
+      int? destinationAccountId;
+      if (type == 'transfer') {
+        destinationAccountId = map['destination_account_id'] as int?;
+        if (destinationAccountId != null &&
+            !accounts.any((a) => a.id == destinationAccountId)) {
+          destinationAccountId = null;
+        }
+      }
+
+      // Category resolution (US 5, US 8)
+      int? categoryId;
+      bool hasUnassignedCategory = false;
+      if (type == 'expense') {
+        categoryId = map['category_id'] as int?;
+        if (categoryId == null || !categories.any((c) => c.id == categoryId)) {
+          categoryId = null;
+          hasUnassignedCategory = true;
+        }
+      }
+
+      drafts.add(
+        DraftTransaction(
+          amount: amount,
+          type: type,
+          accountId: accountId,
+          destinationAccountId: destinationAccountId,
+          categoryId: categoryId,
+          date: date,
+          note: note,
+          hasUnassignedAccount: hasUnassignedAccount,
+          hasUnassignedCategory: hasUnassignedCategory,
+        ),
+      );
+    }
+
+    return drafts;
+  }
+
+  /// Headless test input harness and offline heuristic fallback parser.
+  /// Parses transcribed speech text deterministically without neural model binaries.
+  static List<DraftTransaction> parseTranscriptionSample(
+    String transcript, {
+    required DateTime anchorDate,
+    required List<Account> accounts,
+    required List<Category> categories,
+    int? primaryAccountId,
+  }) {
+    final effectivePrimaryId = resolvePrimaryAccountId(accounts, primaryAccountId);
+    final clauses = _splitMonologue(transcript);
+    final drafts = <DraftTransaction>[];
+
+    for (final clause in clauses) {
+      final draft = _parseSingleClause(
+        clause,
+        anchorDate: anchorDate,
+        accounts: accounts,
+        categories: categories,
+        primaryAccountId: effectivePrimaryId,
+      );
+      if (draft != null) {
+        drafts.add(draft);
+      }
+    }
+
+    return drafts;
+  }
+
+  /// Splits continuous monologue into distinct transaction clauses (US 1).
+  static List<String> _splitMonologue(String text) {
+    final clean = text.trim();
+    if (clean.isEmpty) return [];
+
+    // Split on explicit connectors like " and ", " also ", "\n", ";", or commas preceding amounts
+    final pattern = RegExp(r'(?:\band\b|\balso\b|\bthen\b|[;\n])', caseSensitive: false);
+    final rawParts = clean.split(pattern);
+
+    final parts = <String>[];
+    for (final part in rawParts) {
+      final trimmed = part.trim();
+      if (trimmed.isNotEmpty) parts.add(trimmed);
+    }
+
+    return parts.isEmpty ? [clean] : parts;
+  }
+
+  /// Parses an individual clause into a [DraftTransaction].
+  static DraftTransaction? _parseSingleClause(
+    String clause, {
+    required DateTime anchorDate,
+    required List<Account> accounts,
+    required List<Category> categories,
+    required int? primaryAccountId,
+  }) {
+    final lower = clause.toLowerCase();
+
+    // 1. Extract Amount
+    final amountMatch = RegExp(
+      r'(?:\$|\b)\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars?|bucks?|usd|\$|\b)',
+      caseSensitive: false,
+    ).firstMatch(lower);
+
+    double? amount;
+    if (amountMatch != null) {
+      amount = double.tryParse(amountMatch.group(1)!);
+    } else {
+      // General number match
+      final numMatch = RegExp(r'\b(\d+(?:\.\d{1,2})?)\b').firstMatch(lower);
+      if (numMatch != null) {
+        amount = double.tryParse(numMatch.group(1)!);
+      }
+    }
+
+    if (amount == null || amount <= 0) return null;
+
+    // 2. Classify Transaction Type (US 17)
+    String type = 'expense';
+    int? sourceAccountId;
+    int? destAccountId;
+
+    final isIncome = lower.contains('salary') ||
+        lower.contains('paycheck') ||
+        lower.contains('deposited') ||
+        lower.contains('earned') ||
+        lower.contains('income');
+
+    final isTransfer = lower.contains('transfer') ||
+        lower.contains('moved') ||
+        lower.contains('move') ||
+        (lower.contains('from') && lower.contains('to'));
+
+    if (isTransfer) {
+      type = 'transfer';
+      // Try to extract from X to Y
+      final transferMatch = RegExp(
+        r'from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+?)(?:\s+yesterday|\s+today|\s+last|\s*$)',
+        caseSensitive: false,
+      ).firstMatch(lower);
+
+      if (transferMatch != null) {
+        final srcStr = transferMatch.group(1)!.trim();
+        final dstStr = transferMatch.group(2)!.trim();
+        sourceAccountId = matchAccount(srcStr, accounts)?.id;
+        destAccountId = matchAccount(dstStr, accounts)?.id;
+      }
+    } else if (isIncome) {
+      type = 'income';
+    }
+
+    // 3. Match Account if not transfer
+    bool hasUnassignedAccount = false;
+    if (type != 'transfer') {
+      final matchedAcc = matchAccount(lower, accounts);
+      if (matchedAcc != null) {
+        sourceAccountId = matchedAcc.id;
+      } else {
+        sourceAccountId = primaryAccountId;
+        hasUnassignedAccount = true;
+      }
+    } else {
+      if (sourceAccountId == null) {
+        sourceAccountId = primaryAccountId;
+        hasUnassignedAccount = true;
+      }
+    }
+
+    // 4. Match Category (expenses only)
+    int? categoryId;
+    bool hasUnassignedCategory = false;
+    if (type == 'expense') {
+      final matchedCat = matchCategory(lower, categories);
+      if (matchedCat != null) {
+        categoryId = matchedCat.id;
+      } else {
+        hasUnassignedCategory = true;
+      }
+    }
+
+    // 5. Relative Date Resolution (US 6)
+    String date = DateFormat('yyyy-MM-dd').format(anchorDate);
+    if (lower.contains('yesterday')) {
+      date = resolveRelativeDate('yesterday', anchorDate);
+    } else if (lower.contains('the day before yesterday')) {
+      date = resolveRelativeDate('the day before yesterday', anchorDate);
+    } else {
+      for (final wd in _weekdays) {
+        if (lower.contains(wd)) {
+          date = resolveRelativeDate(wd, anchorDate);
+          break;
+        }
+      }
+    }
+
+    // 6. Formulate clean note
+    String note = clause;
+    // Clean common fillers
+    note = note
+        .replaceAll(RegExp(r'\b\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?|\$)?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b(?:yesterday|today|last\s+[a-z]+|deposited|moved|from|to|on|at|for|in)\b', caseSensitive: false), '')
+        .trim();
+    if (note.isEmpty) {
+      note = type == 'income' ? 'Income' : (type == 'transfer' ? 'Transfer' : 'Expense');
+    } else {
+      // Capitalize first letter
+      note = note[0].toUpperCase() + note.substring(1);
+    }
+
+    return DraftTransaction(
+      amount: amount,
+      type: type,
+      accountId: sourceAccountId,
+      destinationAccountId: destAccountId,
+      categoryId: categoryId,
+      date: date,
+      note: note,
+      rawSpeech: clause,
+      hasUnassignedAccount: hasUnassignedAccount,
+      hasUnassignedCategory: hasUnassignedCategory,
+    );
+  }
+}
