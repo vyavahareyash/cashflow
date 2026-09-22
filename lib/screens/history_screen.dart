@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -6,6 +7,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/category_badge.dart';
 import '../components/app_dialogs.dart';
+import '../components/export_backup_dialog.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -275,7 +277,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _exportCSV() async {
     try {
-      final path = await DatabaseHelper.instance.exportTransactionsAsCSV();
+      final defaultDir = kIsWeb ? '' : await DatabaseHelper.instance.getDefaultBackupDirectory();
+      final effectiveDir = await DatabaseHelper.instance.getEffectiveBackupDirectory();
+      if (!mounted) return;
+
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final result = await showDialog<ExportDialogResult>(
+        context: context,
+        builder: (dialogCtx) => ExportBackupDialog(
+          isDark: isDark,
+          defaultDirectory: defaultDir,
+          initialDirectory: effectiveDir,
+          initialFormat: ExportFormat.csv,
+          fixedFormat: true,
+          title: 'Export Transactions CSV',
+        ),
+      );
+
+      if (result == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('CSV export cancelled')),
+          );
+        }
+        return;
+      }
+
+      if (!kIsWeb) {
+        if (result.directory == defaultDir) {
+          await DatabaseHelper.instance.setCustomBackupPath(null);
+        } else {
+          await DatabaseHelper.instance.setCustomBackupPath(result.directory);
+        }
+      }
+
+      final path = await DatabaseHelper.instance.exportTransactionsAsCSV(
+        destinationDirectory: result.directory.isEmpty ? null : result.directory,
+        fileName: result.fileName,
+      );
       if (!mounted) return;
       if (path != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -286,7 +325,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('CSV export cancelled')),
+          const SnackBar(
+            content: Text('Export failed'),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } catch (e) {

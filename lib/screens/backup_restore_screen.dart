@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as p;
 import 'package:cashflow/services/backup_platform.dart';
 import 'package:cashflow/services/database_helper.dart';
 
+import '../components/export_backup_dialog.dart';
 import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 
-enum ExportFormat {
-  sqlite,
-  json,
-  csv,
-}
+export '../components/export_backup_dialog.dart' show ExportFormat;
 
 class BackupRestoreScreen extends StatefulWidget {
   const BackupRestoreScreen({super.key});
@@ -176,9 +172,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     if (!mounted) return;
 
-    final result = await showDialog<({ExportFormat format, String directory, String fileName})>(
+    final result = await showDialog<ExportDialogResult>(
       context: context,
-      builder: (dialogCtx) => _ExportBackupDialog(
+      builder: (dialogCtx) => ExportBackupDialog(
         isDark: isDark,
         defaultDirectory: defaultDir,
         initialDirectory: selectedDirectory,
@@ -1325,6 +1321,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               color: AppColors.emerald600,
             ),
           _buildSettingsTile(
+            key: const Key('backup_export_tile'),
             icon: Icons.file_download_outlined,
             iconColor: AppColors.emerald700,
             title: 'Export Data & Backups',
@@ -1336,6 +1333,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
           const Divider(height: 1),
           _buildSettingsTile(
+            key: const Key('backup_import_tile'),
             icon: Icons.file_upload_outlined,
             iconColor: AppColors.info,
             title: 'Import & Restore Data',
@@ -1345,6 +1343,22 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             onTap: _isProcessing ? null : () => _showImportDialog(isDark),
             isDark: isDark,
           ),
+          if (!kIsWeb) ...[
+            const Divider(height: 1),
+            _buildSettingsTile(
+              key: const Key('settings_default_export_directory_tile'),
+              icon: Icons.folder_open_rounded,
+              iconColor: AppColors.purple,
+              title: 'Default Export Directory',
+              subtitle: _effectiveBackupDirectory.isNotEmpty
+                  ? _effectiveBackupDirectory
+                  : (_defaultBackupDirectory.isNotEmpty
+                      ? _defaultBackupDirectory
+                      : 'System default directory'),
+              onTap: _isProcessing ? null : () => _showConfigureDirectoryDialog(isDark),
+              isDark: isDark,
+            ),
+          ],
         ],
       ),
     );
@@ -1610,340 +1624,94 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       ],
     );
   }
-}
 
-class _ExportBackupDialog extends StatefulWidget {
-  final bool isDark;
-  final String defaultDirectory;
-  final String initialDirectory;
+  Future<void> _showConfigureDirectoryDialog(bool isDark) async {
+    final customPath = await DatabaseHelper.instance.getCustomBackupPath();
+    final isCustom = customPath != null && customPath.trim().isNotEmpty;
+    final currentDir = _effectiveBackupDirectory.isNotEmpty
+        ? _effectiveBackupDirectory
+        : await DatabaseHelper.instance.getEffectiveBackupDirectory();
 
-  const _ExportBackupDialog({
-    required this.isDark,
-    required this.defaultDirectory,
-    required this.initialDirectory,
-  });
+    if (!mounted) return;
 
-  @override
-  State<_ExportBackupDialog> createState() => _ExportBackupDialogState();
-}
-
-class _ExportBackupDialogState extends State<_ExportBackupDialog> {
-  late ExportFormat _selectedFormat;
-  late String _selectedDirectory;
-  late TextEditingController _fileNameController;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedFormat = kIsWeb ? ExportFormat.json : ExportFormat.sqlite;
-    _selectedDirectory = widget.initialDirectory;
-    _fileNameController = TextEditingController(
-      text: _getDefaultName(_selectedFormat),
-    );
-  }
-
-  @override
-  void dispose() {
-    _fileNameController.dispose();
-    super.dispose();
-  }
-
-  String _getDefaultName(ExportFormat fmt) {
-    switch (fmt) {
-      case ExportFormat.sqlite:
-        return 'cashflow_backup.db';
-      case ExportFormat.json:
-        return 'cashflow_backup.json';
-      case ExportFormat.csv:
-        return 'cashflow_transactions.csv';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveName = _fileNameController.text.trim().isEmpty
-        ? _getDefaultName(_selectedFormat)
-        : _fileNameController.text.trim();
-    final previewPath = kIsWeb
-        ? effectiveName
-        : p.join(_selectedDirectory, effectiveName);
-
-    return AlertDialog(
-      backgroundColor: widget.isDark ? AppColors.darkSurface : AppColors.white,
-      title: Text(
-        'Export Data & Backups',
-        style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        title: Text(
+          'Default Export Directory',
+          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose File Format',
+              'Configured folder for database backups and CSV exports:',
               style: AppTypography.labelSmall.copyWith(
-                color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
-                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.gray400 : AppColors.gray600,
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            if (!kIsWeb) ...[
-              _buildOptionCard(
-                title: 'SQLite Database (.db)',
-                subtitle: 'Full binary database backup & restore',
-                icon: Icons.storage_rounded,
-                iconColor: AppColors.emerald700,
-                isSelected: _selectedFormat == ExportFormat.sqlite,
-                isDark: widget.isDark,
-                onTap: () {
-                  setState(() {
-                    _selectedFormat = ExportFormat.sqlite;
-                    _fileNameController.text = _getDefaultName(ExportFormat.sqlite);
-                  });
-                },
-              ),
-              const SizedBox(height: AppSpacing.xs),
-            ],
-            _buildOptionCard(
-              title: 'JSON Backup (.json)',
-              subtitle: 'Portable structured accounts & transactions',
-              icon: Icons.data_object_rounded,
-              iconColor: AppColors.purple,
-              isSelected: _selectedFormat == ExportFormat.json,
-              isDark: widget.isDark,
-              onTap: () {
-                setState(() {
-                  _selectedFormat = ExportFormat.json;
-                  _fileNameController.text = _getDefaultName(ExportFormat.json);
-                });
-              },
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            _buildOptionCard(
-              title: 'Transactions CSV (.csv)',
-              subtitle: 'Spreadsheet format for Excel & Google Sheets',
-              icon: Icons.table_chart_rounded,
-              iconColor: AppColors.pink,
-              isSelected: _selectedFormat == ExportFormat.csv,
-              isDark: widget.isDark,
-              onTap: () {
-                setState(() {
-                  _selectedFormat = ExportFormat.csv;
-                  _fileNameController.text = _getDefaultName(ExportFormat.csv);
-                });
-              },
-            ),
-            if (!kIsWeb) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Destination Directory',
-                style: AppTypography.labelSmall.copyWith(
-                  color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: widget.isDark
-                      ? AppColors.darkSurfaceElevated
-                      : AppColors.gray100,
-                  borderRadius: AppBorderRadius.smallBorder,
-                  border: Border.all(
-                    color: widget.isDark ? AppColors.gray700 : AppColors.gray300,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _selectedDirectory,
-                        key: const Key('export_destination_directory_text'),
-                        style: AppTypography.labelSmall.copyWith(
-                          fontFamily: 'monospace',
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    IconButton(
-                      key: const Key('export_browse_directory_button'),
-                      icon: const Icon(Icons.folder_open_rounded, size: 20),
-                      tooltip: 'Browse Directory',
-                      onPressed: () async {
-                        final picked = await pickBackupDirectory(
-                          initialDirectory: _selectedDirectory,
-                        );
-                        if (picked != null && picked.trim().isNotEmpty && mounted) {
-                          setState(() {
-                            _selectedDirectory = picked.trim();
-                          });
-                        }
-                      },
-                    ),
-                    if (_selectedDirectory != widget.defaultDirectory) ...[
-                      IconButton(
-                        key: const Key('export_reset_directory_button'),
-                        icon: const Icon(Icons.refresh_rounded, size: 18),
-                        tooltip: 'Reset to default folder',
-                        onPressed: () {
-                          setState(() {
-                            _selectedDirectory = widget.defaultDirectory;
-                          });
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'File Name',
-              style: AppTypography.labelSmall.copyWith(
-                color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            TextField(
-              controller: _fileNameController,
-              key: const Key('export_filename_input'),
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.sm,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: AppBorderRadius.smallBorder,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Save Destination Preview:',
-              style: AppTypography.labelSmall.copyWith(
-                color: widget.isDark ? AppColors.gray400 : AppColors.gray600,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
+            const SizedBox(height: AppSpacing.sm),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.xs),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: widget.isDark
-                    ? AppColors.darkSurfaceElevated.withValues(alpha: 0.5)
-                    : AppColors.gray50,
+                color: isDark ? AppColors.darkSurfaceElevated : AppColors.gray100,
                 borderRadius: AppBorderRadius.smallBorder,
+                border: Border.all(
+                  color: isDark ? AppColors.gray700 : AppColors.gray300,
+                ),
               ),
               child: Text(
-                previewPath,
-                key: const Key('export_full_path_preview'),
+                currentDir,
+                key: const Key('settings_current_export_directory_text'),
                 style: AppTypography.labelSmall.copyWith(
-                  color: widget.isDark ? AppColors.emerald400 : AppColors.emerald800,
                   fontFamily: 'monospace',
                 ),
               ),
             ),
           ],
         ),
-      ),
-      actions: [
-        TextButton(
-          key: const Key('export_cancel_button'),
-          onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          key: const Key('export_confirm_button'),
-          onPressed: () {
-            final name = _fileNameController.text.trim();
-            Navigator.of(context).pop((
-              format: _selectedFormat,
-              directory: _selectedDirectory,
-              fileName: name.isEmpty ? _getDefaultName(_selectedFormat) : name,
-            ));
-          },
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.emerald600,
-          ),
-          child: const Text('Confirm & Save'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOptionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    required bool isSelected,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppBorderRadius.smallBorder,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark
-                  ? AppColors.emerald600.withValues(alpha: 0.2)
-                  : AppColors.emerald50)
-              : (isDark
-                  ? AppColors.darkSurfaceElevated
-                  : AppColors.gray50),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.emerald600
-                : (isDark ? AppColors.gray700 : AppColors.gray300),
-            width: isSelected ? 1.5 : 1,
-          ),
-          borderRadius: AppBorderRadius.smallBorder,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTypography.labelLarge.copyWith(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                      color: isDark ? AppColors.darkText : AppColors.gray900,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: isDark ? AppColors.gray400 : AppColors.gray600,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
+        actions: [
+          if (isCustom)
+            TextButton.icon(
+              key: const Key('settings_reset_export_directory_button'),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Reset to Default'),
+              onPressed: () async {
+                await DatabaseHelper.instance.setCustomBackupPath(null);
+                await _loadStats();
+                if (dialogCtx.mounted) {
+                  Navigator.of(dialogCtx).pop();
+                }
+                _showFeedback('Reset export directory to system default', isSuccess: true);
+              },
             ),
-            if (isSelected)
-              const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.emerald600,
-                size: 18,
-              ),
-          ],
-        ),
+          FilledButton.icon(
+            key: const Key('settings_browse_export_directory_button'),
+            icon: const Icon(Icons.folder_open_rounded, size: 18),
+            label: const Text('Browse Folder'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.emerald600),
+            onPressed: () async {
+              final picked = await pickBackupDirectory(
+                initialDirectory: currentDir,
+              );
+              if (picked != null && picked.trim().isNotEmpty) {
+                await DatabaseHelper.instance.setCustomBackupPath(picked.trim());
+                await _loadStats();
+                if (dialogCtx.mounted) {
+                  Navigator.of(dialogCtx).pop();
+                }
+                _showFeedback('Export directory updated', isSuccess: true);
+              }
+            },
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Done'),
+          ),
+        ],
       ),
     );
   }
