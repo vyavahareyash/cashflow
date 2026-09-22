@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cashflow/models/account_model.dart';
@@ -463,7 +462,6 @@ void main() {
     });
 
     test('SlmInferenceService integrates with ModelManagementService deallocation hook', () async {
-      bool deallocated = false;
       final mockEngine = MockSlmEngine();
 
       final modelService = ModelManagementService();

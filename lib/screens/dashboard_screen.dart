@@ -416,6 +416,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
       children: [
         Expanded(
           child: _buildActionButton(
+            key: const Key('dashboard_log_transaction_action'),
             label: 'Log Transaction',
             icon: Icons.add_circle_rounded,
             color: AppColors.emerald600,
@@ -426,6 +427,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _buildActionButton(
+            key: const Key('dashboard_lock_goal_action'),
             label: 'Lock Goal',
             icon: Icons.lock_outline_rounded,
             color: AppColors.warning,
@@ -440,6 +442,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _buildActionButton(
+            key: const Key('dashboard_add_budget_action'),
             label: 'Add Budget',
             icon: Icons.pie_chart_outline_rounded,
             color: AppColors.info,
@@ -456,6 +459,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   }
 
   Widget _buildActionButton({
+    Key? key,
     required String label,
     required IconData icon,
     required Color color,
@@ -463,6 +467,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     required VoidCallback onTap,
   }) {
     return Material(
+      key: key,
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
