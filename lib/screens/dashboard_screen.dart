@@ -13,6 +13,8 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/category_badge.dart';
 import '../components/app_dialogs.dart';
+import '../components/voice_transaction_staging_sheet.dart';
+import '../models/draft_transaction.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int tabIndex)? onNavigateTab;
@@ -285,18 +287,34 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                   ),
                 ],
               ),
-              IconButton(
-                icon: Icon(
-                  _isPrivate
-                      ? Icons.visibility_off_rounded
-                      : Icons.visibility_rounded,
-                  color: Colors.white.withValues(alpha: 0.85),
-                  size: 20,
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: _togglePrivacy,
-                tooltip: _isPrivate ? 'Show Balance' : 'Hide Balance',
+              Row(
+                children: [
+                  IconButton(
+                    key: const Key('dashboard_hero_mic_button'),
+                    icon: const Icon(
+                      Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _openVoiceStaging(context),
+                    tooltip: 'Voice Transaction Journaling',
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isPrivate
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: _togglePrivacy,
+                    tooltip: _isPrivate ? 'Show Balance' : 'Hide Balance',
+                  ),
+                ],
               ),
             ],
           ),
@@ -416,16 +434,29 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
       children: [
         Expanded(
           child: _buildActionButton(
-            label: 'Log Transaction',
+            key: const Key('dashboard_log_transaction_action'),
+            label: 'Log Trans.',
             icon: Icons.add_circle_rounded,
             color: AppColors.emerald600,
             isDark: isDark,
             onTap: () => _showTransactionSheet(context),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: _buildActionButton(
+            key: const Key('dashboard_voice_entry_action'),
+            label: 'Voice Entry',
+            icon: Icons.mic_rounded,
+            color: AppColors.emerald700,
+            isDark: isDark,
+            onTap: () => _openVoiceStaging(context),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: _buildActionButton(
+            key: const Key('dashboard_lock_goal_action'),
             label: 'Lock Goal',
             icon: Icons.lock_outline_rounded,
             color: AppColors.warning,
@@ -437,9 +468,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             },
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: _buildActionButton(
+            key: const Key('dashboard_add_budget_action'),
             label: 'Add Budget',
             icon: Icons.pie_chart_outline_rounded,
             color: AppColors.info,
@@ -455,7 +487,32 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     );
   }
 
+  Future<void> _openVoiceStaging(
+    BuildContext context, [
+    List<DraftTransaction>? initialDrafts,
+  ]) async {
+    final drafts = initialDrafts ?? [
+      DraftTransaction(
+        amount: 250.0,
+        type: 'expense',
+        accountId: _accounts.firstOrNull?.id,
+        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        note: 'Coffee and groceries',
+        hasUnassignedCategory: true,
+      ),
+    ];
+
+    await VoiceTransactionStagingSheet.show(
+      context,
+      drafts: drafts,
+      accounts: _accounts,
+      categories: _categories,
+      isPrivate: _isPrivate,
+    );
+  }
+
   Widget _buildActionButton({
+    Key? key,
     required String label,
     required IconData icon,
     required Color color,
@@ -463,6 +520,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     required VoidCallback onTap,
   }) {
     return Material(
+      key: key,
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,

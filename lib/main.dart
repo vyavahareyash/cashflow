@@ -9,6 +9,9 @@ import 'package:cashflow/screens/backup_restore_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/services/platform_database.dart';
 import 'package:cashflow/theme/theme_constants.dart';
+import 'package:cashflow/components/voice_transaction_staging_sheet.dart';
+import 'package:cashflow/models/draft_transaction.dart';
+import 'package:intl/intl.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -261,6 +264,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ],
       ),
       body: IndexedStack(index: _selectedIndex, children: screens),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton(
+              key: const Key('dashboard_voice_entry_fab'),
+              heroTag: 'dashboard_voice_entry_fab',
+              tooltip: 'Voice Transaction Journaling',
+              backgroundColor: AppColors.emerald700,
+              onPressed: () {
+                VoiceTransactionStagingSheet.show(
+                  context,
+                  drafts: [
+                    DraftTransaction(
+                      amount: 150.0,
+                      type: 'expense',
+                      date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                      note: 'Voice transaction note',
+                      hasUnassignedAccount: true,
+                      hasUnassignedCategory: true,
+                    ),
+                  ],
+                );
+              },
+              child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,

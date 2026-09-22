@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/draft_transaction.dart';
-import 'package:cashflow/models/transaction_model.dart';
 import 'package:cashflow/services/model_management_service.dart';
 import 'package:cashflow/services/slm_inference_service.dart';
 import 'package:cashflow/services/voice_entity_parser.dart';
@@ -463,7 +461,6 @@ void main() {
     });
 
     test('SlmInferenceService integrates with ModelManagementService deallocation hook', () async {
-      bool deallocated = false;
       final mockEngine = MockSlmEngine();
 
       final modelService = ModelManagementService();
