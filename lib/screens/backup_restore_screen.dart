@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:cashflow/services/backup_platform.dart';
 import 'package:cashflow/services/database_helper.dart';
+import 'package:cashflow/services/model_management_service.dart';
 
 import '../components/export_backup_dialog.dart';
 import '../models/salary_cycle.dart';
@@ -30,11 +31,54 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   String? _lastBackupTimestamp;
   String _defaultBackupDirectory = '';
   String _effectiveBackupDirectory = '';
+  bool _voiceModelsWifiOnly = true;
+  int _voiceModelsDiskUsage = 0;
 
   @override
   void initState() {
     super.initState();
     _loadStats();
+    ModelManagementService.instance.addListener(_onModelManagementChanged);
+    _initModelManagement();
+  }
+
+  @override
+  void dispose() {
+    ModelManagementService.instance.removeListener(_onModelManagementChanged);
+    super.dispose();
+  }
+
+  void _onModelManagementChanged() {
+    if (mounted) {
+      _refreshModelDiskUsage();
+      setState(() {});
+    }
+  }
+
+  Future<void> _initModelManagement() async {
+    try {
+      final db = DatabaseHelper.instance;
+      final wifiOnly = await db.getVoiceModelsWifiOnly();
+      await ModelManagementService.instance.checkInstalledStatus();
+      final usage = await ModelManagementService.instance.getModelsDiskUsage();
+      if (mounted) {
+        setState(() {
+          _voiceModelsWifiOnly = wifiOnly;
+          _voiceModelsDiskUsage = usage;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _refreshModelDiskUsage() async {
+    try {
+      final usage = await ModelManagementService.instance.getModelsDiskUsage();
+      if (mounted && usage != _voiceModelsDiskUsage) {
+        setState(() {
+          _voiceModelsDiskUsage = usage;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadStats() async {
@@ -576,7 +620,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ],
           const SizedBox(height: AppSpacing.xl),
 
-          // 4. DEMO DATA GENERATOR
+          // 4. OFFLINE VOICE AI MODEL PACK
+          _buildSectionHeader('Voice AI & Offline Models', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildVoiceAiModelPackCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
+
+          // 5. DEMO DATA GENERATOR
           _buildSectionHeader('Demo & Testing', isDark),
           const SizedBox(height: AppSpacing.xs),
           _buildDemoDataCard(isDark),
@@ -1714,6 +1764,440 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         ],
       ),
     );
+  }
+
+  // --- 4. OFFLINE VOICE AI MODEL PACK CARD ---
+  Widget _buildVoiceAiModelPackCard(bool isDark) {
+    final modelService = ModelManagementService.instance;
+    final status = modelService.status;
+    final isInstalled = status == ModelPackStatus.installed;
+    final isDownloading = status == ModelPackStatus.downloading;
+    final isVerifying = status == ModelPackStatus.verifying;
+
+    String statusLabel;
+    Color statusColor;
+    IconData statusIcon;
+
+    switch (status) {
+      case ModelPackStatus.installed:
+        statusLabel = 'Installed & Ready';
+        statusColor = AppColors.emerald600;
+        statusIcon = Icons.check_circle_outline_rounded;
+        break;
+      case ModelPackStatus.downloading:
+        statusLabel =
+            'Downloading ${(modelService.progress * 100).toStringAsFixed(0)}%';
+        statusColor = Colors.blue;
+        statusIcon = Icons.downloading_rounded;
+        break;
+      case ModelPackStatus.verifying:
+        statusLabel = 'Verifying SHA-256...';
+        statusColor = Colors.orange;
+        statusIcon = Icons.security_rounded;
+        break;
+      case ModelPackStatus.checking:
+        statusLabel = 'Checking...';
+        statusColor = AppColors.gray500;
+        statusIcon = Icons.hourglass_top_rounded;
+        break;
+      case ModelPackStatus.error:
+        statusLabel = 'Download Error';
+        statusColor = AppColors.danger;
+        statusIcon = Icons.error_outline_rounded;
+        break;
+      case ModelPackStatus.notInstalled:
+        statusLabel = 'Not Installed';
+        statusColor = isDark ? AppColors.gray400 : AppColors.gray600;
+        statusIcon = Icons.cloud_download_outlined;
+        break;
+    }
+
+    final usageMb = (_voiceModelsDiskUsage / (1024 * 1024)).toStringAsFixed(1);
+
+    return CustomCard(
+      key: const Key('voice_model_card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald500.withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: const Icon(
+                  Icons.graphic_eq_rounded,
+                  color: AppColors.emerald600,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Voice AI Model Pack', style: AppTypography.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      'On-device Moonshine STT & SmolLM2 neural models (~390 MB)',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Status Badge
+              Container(
+                key: const Key('voice_model_status_badge'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.pillBorder,
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, size: 14, color: statusColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      statusLabel,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+          const SizedBox(height: AppSpacing.md),
+
+          // Details summary: storage usage & zero-cloud guarantee
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Local Storage Footprint',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: isDark ? AppColors.darkText : AppColors.gray900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                isInstalled ? '$usageMb MB' : '0 MB (Purely optional)',
+                key: const Key('voice_model_storage_text'),
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isInstalled
+                      ? AppColors.emerald600
+                      : (isDark ? AppColors.gray400 : AppColors.gray600),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.sm),
+
+          // Download over Wi-Fi only switch
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Download over Wi-Fi only',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark ? AppColors.darkText : AppColors.gray900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Prevents downloading large model weights on cellular data',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                key: const Key('voice_models_wifi_only_switch'),
+                value: _voiceModelsWifiOnly,
+                activeTrackColor: AppColors.emerald600,
+                onChanged: isDownloading
+                    ? null
+                    : (val) async {
+                        await DatabaseHelper.instance.setVoiceModelsWifiOnly(val);
+                        if (mounted) {
+                          setState(() {
+                            _voiceModelsWifiOnly = val;
+                          });
+                        }
+                      },
+              ),
+            ],
+          ),
+
+          // Progress Bar & Details during download / verify
+          if (isDownloading || isVerifying) ...[
+            const SizedBox(height: AppSpacing.md),
+            LinearProgressIndicator(
+              key: const Key('voice_model_download_progress_bar'),
+              value: isVerifying ? null : modelService.progress,
+              backgroundColor: isDark ? AppColors.darkBorder : AppColors.gray200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isVerifying ? Colors.orange : AppColors.emerald600,
+              ),
+              borderRadius: AppBorderRadius.smallBorder,
+              minHeight: 6,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    modelService.statusDetail,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (isDownloading && modelService.totalBytes > 0)
+                  Text(
+                    '${(modelService.bytesDownloaded / (1024 * 1024)).toStringAsFixed(1)} / ${(modelService.totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB',
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+
+          // Error Message if any
+          if (modelService.errorMessage != null && !isDownloading) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              key: const Key('voice_model_error_banner'),
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: AppBorderRadius.smallBorder,
+                border: Border.all(
+                  color: AppColors.danger.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: AppColors.danger, size: 18),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      modelService.errorMessage!,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.danger,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Actions
+          if (isDownloading || isVerifying) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: const Key('voice_model_cancel_button'),
+                onPressed: () => modelService.cancelDownload(),
+                icon: const Icon(Icons.close_rounded, size: 18),
+                label: const Text('Cancel Download'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: const BorderSide(color: AppColors.danger),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppBorderRadius.mediumBorder,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (isInstalled) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: const Key('voice_model_delete_button'),
+                onPressed: () => _handleDeleteModels(context, isDark),
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                label: const Text('Delete Models to Reclaim Space'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: BorderSide(
+                    color: AppColors.danger.withValues(alpha: 0.5),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppBorderRadius.mediumBorder,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                key: const Key('voice_model_download_button'),
+                onPressed: () => _handleDownloadModels(context),
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: const Text('Download Model Pack (~390 MB)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppBorderRadius.mediumBorder,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDownloadModels(BuildContext context) async {
+    final modelService = ModelManagementService.instance;
+    final connectivity = await modelService.checkNetworkType();
+    final wifiOnly = _voiceModelsWifiOnly;
+
+    bool allowCellular = false;
+
+    if (wifiOnly && connectivity == NetworkType.cellular) {
+      if (!context.mounted) return;
+      final bool? proceedOverCellular = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          key: const Key('cellular_warning_dialog'),
+          title: Row(
+            children: const [
+              Icon(Icons.network_cell_rounded, color: Colors.orange, size: 22),
+              SizedBox(width: 8),
+              Text('Cellular Data Warning'),
+            ],
+          ),
+          content: const Text(
+            'You are currently connected to a cellular mobile network. '
+            'Downloading the Voice AI Model Pack will use approximately 390 MB of mobile data.\n\n'
+            'Do you want to proceed over cellular data?',
+          ),
+          actions: [
+            TextButton(
+              key: const Key('cellular_warning_cancel_button'),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              key: const Key('cellular_warning_proceed_button'),
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade800,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Download Anyway'),
+            ),
+          ],
+        ),
+      );
+
+      if (proceedOverCellular != true) {
+        return;
+      }
+      allowCellular = true;
+    }
+
+    final success = await modelService.downloadModelPack(
+      allowCellular: allowCellular,
+    );
+
+    if (success && mounted) {
+      _showFeedback('Voice AI Model Pack installed successfully!');
+      _refreshModelDiskUsage();
+    }
+  }
+
+  Future<void> _handleDeleteModels(BuildContext context, bool isDark) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('delete_models_dialog'),
+        title: Row(
+          children: const [
+            Icon(Icons.delete_outline_rounded,
+                color: AppColors.danger, size: 22),
+            SizedBox(width: 8),
+            Text('Delete Voice AI Models?'),
+          ],
+        ),
+        content: const Text(
+          'This will delete the on-device AI model files (~390 MB) to free disk space.\n\n'
+          'Manual transaction entry remains 100% functional. You can re-download models anytime.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('delete_models_cancel_button'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            key: const Key('delete_models_confirm_button'),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Models'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ModelManagementService.instance.deleteModels();
+      if (mounted) {
+        _showFeedback('Voice AI Models deleted to free disk space.');
+        _refreshModelDiskUsage();
+      }
+    }
   }
 }
 
