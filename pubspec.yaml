@@ -42,6 +42,8 @@ dependencies:
   fl_chart: ^0.68.0
   sqflite_common_ffi_web: ^1.1.2
   crypto: ^3.0.6
+  record: ^5.2.0
+  sherpa_onnx: ^1.13.8
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +56,10 @@ dev_dependencies:
   sqflite_common_ffi: any
   path_provider_platform_interface: any
   plugin_platform_interface: any
+
+dependency_overrides:
+  record_platform_interface: 1.2.0
+
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
