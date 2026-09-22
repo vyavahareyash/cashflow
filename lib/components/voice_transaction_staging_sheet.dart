@@ -326,6 +326,67 @@ class _VoiceTransactionStagingSheetState
     }
   }
 
+  Future<void> _selectType(int index, DraftTransaction draft) async {
+    const types = ['expense', 'income', 'transfer'];
+    final selectedType = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.darkSurface
+          : AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: Text('Select Transaction Type', style: AppTypography.titleLarge),
+              ),
+              const Divider(height: 1),
+              ...types.map((t) {
+                final isSelected = draft.type.toLowerCase() == t;
+                final color = t == 'income'
+                    ? AppColors.emerald700
+                    : (t == 'transfer' ? AppColors.info : AppColors.danger);
+                final icon = t == 'income'
+                    ? Icons.arrow_downward_rounded
+                    : (t == 'transfer'
+                        ? Icons.swap_horiz_rounded
+                        : Icons.arrow_upward_rounded);
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: color.withValues(alpha: 0.15),
+                    child: Icon(icon, size: 16, color: color),
+                  ),
+                  title: Text(t.toUpperCase(), style: AppTypography.bodyMedium),
+                  trailing: isSelected
+                      ? const Icon(Icons.check, color: AppColors.emerald700)
+                      : null,
+                  onTap: () => Navigator.of(sheetCtx).pop(t),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedType != null && mounted) {
+      setState(() {
+        _drafts[index] = draft.copyWith(
+          type: selectedType,
+          hasUnassignedCategory:
+              selectedType == 'expense' && draft.categoryId == null,
+        );
+      });
+    }
+  }
+
   Future<void> _editNote(int index, DraftTransaction draft) async {
     final controller = TextEditingController(text: draft.note);
 
@@ -436,16 +497,25 @@ class _VoiceTransactionStagingSheetState
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.emerald700.withValues(alpha: 0.15),
-                        borderRadius: AppBorderRadius.smallBorder,
-                      ),
-                      child: const Icon(
-                        Icons.mic_rounded,
-                        color: AppColors.emerald700,
-                        size: 20,
+                    ClipRRect(
+                      borderRadius: AppBorderRadius.smallBorder,
+                      child: Image.asset(
+                        'assets/icon/ai_voice_icon.jpg',
+                        width: 28,
+                        height: 28,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald700.withValues(alpha: 0.15),
+                            borderRadius: AppBorderRadius.smallBorder,
+                          ),
+                          child: const Icon(
+                            Icons.mic_rounded,
+                            color: AppColors.emerald700,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -519,7 +589,7 @@ class _VoiceTransactionStagingSheetState
                     const SizedBox(width: AppSpacing.xs),
                     Expanded(
                       child: Text(
-                        'Some entries have missing or inferred fields. Tap chips to adjust.',
+                        'Some entries have missing or inferred fields. Tap tiles to adjust.',
                         style: AppTypography.labelSmall.copyWith(
                           color: isDark ? AppColors.warning : AppColors.gray800,
                           fontWeight: FontWeight.w600,
@@ -747,40 +817,24 @@ class _VoiceTransactionStagingSheetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Type Badge, Note, Discard Button
+          // Header Row: Note & speech left-aligned, Prominent Amount + Delete right-aligned
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: typeColor.withValues(alpha: 0.15),
-                  borderRadius: AppBorderRadius.pillBorder,
-                ),
-                child: Text(
-                  draft.type.toUpperCase(),
-                  style: AppTypography.labelSmall.copyWith(
-                    color: typeColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
+              // Note title (tap to edit)
               Expanded(
                 child: GestureDetector(
                   onTap: () => _editNote(index, draft),
                   child: Row(
                     children: [
-                      Expanded(
+                      Flexible(
                         child: Text(
                           draft.note.isNotEmpty
                               ? draft.note
                               : (draft.rawSpeech ?? 'Untitled draft'),
                           style: AppTypography.titleMedium.copyWith(
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -796,10 +850,56 @@ class _VoiceTransactionStagingSheetState
                   ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+
+              // Prominent Amount (tap to edit)
+              GestureDetector(
+                onTap: () => _editAmount(index, draft),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: typeColor.withValues(alpha: 0.1),
+                    borderRadius: AppBorderRadius.smallBorder,
+                    border: Border.all(
+                      color: typeColor.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        AppFormatters.currency(
+                          draft.amount,
+                          isPrivate: _isPrivate,
+                        ),
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: typeColor,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 12,
+                        color: typeColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded, size: 20),
                 color: AppColors.danger,
                 tooltip: 'Dismiss',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
                 onPressed: () => _dismissDraft(index),
               ),
             ],
@@ -829,70 +929,73 @@ class _VoiceTransactionStagingSheetState
             _buildWarningBadge('Select Destination Account', isDark),
           ],
 
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.md),
 
-          // Inline Interactive Chips (US 9)
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // Structured 2x2 Grid Tiles (Receipt & Ledger Style - Option 1)
+          // Row 1: Account | Category / Destination
+          Row(
             children: [
-              // Amount Chip (US 9, US 18)
-              _buildInteractiveChip(
-                icon: Icons.payments_outlined,
-                label: AppFormatters.currency(
-                  draft.amount,
-                  isPrivate: _isPrivate,
-                ),
-                color: AppColors.emerald700,
-                onTap: () => _editAmount(index, draft),
-              ),
-
-              // Account Chip (US 9, US 8)
-              _buildInteractiveChip(
-                icon: Icons.account_balance_wallet_outlined,
-                label: account?.name ?? 'Select Account',
-                color: draft.hasUnassignedAccount
-                    ? AppColors.warning
-                    : AppColors.gray700,
+              _buildGridTile(
+                label: 'ACCOUNT',
+                value: account?.name ?? 'Select Account',
+                icon: account?.isCreditCard == true
+                    ? Icons.credit_card_rounded
+                    : Icons.account_balance_wallet_outlined,
                 isWarning: draft.hasUnassignedAccount,
+                isDark: isDark,
                 onTap: () => _selectAccount(index, draft, isDestination: false),
               ),
-
-              // Category Chip (US 9, US 8)
-              if (draft.isExpense)
-                _buildInteractiveChip(
-                  icon: Icons.category_outlined,
-                  label: category != null
+              const SizedBox(width: AppSpacing.sm),
+              if (draft.isTransfer)
+                _buildGridTile(
+                  label: 'DESTINATION',
+                  value: destinationAccount != null
+                      ? destinationAccount.name
+                      : 'Select Destination',
+                  icon: Icons.arrow_forward_rounded,
+                  isWarning: destinationAccount == null,
+                  accentColor: AppColors.info,
+                  isDark: isDark,
+                  onTap: () => _selectAccount(index, draft, isDestination: true),
+                )
+              else
+                _buildGridTile(
+                  label: 'CATEGORY',
+                  value: category != null
                       ? category.name
-                      : 'Select Category',
-                  color: draft.hasUnassignedCategory
-                      ? AppColors.warning
-                      : AppColors.gray700,
+                      : (draft.isIncome ? 'Income' : 'Select Category'),
+                  icon: Icons.category_outlined,
                   isWarning: draft.hasUnassignedCategory,
+                  isDark: isDark,
                   onTap: () => _selectCategory(index, draft),
                 ),
+            ],
+          ),
 
-              // Destination Account Chip for Transfer
-              if (draft.isTransfer)
-                _buildInteractiveChip(
-                  icon: Icons.arrow_forward_rounded,
-                  label: destinationAccount != null
-                      ? 'To: ${destinationAccount.name}'
-                      : 'Select Destination',
-                  color: destinationAccount == null
-                      ? AppColors.warning
-                      : AppColors.info,
-                  isWarning: destinationAccount == null,
-                  onTap: () => _selectAccount(index, draft, isDestination: true),
-                ),
+          const SizedBox(height: AppSpacing.sm),
 
-              // Date Chip
-              _buildInteractiveChip(
+          // Row 2: Date | Type
+          Row(
+            children: [
+              _buildGridTile(
+                label: 'DATE',
+                value: draft.date.isNotEmpty ? draft.date : 'Select Date',
                 icon: Icons.calendar_today_outlined,
-                label: draft.date.isNotEmpty ? draft.date : 'Select Date',
-                color: AppColors.gray700,
+                isDark: isDark,
                 onTap: () => _selectDate(index, draft),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _buildGridTile(
+                label: 'TYPE',
+                value: draft.type.toUpperCase(),
+                icon: draft.isIncome
+                    ? Icons.arrow_downward_rounded
+                    : (draft.isTransfer
+                        ? Icons.swap_horiz_rounded
+                        : Icons.arrow_upward_rounded),
+                accentColor: typeColor,
+                isDark: isDark,
+                onTap: () => _selectType(index, draft),
               ),
             ],
           ),
@@ -933,51 +1036,88 @@ class _VoiceTransactionStagingSheetState
     );
   }
 
-  Widget _buildInteractiveChip({
-    required IconData icon,
+  Widget _buildGridTile({
     required String label,
-    required Color color,
+    required String value,
+    required IconData icon,
     required VoidCallback onTap,
+    required bool isDark,
     bool isWarning = false,
+    Color? accentColor,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppBorderRadius.pillBorder,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm + 2,
-            vertical: AppSpacing.xs + 1,
-          ),
-          decoration: BoxDecoration(
-            color: isWarning
-                ? AppColors.warning.withValues(alpha: 0.12)
-                : color.withValues(alpha: 0.08),
-            borderRadius: AppBorderRadius.pillBorder,
-            border: Border.all(
-              color: isWarning
-                  ? AppColors.warning
-                  : color.withValues(alpha: 0.25),
+    final borderColor = isWarning
+        ? AppColors.warning
+        : (isDark ? AppColors.darkBorder : AppColors.gray200);
+    final bgColor = isWarning
+        ? AppColors.warning.withValues(alpha: 0.08)
+        : (isDark ? AppColors.darkSurface : AppColors.gray50);
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppBorderRadius.mediumBorder,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm + 2,
+              vertical: AppSpacing.sm,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 15,
-                color: isWarning ? AppColors.warning : color,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: AppBorderRadius.mediumBorder,
+              border: Border.all(
+                color: borderColor,
+                width: isWarning ? 1.5 : 1.0,
               ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: AppTypography.labelSmall.copyWith(
-                  color: isWarning ? AppColors.warning : color,
-                  fontWeight: FontWeight.w600,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 13,
+                      color: isWarning
+                          ? AppColors.warning
+                          : (accentColor ??
+                              (isDark ? AppColors.gray400 : AppColors.gray500)),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: isWarning
+                              ? AppColors.warning
+                              : (isDark ? AppColors.gray400 : AppColors.gray500),
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: AppTypography.bodySmall.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isWarning
+                        ? AppColors.warning
+                        : (isDark ? AppColors.darkText : AppColors.gray900),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),

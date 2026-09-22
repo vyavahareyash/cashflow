@@ -154,7 +154,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('Some entries have missing or inferred fields. Tap chips to adjust.'),
+        find.text('Some entries have missing or inferred fields. Tap tiles to adjust.'),
         findsOneWidget,
       );
     });
@@ -470,7 +470,7 @@ void main() {
       expect(finalTxCount, equals(initialTxCount));
     });
 
-    testWidgets('10. Dashboard prominent microphone button launches staging sheet (US 3)', (tester) async {
+    testWidgets('10. Dashboard hero balance card excludes mic icon; standard quick actions preserved', (tester) async {
       DashboardScreen.resetStartupPrivacyFlag();
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
@@ -491,21 +491,13 @@ void main() {
         if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
       }
 
-      // Verify microphone buttons exist on dashboard
-      expect(find.byKey(const Key('dashboard_hero_mic_button')), findsOneWidget);
-      expect(find.byKey(const Key('dashboard_voice_entry_action')), findsOneWidget);
+      // Verify hero card does not have the mic button (clean card as requested)
+      expect(find.byKey(const Key('dashboard_hero_mic_button')), findsNothing);
 
-      // Tap Quick Actions Voice Entry button
-      await tester.tap(find.byKey(const Key('dashboard_voice_entry_action')));
-      await tester.pump();
-      for (int i = 0; i < 10; i++) {
-        await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
-        await tester.pump(const Duration(milliseconds: 50));
-      }
-
-      // Staging sheet opened
-      expect(find.text('Staged Transactions'), findsOneWidget);
-      expect(find.text('Coffee and groceries'), findsOneWidget);
+      // Verify standard Quick Actions are present
+      expect(find.text('Log Transaction'), findsOneWidget);
+      expect(find.text('Lock Goal'), findsOneWidget);
+      expect(find.text('Add Budget'), findsOneWidget);
     });
 
     testWidgets('11. Batch approval: Approve Valid commits valid entries while retaining invalid ones (US 11, 12)', (tester) async {

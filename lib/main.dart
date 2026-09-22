@@ -212,16 +212,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.xs + 2),
-              decoration: BoxDecoration(
-                color: AppColors.emerald500.withValues(alpha: 0.15),
-                borderRadius: AppBorderRadius.smallBorder,
-              ),
-              child: const Icon(
-                Icons.account_balance_wallet_rounded,
-                color: AppColors.emerald600,
-                size: 20,
+            ClipRRect(
+              borderRadius: AppBorderRadius.smallBorder,
+              child: Image.asset(
+                'assets/icon/app_icon.jpeg',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald500.withValues(alpha: 0.15),
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: AppColors.emerald600,
+                    size: 20,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -265,27 +274,77 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       body: IndexedStack(index: _selectedIndex, children: screens),
       floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              key: const Key('dashboard_voice_entry_fab'),
-              heroTag: 'dashboard_voice_entry_fab',
-              tooltip: 'Voice Transaction Journaling',
-              backgroundColor: AppColors.emerald700,
-              onPressed: () {
-                VoiceTransactionStagingSheet.show(
-                  context,
-                  drafts: [
-                    DraftTransaction(
-                      amount: 150.0,
-                      type: 'expense',
-                      date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                      note: 'Voice transaction note',
-                      hasUnassignedAccount: true,
-                      hasUnassignedCategory: true,
+          ? Container(
+              height: 58,
+              width: 58,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.55),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.6),
+                  width: 1.5,
+                ),
+              ),
+              child: FloatingActionButton(
+                key: const Key('dashboard_voice_entry_fab'),
+                heroTag: 'dashboard_voice_entry_fab',
+                tooltip: 'AI Voice Transaction Journaling',
+                backgroundColor: const Color(0xFF064E3B),
+                elevation: 0,
+                focusElevation: 0,
+                hoverElevation: 0,
+                highlightElevation: 0,
+                shape: const CircleBorder(),
+                onPressed: () {
+                  VoiceTransactionStagingSheet.show(
+                    context,
+                    drafts: [
+                      DraftTransaction(
+                        amount: 150.0,
+                        type: 'expense',
+                        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                        note: 'Voice transaction note',
+                        hasUnassignedAccount: true,
+                        hasUnassignedCategory: true,
+                      ),
+                    ],
+                  );
+                },
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/icon/ai_voice_icon.jpg',
+                    width: 58,
+                    height: 58,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(
+                          Icons.mic_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Icon(
+                            Icons.auto_awesome,
+                            color: Colors.amber.shade300,
+                            size: 13,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                );
-              },
-              child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+                  ),
+                ),
+              ),
             )
           : null,
       bottomNavigationBar: NavigationBar(
