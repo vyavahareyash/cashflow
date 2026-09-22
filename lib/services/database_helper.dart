@@ -18,6 +18,7 @@ import 'package:cashflow/models/goal_model.dart';
 import 'package:cashflow/models/credit_card_model.dart';
 import 'package:cashflow/models/locked_allocation_model.dart';
 import 'package:cashflow/models/salary_cycle.dart';
+import 'package:cashflow/models/draft_transaction.dart';
 
 class DatabaseHelper {
   // Singleton pattern: ensures only one database connection exists
@@ -625,6 +626,94 @@ class DatabaseHelper {
   }
 
   // --- TRANSACTION OPERATIONS ---
+  /// Commits a batch of reviewed [DraftTransaction] items atomically in a single SQLite transaction.
+  ///
+  /// For each valid draft:
+  /// - Adjusts account balance(s) based on transaction type (expense, income, or transfer).
+  /// - Inserts a record into the `transactions` table.
+  ///
+  /// If any write fails or any draft is invalid, the entire SQLite transaction rolls back.
+  /// Broadcasts a single [notifyDataChanged] revision increment upon successful batch completion.
+  Future<List<int>> commitDraftTransactions(List<DraftTransaction> drafts) async {
+    if (drafts.isEmpty) return [];
+
+    final db = await instance.database;
+    final insertedIds = <int>[];
+
+    await db.transaction((txn) async {
+      for (final draft in drafts) {
+        if (!draft.isValid) {
+          throw ArgumentError(
+            'Cannot commit invalid DraftTransaction (id: ${draft.id}, amount: ${draft.amount}, accountId: ${draft.accountId}, type: ${draft.type})',
+          );
+        }
+        _validateAmount(draft.amount);
+
+        final accountId = draft.accountId!;
+        await _requireAccount(txn, accountId);
+
+        if (draft.isTransfer) {
+          final destAccountId = draft.destinationAccountId!;
+          if (accountId == destAccountId) {
+            throw ArgumentError('Transfer accounts must be different');
+          }
+          await _requireAccount(txn, destAccountId);
+          await _adjustAccountBalance(txn, accountId, -draft.amount);
+          await _adjustAccountBalance(txn, destAccountId, draft.amount);
+
+          final id = await txn.insert('transactions', {
+            'account_id': accountId,
+            'destination_account_id': destAccountId,
+            'category_id': null,
+            'goal_id': null,
+            'amount': draft.amount,
+            'date': draft.date,
+            'note': draft.note,
+            'type': 'transfer',
+          });
+          insertedIds.add(id);
+        } else if (draft.isIncome) {
+          if (draft.categoryId != null) {
+            await _requireCategory(txn, draft.categoryId!);
+          }
+          await _adjustAccountBalance(txn, accountId, draft.amount);
+
+          final id = await txn.insert('transactions', {
+            'account_id': accountId,
+            'destination_account_id': null,
+            'category_id': draft.categoryId,
+            'goal_id': null,
+            'amount': draft.amount,
+            'date': draft.date,
+            'note': draft.note,
+            'type': 'income',
+          });
+          insertedIds.add(id);
+        } else {
+          if (draft.categoryId != null) {
+            await _requireCategory(txn, draft.categoryId!);
+          }
+          await _adjustAccountBalance(txn, accountId, -draft.amount);
+
+          final id = await txn.insert('transactions', {
+            'account_id': accountId,
+            'destination_account_id': null,
+            'category_id': draft.categoryId,
+            'goal_id': null,
+            'amount': draft.amount,
+            'date': draft.date,
+            'note': draft.note,
+            'type': 'expense',
+          });
+          insertedIds.add(id);
+        }
+      }
+    });
+
+    notifyDataChanged();
+    return insertedIds;
+  }
+
   Future<int> insertTransaction(TransactionModel transaction) async {
     final db = await instance.database;
     final id = await db.insert('transactions', transaction.toMap());
