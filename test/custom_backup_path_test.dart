@@ -336,5 +336,78 @@ void main() {
 
       expect(find.text('Select the backup file format you want to restore:'), findsNothing);
     });
+
+    testWidgets('renders Default Export Directory tile and allows resetting path to default', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final db = DatabaseHelper.instance;
+      final customPath = join(tempDir.path, 'preconfigured_custom_dir');
+      await tester.runAsync(() async {
+        await db.setCustomBackupPath(customPath);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BackupRestoreScreen(),
+        ),
+      );
+      for (int i = 0; i < 30; i++) {
+        await tester.runAsync(() async {
+          await Future.delayed(const Duration(milliseconds: 50));
+        });
+        await tester.pump();
+        if (find.text(customPath).evaluate().isNotEmpty) {
+          break;
+        }
+      }
+      await tester.pumpAndSettle();
+
+      // Verify Default Export Directory tile exists
+      final dirTile = find.byKey(const Key('settings_default_export_directory_tile'));
+      expect(dirTile, findsOneWidget);
+      await tester.ensureVisible(dirTile);
+      await tester.pumpAndSettle();
+
+      expect(find.text(customPath), findsOneWidget);
+
+      // Tap Default Export Directory tile
+      await tester.tap(dirTile);
+      await tester.pump();
+      for (int i = 0; i < 30; i++) {
+        await tester.runAsync(() async {
+          await Future.delayed(const Duration(milliseconds: 50));
+        });
+        await tester.pump();
+        if (find.byKey(const Key('settings_reset_export_directory_button')).evaluate().isNotEmpty) {
+          break;
+        }
+      }
+      await tester.pumpAndSettle();
+
+      // Verify dialog appears
+      expect(find.text('Default Export Directory'), findsAtLeastNWidgets(1));
+      expect(find.byKey(const Key('settings_reset_export_directory_button')), findsOneWidget);
+
+      // Tap Reset button
+      await tester.tap(find.byKey(const Key('settings_reset_export_directory_button')));
+      await tester.pump();
+      for (int i = 0; i < 30; i++) {
+        await tester.runAsync(() async {
+          await Future.delayed(const Duration(milliseconds: 50));
+        });
+        await tester.pump();
+        if (find.byKey(const Key('settings_reset_export_directory_button')).evaluate().isEmpty) {
+          break;
+        }
+      }
+      await tester.pumpAndSettle();
+
+      // Verify path was reset in db
+      final effective = await tester.runAsync(() => db.getEffectiveBackupDirectory());
+      final defaultDir = await tester.runAsync(() => db.getDefaultBackupDirectory());
+      expect(effective, equals(defaultDir));
+    });
   });
 }
