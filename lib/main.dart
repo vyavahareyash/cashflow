@@ -315,6 +315,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         hasUnassignedCategory: true,
                       ),
                     ],
+                    onCommit: (approved) async {
+                      await DatabaseHelper.instance.commitDraftTransactions(approved);
+                    },
                   );
                 },
                 child: ClipOval(

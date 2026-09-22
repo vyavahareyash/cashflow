@@ -437,11 +437,14 @@ class _VoiceTransactionStagingSheetState
     try {
       if (widget.onCommit != null) {
         await widget.onCommit!(draftsToCommit);
+      } else {
+        await DatabaseHelper.instance.commitDraftTransactions(draftsToCommit);
       }
 
       if (!mounted) return;
 
       if (draftsToCommit.length >= _drafts.length) {
+        setState(() => _isCommitting = false);
         Navigator.of(context).pop(draftsToCommit);
       } else {
         setState(() {
