@@ -27,8 +27,10 @@ Instead of filling out form after form, simply tap the **Microphone** button and
 
 > *"Spent \$4 on coffee with Chase, bought groceries for \$65 using debit, and received a \$150 freelance payment into checking yesterday."*
 
-### 1. Continuous Monologue Capture
+### 1. Continuous Monologue Capture & Turn Synchronization
 Dictate one transaction or recap your entire day's spending in a single voice note. The recording modal displays a live audio visualizer and real-time streaming transcript as you speak.
+- **Silence-Aware Deduplication**: The turn engine reliably accumulates phrases across natural pauses without duplicating recognized text when the microphone cycles on silence timeout.
+- **Editable Transcript During Mic Pause**: Pause the microphone at any time to inspect the transcribed text. Tap the transcript to manually edit, fix typos, or adjust recognized words before triggering entity extraction.
 
 ### 2. Intelligent On-Device Extraction
 When you tap stop, Cashflow's on-device neural model:

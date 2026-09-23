@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-09-23
+
+### Added
+- **100% Offline Voice AI Journaling**: Multi-transaction dictation via continuous spoken monologue with on-device speech-to-text and quantized neural model extraction (`SmolLM2-360M`), featuring zero cloud telemetry and zero audio persistence (#79, #84, #85, #86, #87, #88, #94, #96, #102).
+- **Platform-Native On-Device Speech Recognition**: Switched to platform-native speech recognition engine (Android `SpeechRecognizer` / iOS `SFSpeechRecognizer`) for lower memory footprint, zero extra model downloads, and native regional accent accuracy ([ADR-0006](docs/adr/0006-platform-native-on-device-stt.md), #96, #97).
+- **STT Turn-Engine Synchronization & Deduplication**: Multi-turn speech accumulator with silence-timeout deduplication, ensuring continuous capture without duplicate phrasing across pause boundaries (#101, #102).
+- **Editable Transcript During Mic Pause**: Interactive inline transcription editor allowing users to review and manually touch up STT text before entity extraction (#101, #102).
+- **Glassmorphic Floating Navigation Pill**: Frosted glass navigation bar with backdrop blur and prominent elevated voice dictation action (#101, #102).
+- **Voice Transaction Staging Sheet**: In-memory review sheet displaying parsed draft transaction cards with visual warnings, interactive inline chips (Amount, Account, Category, Date), swipe-to-delete, and "Approve All" / "Approve Valid" atomic commits (#87, #92).
+- **Colloquial Indian Financial Context Parsing**: Comprehensive regex and heuristic engine supporting Lakhs/Crores, UPI handles, Indian bank prefixes (HDFC, SBI, ICICI, Axis), merchant parsing (Swiggy, Zomato, Blinkit, Zepto), and cash idioms (#101, #102).
+- **Application Security & Native App Lock**: Biometric and device PIN authentication via local auth, journal integrity validations, and tamper-resistant settings protection (#99, #100).
+- **Startup and Background Privacy Protection**: Configurable automatic privacy mode masking on app cold start and app switcher backgrounding (#81, #82).
+- **Custom CSV Export Destination**: Synchronized file picker export workflow allowing user-chosen destination folders for CSV activity ledger exports (#80, #83).
+
+### Changed
+- **Navigation Shell**: Modernized root layout to host the floating navigation pill with balanced edge insets and theme-adaptive contrast.
+- **Model Download Manager**: Streamlined Wi-Fi gated download flow exclusively for quantized SmolLM2 weights (~230MB), eliminating separate STT model payload.
+
+---
+
 ## [3.1.1] - 2026-09-15
 
 ### Changed

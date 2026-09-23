@@ -177,10 +177,12 @@ Cashflow transcends traditional expense trackers that serve merely as static log
 
 ### The Voice Journaling Flow
 1. **Prominent Entry Point**:
-   - Tap the prominent **Microphone FAB** anchored in the center of the bottom navigation bar.
-2. **Natural Monologue Recording**:
+   - Tap the prominent microphone button anchored in the glassmorphic **Floating Navigation Pill** at the bottom of the screen.
+2. **Natural Monologue Recording & Live Feedback**:
    - Speak naturally: *"Paid \$12 for lunch with Chase, spent \$45 on groceries with debit, and received \$200 freelance payment into savings yesterday."*
    - Watch live audio waveforms and real-time streaming transcripts validate your input on screen.
+   - **Continuous Turn-Engine Accumulation**: Pause seamlessly between sentences without the turn-engine repeating past text when recording resumes.
+   - **Interactive Editable Transcript**: When the microphone is paused, tap the transcript text box directly to manually edit, refine, or correct speech recognition text prior to entity extraction.
 3. **Smart Entity Grounding & Extraction**:
    - On-device neural model (SmolLM2 with GBNF grammar constraints) parses entities against your actual SQLite accounts and categories.
    - Automatically maps relative dates (*"yesterday"*, *"last Friday"*) to exact calendar dates.
