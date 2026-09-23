@@ -61,6 +61,8 @@ jobs:
 
       - name: Rename APKs and App Bundle
         run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          echo "App version: $VERSION"
           cd build/app/outputs/flutter-apk
           for f in app*.apk; do
             [ -f "$f" ] && mv "$f" "${f/#app/cashflow}"
@@ -75,9 +77,24 @@ jobs:
 
       - name: Stage Release Artifacts Flat
         run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
           mkdir -p build/dist
-          cp build/app/outputs/flutter-apk/cashflow*.apk build/dist/
-          cp build/app/outputs/bundle/release/cashflow-release.aab build/dist/
+          cd build/app/outputs/flutter-apk
+          for f in cashflow*.apk; do
+            if [ -f "$f" ]; then
+              cp "$f" "$GITHUB_WORKSPACE/build/dist/$f"
+              # Create versioned copy, e.g. cashflow-v4.0.0-release.apk or cashflow-v4.0.0-arm64-v8a-release.apk
+              versioned_name=$(echo "$f" | sed "s/^cashflow-/cashflow-v${VERSION}-/")
+              cp "$f" "$GITHUB_WORKSPACE/build/dist/$versioned_name"
+            fi
+          done
+          cd -
+          cd build/app/outputs/bundle/release
+          if [ -f "cashflow-release.aab" ]; then
+            cp cashflow-release.aab "$GITHUB_WORKSPACE/build/dist/cashflow-release.aab"
+            cp cashflow-release.aab "$GITHUB_WORKSPACE/build/dist/cashflow-v${VERSION}-release.aab"
+          fi
+          cd -
           ls -la build/dist/
 
       - name: Upload Android Artifacts
@@ -107,15 +124,19 @@ jobs:
 
       - name: Package Web App
         run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
           cd build/web
           zip -r ../../cashflow-web.zip .
           cd ../..
+          cp cashflow-web.zip "cashflow-v${VERSION}-web.zip"
 
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
           name: web-bundle
-          path: cashflow-web.zip
+          path: |
+            cashflow-web.zip
+            cashflow-v*-web.zip
           retention-days: 1
 
   build-ios:
@@ -138,10 +159,13 @@ jobs:
 
       - name: Package iOS Payload and IPA
         run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r cashflow-ios-unsigned.ipa Payload
           zip -r cashflow-ios-app.zip build/ios/iphoneos/Runner.app
+          cp cashflow-ios-unsigned.ipa "cashflow-v${VERSION}-ios-unsigned.ipa"
+          cp cashflow-ios-app.zip "cashflow-v${VERSION}-ios-app.zip"
 
       - name: Upload iOS Artifacts
         uses: actions/upload-artifact@v4
@@ -150,6 +174,8 @@ jobs:
           path: |
             cashflow-ios-unsigned.ipa
             cashflow-ios-app.zip
+            cashflow-v*-ios-unsigned.ipa
+            cashflow-v*-ios-app.zip
           retention-days: 1
 
   publish-release:
