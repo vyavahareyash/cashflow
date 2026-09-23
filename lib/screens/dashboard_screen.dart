@@ -1832,6 +1832,17 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                                   'Select a destination account.',
                                 );
                               }
+                              final sourceAcc = _accounts.firstWhere(
+                                (acc) => acc.id == selectedAccountId,
+                                orElse: () =>
+                                    throw ArgumentError('Select an account.'),
+                              );
+                              if (sourceAcc.type != 'Credit Card' &&
+                                  amount > sourceAcc.balance) {
+                                throw ArgumentError(
+                                  'Transfer amount cannot exceed source account balance (₹${sourceAcc.balance.toStringAsFixed(0)} available).',
+                                );
+                              }
                               await DatabaseHelper.instance
                                   .createTransferTransaction(
                                     sourceAccountId: selectedAccountId!,
@@ -1898,6 +1909,11 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                                       : null,
                                 );
                               } else {
+                                if (amount > (currentSelectedAcc?.balance ?? 0)) {
+                                  throw ArgumentError(
+                                    'Expense amount cannot exceed account balance (₹${(currentSelectedAcc?.balance ?? 0).toStringAsFixed(0)} available).',
+                                  );
+                                }
                                 await DatabaseHelper.instance.insertTransaction(
                                   TransactionModel(
                                     accountId: selectedAccountId!,

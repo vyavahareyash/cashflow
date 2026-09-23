@@ -80,7 +80,11 @@ class BackupCodec {
   }
 
   static String _escapeCsv(Object? value) {
-    final text = value?.toString() ?? '';
+    if (value is num) return value.toString();
+    var text = value?.toString() ?? '';
+    if (text.isNotEmpty && RegExp(r'^[=\+\-@\t\r]').hasMatch(text)) {
+      text = "'$text";
+    }
     if (!text.contains(RegExp(r'[",\n\r]'))) return text;
     return '"${text.replaceAll('"', '""')}"';
   }

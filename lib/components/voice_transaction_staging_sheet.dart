@@ -458,9 +458,17 @@ class _VoiceTransactionStagingSheetState
           _isCommitting = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isCommitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceFirst(RegExp(r'^[A-Za-z]+Error:\s*'), ''),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
       rethrow;
     }
