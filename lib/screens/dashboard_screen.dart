@@ -989,24 +989,29 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             children: [
               Text(
                 AppFormatters.currency(
-                  (totalLocked > 0 && !isCC) ? usableBalance : acc.balance,
+                  acc.balance,
                   isPrivate: _isPrivate,
                 ),
                 style: AppTypography.titleMedium.copyWith(
                   fontWeight: FontWeight.w700,
                   color: (isCC && acc.balance > 0)
                       ? AppColors.danger
-                      : ((totalLocked > 0 && !isCC)
-                          ? AppColors.emerald600
-                          : (isDark ? AppColors.darkText : AppColors.gray900)),
+                      : (isDark ? AppColors.darkText : AppColors.gray900),
                 ),
               ),
               if (totalLocked > 0 && !isCC)
                 Text(
-                  'Usable (${AppFormatters.compactCurrency(acc.balance, isPrivate: _isPrivate)} total)',
+                  '${AppFormatters.compactCurrency(usableBalance, isPrivate: _isPrivate)} usable',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.emerald400 : AppColors.emerald600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              else
+                Text(
+                  isCC ? 'Outstanding' : 'Balance',
                   style: AppTypography.labelSmall.copyWith(
                     color: isDark ? AppColors.gray400 : AppColors.gray600,
-                    fontSize: 10,
                   ),
                 ),
             ],
