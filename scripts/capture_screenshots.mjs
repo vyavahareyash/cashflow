@@ -7,7 +7,30 @@ const execFile = promisify(nodeExecFile);
 const root = new URL('..', import.meta.url).pathname;
 const output = `${root}/screenshots`;
 const adb = `${process.env.ANDROID_HOME ?? `${process.env.HOME}/Library/Android/sdk`}/platform-tools/adb`;
-const device = process.env.ANDROID_DEVICE ?? 'emulator-5554';
+
+async function resolveDevice() {
+    if (process.env.ANDROID_DEVICE) {
+        return process.env.ANDROID_DEVICE;
+    }
+    try {
+        const { stdout } = await execFile(adb, ['devices'], { encoding: 'utf8' });
+        const lines = stdout.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('List of'));
+        const devices = lines.map((l) => l.split(/\s+/)[0]).filter(Boolean);
+        if (devices.length === 1) {
+            return devices[0];
+        }
+        const emulator = devices.find((d) => d.startsWith('emulator-'));
+        if (emulator) {
+            return emulator;
+        }
+        if (devices.length > 0) {
+            return devices[0];
+        }
+    } catch (_) {}
+    return 'emulator-5554';
+}
+
+const device = await resolveDevice();
 
 await mkdir(output, { recursive: true });
 
@@ -20,13 +43,14 @@ async function capture(name) {
 }
 
 const markers = [
+    // --- PASS 1: LIGHT MODE ---
     {
         id: '01-dashboard-light',
         name: 'Dashboard Overview',
         group: 'Dashboard',
         theme: 'light',
         type: 'screen',
-        description: 'Main Dashboard overview showing Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.'
+        description: 'Main Dashboard overview showing Safe-to-Spend Usable Balance, Total Balance, Sinking Funds locked, Monthly Budget gauge, and Recent Activity.'
     },
     {
         id: '01b-dashboard-privacy-light',
@@ -66,7 +90,7 @@ const markers = [
         group: 'Budgets',
         theme: 'light',
         type: 'screen',
-        description: 'Monthly category budget tracking screen with overall spending summary and animated category progress bars.'
+        description: 'Monthly category budget tracking screen with overall spending summary, salary cycle boundaries, and category progress bars.'
     },
     {
         id: '06-modal-add-category-light',
@@ -90,7 +114,7 @@ const markers = [
         group: 'Goals',
         theme: 'light',
         type: 'screen',
-        description: 'Sinking funds screen displaying target dates, recommended monthly pace, and lock action buttons.'
+        description: 'Sinking funds screen displaying target dates, recommended monthly pace, days remaining, and lock action buttons.'
     },
     {
         id: '09-modal-add-goal-light',
@@ -122,7 +146,7 @@ const markers = [
         group: 'Accounts',
         theme: 'light',
         type: 'screen',
-        description: 'Physical wealth accounts list with total physical balance, locked funds summary, and net liquidity.'
+        description: 'Physical wealth accounts list with usable balance, locked funds summary, and net liquidity.'
     },
     {
         id: '13-accounts-dropdown-expanded-light',
@@ -141,39 +165,97 @@ const markers = [
         description: 'Dialog to add a new physical account with account name, starting balance, and account type.'
     },
     {
+        id: '14b-modal-edit-account-light',
+        name: 'Edit Account Dialog',
+        group: 'Modals',
+        theme: 'light',
+        type: 'modal',
+        description: 'Dialog to edit account name, starting balance, or delete account.'
+    },
+    {
         id: '15-activity-ledger-light',
         name: 'Activity Ledger Tab',
-        group: 'Insights',
+        group: 'Activity',
         theme: 'light',
         type: 'screen',
         description: 'Activity Ledger tab displaying chronological transaction history with search, category badges, and filter controls.'
     },
     {
+        id: '15b-modal-ledger-filters-light',
+        name: 'Transaction Ledger Filters',
+        group: 'Modals',
+        theme: 'light',
+        type: 'modal',
+        description: 'Bottom sheet filters with Category and Type navigation rail tabs and date range picker.'
+    },
+    {
+        id: '15c-modal-export-csv-light',
+        name: 'Export CSV Dialog',
+        group: 'Modals',
+        theme: 'light',
+        type: 'modal',
+        description: 'Dialog to choose destination folder and filename for exporting transaction history as CSV.'
+    },
+    {
         id: '16-analytics-trends-light',
-        name: 'Monthly Spending Trends',
-        group: 'Insights',
+        name: 'Spending Analytics - Distribution',
+        group: 'Analytics',
         theme: 'light',
         type: 'chart',
-        description: 'Monthly spending interactive line/bar trend charts and category expenditure breakdown.'
+        description: 'Interactive spending by category donut chart and responsive percentage distribution legend.'
     },
     {
         id: '16b-analytics-trends-scroll-light',
         name: 'Monthly Trends & Stats (Scrolled)',
-        group: 'Insights',
+        group: 'Analytics',
         theme: 'light',
         type: 'chart',
         description: 'Scrolled analytics view showing the 6-month spending trends chart and detailed financial metrics statistics.'
     },
     {
-        id: '17-backup-restore-light',
+        id: '17-voice-ai-modal-light',
+        name: 'Voice AI Offline Model Pack',
+        group: 'Voice',
+        theme: 'light',
+        type: 'modal',
+        description: 'Modal informing about 100% on-device local voice AI transaction journaling, Whisper STT, and SLM extraction.'
+    },
+    {
+        id: '17b-voice-listening-light',
+        name: 'Voice AI - Active Recording',
+        group: 'Voice',
+        theme: 'light',
+        type: 'modal',
+        description: 'Active voice recording bottom sheet modal with reactive waveform animation, live streaming transcript card, and mic controls.'
+    },
+    {
+        id: '17c-voice-staging-light',
+        name: 'Voice AI - Transaction Staging Sheet',
+        group: 'Voice',
+        theme: 'light',
+        type: 'modal',
+        description: 'Ephemeral multi-draft transaction review sheet with inline editable chips, audit warning badges, and swipe dismiss.'
+    },
+    {
+        id: '18-backup-restore-light',
         name: 'Settings & Data Backup',
         group: 'Settings',
         theme: 'light',
         type: 'screen',
-        description: 'Data management screen offering JSON export, import, sample data seeding, and database reset.'
+        description: 'Data management screen offering JSON export, import, sample data seeding, privacy mode, and app lock controls.'
     },
     {
-        id: '18-dashboard-dark',
+        id: '18b-backup-restore-voice-scroll-light',
+        name: 'Settings - Voice AI Models (Scrolled)',
+        group: 'Settings',
+        theme: 'light',
+        type: 'screen',
+        description: 'Scrolled view of Settings screen showing the Offline Voice AI Model Pack lifecycle and storage management card.'
+    },
+
+    // --- PASS 2: DARK MODE ---
+    {
+        id: '19-dashboard-dark',
         name: 'Dashboard Overview (Dark)',
         group: 'Dashboard',
         theme: 'dark',
@@ -181,7 +263,7 @@ const markers = [
         description: 'Dark mode view of the main dashboard with high-contrast emerald highlights.'
     },
     {
-        id: '18b-dashboard-privacy-dark',
+        id: '19b-dashboard-privacy-dark',
         name: 'Dashboard (Privacy Mode Dark)',
         group: 'Dashboard',
         theme: 'dark',
@@ -189,7 +271,7 @@ const markers = [
         description: 'Dark mode dashboard with privacy mode active, masking all balances and financial commitments.'
     },
     {
-        id: '19-modal-expense-dark',
+        id: '20-modal-expense-dark',
         name: 'Log Transaction - Expense (Dark)',
         group: 'Modals',
         theme: 'dark',
@@ -197,7 +279,7 @@ const markers = [
         description: 'Dark mode bottom sheet modal to log an expense with dark surface elevation.'
     },
     {
-        id: '20-budget-dark',
+        id: '21-budget-dark',
         name: 'Monthly Budgets (Dark)',
         group: 'Budgets',
         theme: 'dark',
@@ -205,7 +287,7 @@ const markers = [
         description: 'Dark mode budgets screen with clear contrast on progress meters and category cards.'
     },
     {
-        id: '21-goals-dark',
+        id: '22-goals-dark',
         name: 'Sinking Funds / Goals (Dark)',
         group: 'Goals',
         theme: 'dark',
@@ -213,7 +295,7 @@ const markers = [
         description: 'Dark mode sinking funds screen with deadline status badges and progress indicators.'
     },
     {
-        id: '22-modal-lock-funds-dark',
+        id: '23-modal-lock-funds-dark',
         name: 'Goal Contributions & Activity (Dark)',
         group: 'Modals',
         theme: 'dark',
@@ -221,7 +303,7 @@ const markers = [
         description: 'Dark mode view of goal contributions breakdown, account allocations, and activity history.'
     },
     {
-        id: '23-accounts-dark',
+        id: '24-accounts-dark',
         name: 'My Accounts (Dark)',
         group: 'Accounts',
         theme: 'dark',
@@ -229,7 +311,7 @@ const markers = [
         description: 'Dark mode accounts screen displaying account cards and liquidity metrics.'
     },
     {
-        id: '24-accounts-dropdown-expanded-dark',
+        id: '25-accounts-dropdown-expanded-dark',
         name: 'Account Locked Funds Dropdown (Dark)',
         group: 'Accounts',
         theme: 'dark',
@@ -237,36 +319,76 @@ const markers = [
         description: 'Dark mode account card with expanded accordion displaying aggregated goal commitments.'
     },
     {
-        id: '25-activity-ledger-dark',
+        id: '26-activity-ledger-dark',
         name: 'Activity Ledger Tab (Dark)',
-        group: 'Insights',
+        group: 'Activity',
         theme: 'dark',
         type: 'screen',
         description: 'Dark mode view of the chronological transaction activity ledger.'
     },
     {
-        id: '26-analytics-trends-dark',
-        name: 'Monthly Spending Trends (Dark)',
-        group: 'Insights',
+        id: '26b-modal-ledger-filters-dark',
+        name: 'Transaction Ledger Filters (Dark)',
+        group: 'Modals',
+        theme: 'dark',
+        type: 'modal',
+        description: 'Dark mode view of transaction ledger filters bottom sheet modal.'
+    },
+    {
+        id: '27-analytics-trends-dark',
+        name: 'Spending Analytics - Distribution (Dark)',
+        group: 'Analytics',
         theme: 'dark',
         type: 'chart',
         description: 'Dark mode analytics screen with interactive chart and expenditure distribution.'
     },
     {
-        id: '26b-analytics-trends-scroll-dark',
+        id: '27b-analytics-trends-scroll-dark',
         name: 'Monthly Trends & Stats (Scrolled, Dark)',
-        group: 'Insights',
+        group: 'Analytics',
         theme: 'dark',
         type: 'chart',
         description: 'Dark mode scrolled analytics view showing the 6-month spending trends chart and detailed financial metrics statistics.'
     },
     {
-        id: '27-backup-restore-dark',
+        id: '28-voice-ai-modal-dark',
+        name: 'Voice AI Offline Model Pack (Dark)',
+        group: 'Voice',
+        theme: 'dark',
+        type: 'modal',
+        description: 'Dark mode view of on-device voice AI model pack sheet.'
+    },
+    {
+        id: '28b-voice-listening-dark',
+        name: 'Voice AI - Active Recording (Dark)',
+        group: 'Voice',
+        theme: 'dark',
+        type: 'modal',
+        description: 'Dark mode active voice recording bottom sheet modal with reactive waveform animation, live streaming transcript card, and mic controls.'
+    },
+    {
+        id: '28c-voice-staging-dark',
+        name: 'Voice AI - Transaction Staging Sheet (Dark)',
+        group: 'Voice',
+        theme: 'dark',
+        type: 'modal',
+        description: 'Dark mode ephemeral multi-draft transaction review sheet with inline editable chips, audit warning badges, and swipe dismiss.'
+    },
+    {
+        id: '29-backup-restore-dark',
         name: 'Settings & Data Backup (Dark)',
         group: 'Settings',
         theme: 'dark',
         type: 'screen',
         description: 'Dark mode settings and data backup screen.'
+    },
+    {
+        id: '29b-backup-restore-voice-scroll-dark',
+        name: 'Settings - Voice AI Models (Scrolled, Dark)',
+        group: 'Settings',
+        theme: 'dark',
+        type: 'screen',
+        description: 'Dark mode scrolled view of Settings screen showing Voice AI models card.'
     }
 ];
 
@@ -294,13 +416,12 @@ if (!isHtmlOnly) {
             return Promise.reject(new Error(`Flutter drive exited before ${name}`));
         }
         return new Promise((resolve, reject) => {
-            markerWaiters.set(name, { resolve, reject });
-            setTimeout(() => {
-                const waiter = markerWaiters.get(name);
-                if (!waiter) return;
+            const timer = setTimeout(() => {
                 markerWaiters.delete(name);
                 reject(new Error(`Timed out waiting for screenshot marker: ${name}`));
-            }, 40000).unref();
+            }, 120000);
+            timer.unref();
+            markerWaiters.set(name, { resolve, reject, timer });
         });
     }
 
@@ -311,6 +432,7 @@ if (!isHtmlOnly) {
             const name = match[1];
             const waiter = markerWaiters.get(name);
             if (waiter) {
+                clearTimeout(waiter.timer);
                 waiter.resolve();
                 markerWaiters.delete(name);
             } else {
@@ -357,18 +479,23 @@ await writeFile(`${output}/manifest.json`, JSON.stringify(manifest, null, 2));
 console.log(`Generated ${output}/manifest.json`);
 
 const PAIRS = [
-    { id: 'dashboard', title: 'Dashboard Overview', group: 'Dashboard', light: '01-dashboard-light', dark: '18-dashboard-dark', description: 'Main screen displaying net balance, sinking fund allocations, and budget gauge.' },
-    { id: 'dashboard-privacy', title: 'Dashboard (Privacy Mode)', group: 'Dashboard', light: '01b-dashboard-privacy-light', dark: '18b-dashboard-privacy-dark', description: 'Main Dashboard with privacy mode active: usable balance, formula pills, budget metrics, and goal amounts are masked.' },
-    { id: 'modal-expense', title: 'Log Transaction - Expense Modal', group: 'Modals', light: '02-modal-expense-light', dark: '19-modal-expense-dark', description: 'Bottom sheet modal configured for logging expenses with account picker, category, and date.' },
-    { id: 'budget', title: 'Monthly Budgets Overview', group: 'Budgets', light: '05-budget-light', dark: '20-budget-dark', description: 'Category progress meters, monthly spend caps, and overall remaining budget.' },
-    { id: 'goals', title: 'Sinking Funds / Goals Overview', group: 'Goals', light: '08-goals-light', dark: '21-goals-dark', description: 'Target date pacing, target amounts, days remaining, and allocation shortcuts.' },
-    { id: 'modal-lock-funds', title: 'Locked Allocations Breakdown Modal', group: 'Modals', light: '10-modal-lock-funds-light', dark: '22-modal-lock-funds-dark', description: 'Physical account commitments reserved towards specific sinking fund goals.' },
-    { id: 'accounts', title: 'Accounts Screen Overview', group: 'Accounts', light: '12-accounts-light', dark: '23-accounts-dark', description: 'Physical accounts list with balances, locked amounts, and net spendable liquidity.' },
-    { id: 'accounts-dropdown', title: 'Account Card Dropdown (Expanded)', group: 'Accounts', light: '13-accounts-dropdown-expanded-light', dark: '24-accounts-dropdown-expanded-dark', description: 'Bank account card with smooth accordion expanded, displaying aggregated locked funds per goal.' },
-    { id: 'activity-ledger', title: 'Activity Ledger Tab', group: 'Insights', light: '15-activity-ledger-light', dark: '25-activity-ledger-dark', description: 'Activity Ledger tab displaying chronological transaction history with search, category badges, and filter controls.' },
-    { id: 'analytics-trends', title: 'Monthly Spending Trends Chart', group: 'Insights', light: '16-analytics-trends-light', dark: '26-analytics-trends-dark', description: 'Interactive monthly spending trend line charts and category expenditure breakdown.' },
-    { id: 'analytics-trends-scroll', title: 'Monthly Spending Trends & Stats (Scrolled)', group: 'Insights', light: '16b-analytics-trends-scroll-light', dark: '26b-analytics-trends-scroll-dark', description: 'Scrolled analytics view displaying multi-month spending trend line chart and 2x2 statistics grid.' },
-    { id: 'settings', title: 'Settings & Data Backup', group: 'Settings', light: '17-backup-restore-light', dark: '27-backup-restore-dark', description: 'Data management screen offering JSON export, import, sample data seeding, and database reset.' }
+    { id: 'dashboard', title: 'Dashboard Overview', group: 'Dashboard', light: '01-dashboard-light', dark: '19-dashboard-dark', description: 'Main screen displaying Safe-to-Spend usable balance, sinking fund allocations, and budget gauge.' },
+    { id: 'dashboard-privacy', title: 'Dashboard (Privacy Mode)', group: 'Dashboard', light: '01b-dashboard-privacy-light', dark: '19b-dashboard-privacy-dark', description: 'Main Dashboard with privacy mode active: usable balance, formula pills, budget metrics, and goal amounts are masked.' },
+    { id: 'modal-expense', title: 'Log Transaction - Expense Modal', group: 'Modals', light: '02-modal-expense-light', dark: '20-modal-expense-dark', description: 'Bottom sheet modal configured for logging expenses with account picker, category, and date.' },
+    { id: 'budget', title: 'Monthly Budgets Overview', group: 'Budgets', light: '05-budget-light', dark: '21-budget-dark', description: 'Category progress meters, monthly spend caps, salary cycle boundaries, and overall remaining budget.' },
+    { id: 'goals', title: 'Sinking Funds / Goals Overview', group: 'Goals', light: '08-goals-light', dark: '22-goals-dark', description: 'Target date pacing, target amounts, days remaining, and allocation shortcuts.' },
+    { id: 'modal-lock-funds', title: 'Locked Allocations Breakdown Modal', group: 'Modals', light: '10-modal-lock-funds-light', dark: '23-modal-lock-funds-dark', description: 'Physical account commitments reserved towards specific sinking fund goals.' },
+    { id: 'accounts', title: 'Accounts Screen Overview', group: 'Accounts', light: '12-accounts-light', dark: '24-accounts-dark', description: 'Physical accounts list with balances, locked amounts, and net spendable liquidity.' },
+    { id: 'accounts-dropdown', title: 'Account Card Dropdown (Expanded)', group: 'Accounts', light: '13-accounts-dropdown-expanded-light', dark: '25-accounts-dropdown-expanded-dark', description: 'Bank account card with smooth accordion expanded, displaying aggregated locked funds per goal.' },
+    { id: 'activity-ledger', title: 'Activity Ledger Tab', group: 'Activity', light: '15-activity-ledger-light', dark: '26-activity-ledger-dark', description: 'Activity Ledger tab displaying chronological transaction history with search, category badges, and filter controls.' },
+    { id: 'ledger-filters', title: 'Transaction Ledger Filters Modal', group: 'Modals', light: '15b-modal-ledger-filters-light', dark: '26b-modal-ledger-filters-dark', description: 'Advanced filtering sheet by transaction Category and Type, with custom date range selection.' },
+    { id: 'analytics-trends', title: 'Spending Distribution Donut Chart', group: 'Analytics', light: '16-analytics-trends-light', dark: '27-analytics-trends-dark', description: 'Interactive spending by category donut chart and responsive expenditure percentage legend.' },
+    { id: 'analytics-trends-scroll', title: 'Monthly Spending Trends & Stats (Scrolled)', group: 'Analytics', light: '16b-analytics-trends-scroll-light', dark: '27b-analytics-trends-scroll-dark', description: 'Scrolled analytics view displaying multi-month spending trend line chart and financial summary metrics.' },
+    { id: 'voice-ai-modal', title: 'Voice AI Offline Models Sheet', group: 'Voice', light: '17-voice-ai-modal-light', dark: '28-voice-ai-modal-dark', description: 'Offline voice journaling modal explaining local on-device Whisper STT and SLM transaction extraction.' },
+    { id: 'voice-listening', title: 'Voice AI - Active Recording Modal', group: 'Voice', light: '17b-voice-listening-light', dark: '28b-voice-listening-dark', description: 'Active voice recording modal featuring reactive pulsating waveform, live streaming transcript card, and mic toggling controls.' },
+    { id: 'voice-staging', title: 'Voice AI - Transaction Staging Sheet', group: 'Voice', light: '17c-voice-staging-light', dark: '28c-voice-staging-dark', description: 'Ephemeral multi-draft review sheet with inline editable chips, audit warning badges, and swipe dismiss.' },
+    { id: 'settings', title: 'Settings & Data Backup', group: 'Settings', light: '18-backup-restore-light', dark: '29-backup-restore-dark', description: 'Data management screen offering JSON export, import, sample data seeding, and database reset.' },
+    { id: 'settings-voice-scroll', title: 'Settings Voice AI Management (Scrolled)', group: 'Settings', light: '18b-backup-restore-voice-scroll-light', dark: '29b-backup-restore-voice-scroll-dark', description: 'Scrolled view of Settings displaying Voice AI model pack download status, Wi-Fi toggle, and storage metrics.' }
 ];
 
 // Generate Standalone Visual Review HTML Gallery
@@ -1004,7 +1131,9 @@ function renderHtmlGallery(data) {
         <button class="filter-btn" data-filter="Budgets">Budgets</button>
         <button class="filter-btn" data-filter="Goals">Goals</button>
         <button class="filter-btn" data-filter="Accounts">Accounts</button>
-        <button class="filter-btn" data-filter="Insights">Insights</button>
+        <button class="filter-btn" data-filter="Activity">Activity</button>
+        <button class="filter-btn" data-filter="Analytics">Analytics</button>
+        <button class="filter-btn" data-filter="Voice">Voice AI</button>
         <button class="filter-btn" data-filter="Modals">Modals</button>
         <button class="filter-btn" data-filter="Settings">Settings</button>
       </div>
