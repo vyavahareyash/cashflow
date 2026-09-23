@@ -175,6 +175,12 @@ class VoicePipelineCoordinator {
     );
   }
 
+  /// Updates the live transcript manually (e.g. user corrections in UI when mic is paused).
+  void updateTranscript(String newTranscript) {
+    _liveTranscriptNotifier.value = newTranscript;
+    speechToTextService.updateTranscript(newTranscript);
+  }
+
   /// Stops recording, executes STT transcription, queries SQLite entities,
   /// grounds ChatML prompt, executes SLM inference (or heuristic fallback),
   /// and returns parsed [DraftTransaction] items.
@@ -182,6 +188,7 @@ class VoicePipelineCoordinator {
   /// Guarantees that ephemeral WAV files are purged from disk (US 13).
   Future<List<DraftTransaction>> stopAndProcess({
     DateTime? anchorDate,
+    String? overrideTranscript,
   }) async {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
@@ -190,10 +197,10 @@ class VoicePipelineCoordinator {
     _isMicActiveNotifier.value = false;
     final effectiveAnchor = anchorDate ?? DateTime.now();
 
-    String transcript = '';
+    String transcript = overrideTranscript?.trim() ?? '';
     try {
       final sttText = await speechToTextService.stopListening();
-      if (sttText.trim().isNotEmpty) {
+      if (transcript.isEmpty && sttText.trim().isNotEmpty) {
         transcript = sttText.trim();
       }
     } catch (_) {}

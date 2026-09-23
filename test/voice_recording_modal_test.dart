@@ -293,6 +293,40 @@ void main() {
       expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
     });
 
+    testWidgets('1e. User can edit transcript when mic is off to correct STT errors', (tester) async {
+      await tester.pumpWidget(buildTestApp(coordinator));
+      await tester.tap(find.byKey(const Key('open_modal_button')));
+      await tester.pump();
+      await waitForRecordingReady(tester);
+
+      // 1. Initial live transcription while listening
+      (coordinator.liveTranscriptListenable as ValueNotifier<String>).value = 'Chai 20 rupees';
+      await tester.pump();
+      expect(find.text('Chai 20 rupees'), findsOneWidget);
+
+      // 2. Pause mic (either manually or via silence timeout)
+      await tester.tap(find.byKey(const Key('voice_recording_mic_button')));
+      await tester.pump();
+
+      // Editable field should now appear with current transcript
+      final editField = find.byKey(const Key('voice_recording_live_transcript_edit_field'));
+      expect(editField, findsOneWidget);
+      expect(find.text('Mic off: Tap above to edit before submitting or tap mic to resume'), findsOneWidget);
+
+      // 3. User edits text in field to fix STT error
+      await tester.enterText(editField, 'Chai 25 rupees on UPI');
+      await tester.pump();
+
+      expect(coordinator.currentLiveTranscript, equals('Chai 25 rupees on UPI'));
+
+      // 4. User resumes mic -> edits preserved
+      await tester.tap(find.byKey(const Key('voice_recording_mic_button')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('voice_recording_live_transcript_text')), findsOneWidget);
+      expect(find.text('Chai 25 rupees on UPI'), findsOneWidget);
+    });
+
     testWidgets('2. Tap Cancel cancels capture and dismisses modal cleanly (US 13)', (tester) async {
       await tester.pumpWidget(buildTestApp(coordinator));
       await tester.tap(find.byKey(const Key('open_modal_button')));

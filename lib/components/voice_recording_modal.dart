@@ -59,6 +59,7 @@ class VoiceRecordingModal extends StatefulWidget {
 
 class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   late final VoicePipelineCoordinator _coordinator;
+  late final TextEditingController _transcriptTextController;
   StreamSubscription<double>? _amplitudeSubscription;
   double _currentAmplitude = 0.0;
   bool _isMicActive = true;
@@ -71,6 +72,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   void initState() {
     super.initState();
     _coordinator = widget.coordinator ?? VoicePipelineCoordinator();
+    _transcriptTextController = TextEditingController();
     _coordinator.isMicActiveListenable.addListener(_handleMicActiveChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,6 +83,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   @override
   void dispose() {
     _coordinator.isMicActiveListenable.removeListener(_handleMicActiveChanged);
+    _transcriptTextController.dispose();
     _amplitudeSubscription?.cancel();
     if (_coordinator.isRecording) {
       _coordinator.cancelRecording();
@@ -92,6 +95,21 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     if (!mounted) return;
     final isActive = _coordinator.isMicActiveListenable.value;
     if (_isMicActive != isActive) {
+      if (!isActive) {
+        // Populate controller with latest live transcript when mic pauses
+        final currentText = _coordinator.currentLiveTranscript.trim();
+        _transcriptTextController.text = currentText;
+        _transcriptTextController.selection = TextSelection.fromPosition(
+          TextPosition(offset: currentText.length),
+        );
+      } else {
+        // When mic reactivates, sync any user edits back into the coordinator and engine
+        final edited = _transcriptTextController.text.trim();
+        if (edited.isNotEmpty) {
+          _coordinator.updateTranscript(edited);
+        }
+      }
+
       setState(() {
         _isMicActive = isActive;
         if (!isActive) {
@@ -149,12 +167,22 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     if (_isMicActive) {
       await _coordinator.pauseListening();
     } else {
+      // Sync any user edits made while paused before resuming
+      final edited = _transcriptTextController.text.trim();
+      if (edited.isNotEmpty) {
+        _coordinator.updateTranscript(edited);
+      }
       await _coordinator.resumeListening();
     }
   }
 
   Future<void> _stopAndProcess() async {
     _amplitudeSubscription?.cancel();
+    final editedTranscript = _transcriptTextController.text.trim();
+    if (editedTranscript.isNotEmpty) {
+      _coordinator.updateTranscript(editedTranscript);
+    }
+
     setState(() {
       _isMicActive = false;
       _state = VoiceModalState.processing;
@@ -164,6 +192,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     try {
       final drafts = await _coordinator.stopAndProcess(
         anchorDate: widget.anchorDate,
+        overrideTranscript: editedTranscript.isNotEmpty ? editedTranscript : null,
       );
 
       if (!mounted) return;
@@ -474,22 +503,79 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                     label: hasText
                         ? 'Live transcript: $transcript'
                         : 'Listening for speech in rupees',
-                    child: Text(
-                      hasText
-                          ? transcript
-                          : 'e.g., "Chai 20 rupees on UPI, 450 rupees groceries yesterday"',
-                      key: const Key('voice_recording_live_transcript_text'),
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: hasText
-                            ? (isDark ? AppColors.darkText : AppColors.gray900)
-                            : (isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.gray500),
-                        fontStyle: hasText ? FontStyle.normal : FontStyle.italic,
-                        fontWeight: hasText ? FontWeight.w600 : FontWeight.normal,
-                        height: 1.4,
-                      ),
-                    ),
+                    child: !_isMicActive
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TextFormField(
+                                controller: _transcriptTextController,
+                                key: const Key('voice_recording_live_transcript_edit_field'),
+                                maxLines: null,
+                                keyboardType: TextInputType.multiline,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: isDark ? AppColors.darkText : AppColors.gray900,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'e.g., "Chai 20 rupees on UPI, 450 rupees groceries yesterday"',
+                                  hintStyle: AppTypography.bodyMedium.copyWith(
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.gray500,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  border: InputBorder.none,
+                                ),
+                                onChanged: (value) {
+                                  _coordinator.updateTranscript(value);
+                                },
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.edit_note_rounded,
+                                    size: 14,
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.gray500,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Mic off: Tap above to edit before submitting or tap mic to resume',
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.gray500,
+                                        fontSize: 10,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          )
+                        : Text(
+                            hasText
+                                ? transcript
+                                : 'e.g., "Chai 20 rupees on UPI, 450 rupees groceries yesterday"',
+                            key: const Key('voice_recording_live_transcript_text'),
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: hasText
+                                  ? (isDark ? AppColors.darkText : AppColors.gray900)
+                                  : (isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.gray500),
+                              fontStyle: hasText ? FontStyle.normal : FontStyle.italic,
+                              fontWeight: hasText ? FontWeight.w600 : FontWeight.normal,
+                              height: 1.4,
+                            ),
+                          ),
                   ),
                 ),
               ),

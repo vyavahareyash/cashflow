@@ -63,6 +63,9 @@ abstract class SttEngine {
     String? localeId,
   });
 
+  /// Updates active transcribed buffer manually (e.g. user corrections when mic paused).
+  void updateTranscript(String newTranscript);
+
   /// Pauses listening without ending the recording session.
   Future<void> pauseListening();
 
@@ -271,6 +274,13 @@ class NativePlatformSttEngine implements SttEngine {
   }
 
   @override
+  void updateTranscript(String newTranscript) {
+    _committedText = newTranscript.trim();
+    _currentTurnWords = '';
+    _lastRecognizedWords = _committedText;
+  }
+
+  @override
   Future<void> pauseListening() async {
     _isPaused = true;
     _isListening = false;
@@ -419,6 +429,11 @@ class MockSttEngine implements SttEngine {
       throw const SttSilentAudioException('Audio contains only silence.');
     }
     return defaultTranscript;
+  }
+
+  @override
+  void updateTranscript(String newTranscript) {
+    defaultTranscript = newTranscript;
   }
 
   @override
@@ -587,6 +602,11 @@ class SpeechToTextService {
       onListeningStateChanged: onListeningStateChanged,
       localeId: localeId,
     );
+  }
+
+  /// Manually updates the active transcription buffer (e.g. user manual correction).
+  void updateTranscript(String newTranscript) {
+    _engine.updateTranscript(newTranscript);
   }
 
   /// Pauses active speech listening without closing the recording session.

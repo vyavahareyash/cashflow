@@ -467,6 +467,36 @@ void main() {
       expect(finalTranscript, equals('lunch 250 rupees'));
       expect(lastResult, equals('lunch 250 rupees'));
     });
+
+    test('updateTranscript updates committed buffer and appends subsequent speech', () async {
+      final fakeSpeech = FakeSpeechToText();
+      final engine = NativePlatformSttEngine(speech: fakeSpeech);
+      await engine.initialize();
+
+      String lastResult = '';
+      await engine.startListening(
+        onResult: (words, isFinal) {
+          lastResult = words;
+        },
+      );
+
+      // 1. Spoken words
+      fakeSpeech.emitResult('lunch 25 rupees', false);
+      expect(lastResult, equals('lunch 25 rupees'));
+
+      // 2. Pause
+      await engine.pauseListening();
+
+      // 3. User corrects typo manually
+      engine.updateTranscript('lunch 250 rupees');
+
+      // 4. User resumes and speaks additional items
+      await engine.resumeListening();
+      fakeSpeech.emitResult('and 30 tea', true);
+
+      final finalTranscript = await engine.stopListening();
+      expect(finalTranscript, equals('lunch 250 rupees, and 30 tea'));
+    });
   });
 
   group('VoiceAudioPipeline - Zero Audio Persistence Invariant (US 13)', () {
