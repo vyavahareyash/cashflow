@@ -6,7 +6,7 @@ import '../theme/theme_constants.dart';
 /// Modal bottom sheet informing the user about the required Offline AI Model Pack (US 14, US 19).
 ///
 /// Explains that voice journaling runs 100% locally on-device without cloud servers,
-/// displaying the download size (~260 MB) and routing the user to [BackupRestoreScreen]
+/// displaying the download size (~230 MB) and routing the user to [BackupRestoreScreen]
 /// to initiate the verified Wi-Fi download.
 class VoiceModelDownloadSheet extends StatelessWidget {
   const VoiceModelDownloadSheet({super.key});
@@ -125,9 +125,9 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     _buildFeatureRow(
                       icon: Icons.storage_rounded,
-                      title: 'One-Time Download (~260 MB)',
+                      title: 'One-Time Download (~230 MB)',
                       subtitle:
-                          'Moonshine STT (~30 MB) & SmolLM2 SLM (~230 MB). Download over Wi-Fi recommended.',
+                          'SmolLM2 SLM neural model for extraction. Speech recognition requires zero download.',
                       isDark: isDark,
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -155,7 +155,9 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                       Navigator.of(context).pop();
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const BackupRestoreScreen(),
+                          builder: (_) => const BackupRestoreScreen(
+                            scrollToVoiceModels: true,
+                          ),
                         ),
                       );
                     },

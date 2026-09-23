@@ -59,10 +59,10 @@ class AiModelFile {
       : p.join(relativeSubpath, filename);
 }
 
-/// Manifest of models required for full Offline Voice Transaction Journaling.
+/// Manifest of models required for full Offline Voice Transaction Journaling (ADR-0006).
 ///
-/// STT: Moonshine Tiny INT8 (~30 MB)
-/// SLM: SmolLM2-360M-Instruct Q4_K_M (~230 MB)
+/// STT: Platform-native on-device speech recognition (0 MB download)
+/// SLM: SmolLM2-360M-Instruct Q4_K_M (~270 MB)
 class AiModelPackManifest {
   final String packId;
   final String name;
@@ -85,61 +85,6 @@ class AiModelPackManifest {
     name: 'Offline AI Model Pack',
     version: '1.0.0',
     files: [
-      AiModelFile(
-        id: 'moonshine_preprocess',
-        filename: 'preprocess.onnx',
-        relativeSubpath: 'moonshine',
-        downloadUrl:
-            'https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/resolve/main/preprocess.onnx',
-        expectedSha256:
-            'f33addce61a143460fe753b5ee5b7db255e5140b5b779c065b94f6c83ff0bf4e',
-        expectedSizeBytes: 6800738,
-        description: 'Moonshine Audio Preprocessing ONNX',
-      ),
-      AiModelFile(
-        id: 'moonshine_encoder',
-        filename: 'encode.int8.onnx',
-        relativeSubpath: 'moonshine',
-        downloadUrl:
-            'https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/resolve/main/encode.int8.onnx',
-        expectedSha256:
-            '8774dfba578de027ec6595c2c654a0836434489bc963a0db124a7f181f571acb',
-        expectedSizeBytes: 18249187,
-        description: 'Moonshine Tiny INT8 Speech Encoder',
-      ),
-      AiModelFile(
-        id: 'moonshine_uncached_decoder',
-        filename: 'uncached_decode.int8.onnx',
-        relativeSubpath: 'moonshine',
-        downloadUrl:
-            'https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/resolve/main/uncached_decode.int8.onnx',
-        expectedSha256:
-            '216737000dd5881a17aa043f6bbd286add33e4c3b0ae257153e2ec15438bdc41',
-        expectedSizeBytes: 53216096,
-        description: 'Moonshine Tiny INT8 Uncached Decoder',
-      ),
-      AiModelFile(
-        id: 'moonshine_cached_decoder',
-        filename: 'cached_decode.int8.onnx',
-        relativeSubpath: 'moonshine',
-        downloadUrl:
-            'https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/resolve/main/cached_decode.int8.onnx',
-        expectedSha256:
-            '2aff28bba6a03d8dcf5c9feac45462629bae37317442299f28115ad09da773f6',
-        expectedSizeBytes: 45264830,
-        description: 'Moonshine Tiny INT8 Cached Decoder',
-      ),
-      AiModelFile(
-        id: 'moonshine_tokens',
-        filename: 'tokens.txt',
-        relativeSubpath: 'moonshine',
-        downloadUrl:
-            'https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/resolve/main/tokens.txt',
-        expectedSha256:
-            '1165c2aeb9f72f457a83be2d459a09054f27490acd9b41bd43794dfd25e296ea',
-        expectedSizeBytes: 436688,
-        description: 'Moonshine STT Tokenizer Dictionary',
-      ),
       AiModelFile(
         id: 'smollm2_360m',
         filename: 'SmolLM2-360M-Instruct-Q4_K_M.gguf',
@@ -696,7 +641,7 @@ class ModelManagementService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Execute registered deallocation hooks (e.g. sherpa_onnx / llama_cpp shutdown)
+      // Execute registered deallocation hooks (e.g. llama_cpp / STT engine shutdown)
       for (final hook in _onUnloadHooks) {
         await hook();
       }

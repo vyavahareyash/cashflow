@@ -74,7 +74,7 @@ class RecordAudioRecorderClient implements AudioRecorderClient {
 /// Enforces the zero-audio-persistence invariant (US 13) via [purgeAudioFile]
 /// and [purgeTemporaryWavs].
 class AudioCaptureService {
-  /// Strict 16kHz mono WAV configuration required by Moonshine STT.
+  /// Standard 16kHz mono WAV configuration for audio recording.
   static const RecordConfig standardVoiceConfig = RecordConfig(
     encoder: AudioEncoder.wav,
     sampleRate: 16000,

@@ -32,7 +32,7 @@ void main() {
       // Check text
       expect(find.text('Offline AI Models Required'), findsOneWidget);
       expect(find.textContaining('100% Offline & Private'), findsOneWidget);
-      expect(find.textContaining('One-Time Download (~260 MB)'), findsOneWidget);
+      expect(find.textContaining('One-Time Download (~230 MB)'), findsOneWidget);
       expect(find.textContaining('On-Demand Memory (US 16)'), findsOneWidget);
 
       // Check buttons
@@ -62,6 +62,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BackupRestoreScreen), findsOneWidget);
+      final backupScreen = tester.widget<BackupRestoreScreen>(find.byType(BackupRestoreScreen));
+      expect(backupScreen.scrollToVoiceModels, isTrue);
+      expect(find.byKey(const Key('voice_model_card')), findsOneWidget);
     });
 
     testWidgets('4. Accessibility: meets WCAG AA tap targets and contrast guidelines', (tester) async {

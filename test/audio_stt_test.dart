@@ -233,8 +233,8 @@ void main() {
     });
   });
 
-  group('SpeechToTextService', () {
-    test('validates Moonshine model installation status', () async {
+  group('SpeechToTextService (ADR-0006)', () {
+    test('validates platform-native STT readiness with zero weight download', () async {
       final mockManager = ModelManagementService(baseDirectory: testModelDir);
       final mockEngine = MockSttEngine();
       final service = SpeechToTextService(
@@ -242,30 +242,39 @@ void main() {
         modelManager: mockManager,
       );
 
-      // Initially no models installed
-      expect(await service.checkModelsInstalled(), isFalse);
-      expect(
-        () => service.initializeEngine(),
-        throwsA(isA<SttModelNotInstalledException>()),
-      );
-
-      // Create fake Moonshine model files
-      final moonshineDir = Directory(p.join(testModelDir.path, 'moonshine'));
-      await moonshineDir.create(recursive: true);
-      final requiredFiles = [
-        'preprocess.onnx',
-        'encode.int8.onnx',
-        'uncached_decode.int8.onnx',
-        'cached_decode.int8.onnx',
-        'tokens.txt',
-      ];
-      for (final name in requiredFiles) {
-        await File(p.join(moonshineDir.path, name)).writeAsString('weights');
-      }
-
+      // Platform STT requires zero downloaded weights
       expect(await service.checkModelsInstalled(), isTrue);
       await service.initializeEngine();
       expect(service.isEngineInitialized, isTrue);
+    });
+
+    test('streaming startListening and stopListening delivers live transcripts', () async {
+      final mockEngine = MockSttEngine(defaultTranscript: 'Chai 20 rupees on UPI');
+      final service = SpeechToTextService(
+        engine: mockEngine,
+        modelManager: ModelManagementService(baseDirectory: testModelDir),
+      );
+
+      String liveWords = '';
+      bool wasFinal = false;
+      double lastSound = 0.0;
+
+      await service.startListening(
+        onResult: (words, isFinal) {
+          liveWords = words;
+          wasFinal = isFinal;
+        },
+        onSoundLevelChange: (sound) {
+          lastSound = sound;
+        },
+      );
+
+      expect(liveWords, equals('Chai 20 rupees on UPI'));
+      expect(wasFinal, isTrue);
+      expect(lastSound, equals(0.5));
+
+      final finalResult = await service.stopListening();
+      expect(finalResult, equals('Chai 20 rupees on UPI'));
     });
 
     test('detects silent audio and throws SttSilentAudioException', () async {
@@ -274,19 +283,6 @@ void main() {
         engine: mockEngine,
         modelManager: ModelManagementService(baseDirectory: testModelDir),
       );
-
-      // Create fake Moonshine models so checkModelsInstalled passes
-      final moonshineDir = Directory(p.join(testModelDir.path, 'moonshine'));
-      await moonshineDir.create(recursive: true);
-      for (final name in [
-        'preprocess.onnx',
-        'encode.int8.onnx',
-        'uncached_decode.int8.onnx',
-        'cached_decode.int8.onnx',
-        'tokens.txt',
-      ]) {
-        await File(p.join(moonshineDir.path, name)).writeAsString('weights');
-      }
 
       // Create empty wav file (44 bytes header only)
       final emptyWav = File(p.join(testTempDir.path, 'empty.wav'));

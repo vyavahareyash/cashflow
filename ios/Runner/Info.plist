@@ -68,5 +68,7 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Cashflow requires microphone access to record voice transactions for offline transcription.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Cashflow uses speech recognition to convert your spoken transactions into text offline on your device.</string>
 </dict>
 </plist>

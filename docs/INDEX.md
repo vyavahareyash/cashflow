@@ -28,6 +28,7 @@ This directory is the central documentation hub for Cashflow, containing user gu
 - [ADR-0003: Tracking-Only Budget Model](adr/0003-tracking-only-budget-model.md) — Treating category budgets as pacing limits rather than escrow cash deductions.
 - [ADR-0004: Single Concurrency SQLite Testing](adr/0004-single-concurrency-sqlite-testing.md) — Mandating `--concurrency=1` to eliminate SQLite file locking race conditions in tests.
 - [ADR-0005: Offline Voice Transaction Entry](adr/0005-offline-voice-transaction-entry.md) — On-device Sherpa-ONNX (Moonshine) STT and GBNF-constrained SmolLM2 for voice journaling.
+- [ADR-0006: Platform-Native On-Device STT](adr/0006-platform-native-on-device-stt.md) — Platform-native on-device speech recognition (Android SpeechRecognizer / iOS SFSpeechRecognizer) superseding custom Moonshine STT.
 
 ---
 
