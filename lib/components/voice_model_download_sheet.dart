@@ -133,7 +133,7 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     _buildFeatureRow(
                       icon: Icons.memory_rounded,
-                      title: 'On-Demand Memory (US 16)',
+                      title: 'On-Demand Memory',
                       subtitle:
                           'Models load into RAM only while journaling and free automatically when done.',
                       isDark: isDark,

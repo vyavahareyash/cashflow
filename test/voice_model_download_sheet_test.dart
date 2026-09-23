@@ -33,7 +33,7 @@ void main() {
       expect(find.text('Offline AI Models Required'), findsOneWidget);
       expect(find.textContaining('100% Offline & Private'), findsOneWidget);
       expect(find.textContaining('One-Time Download (~230 MB)'), findsOneWidget);
-      expect(find.textContaining('On-Demand Memory (US 16)'), findsOneWidget);
+      expect(find.textContaining('On-Demand Memory'), findsOneWidget);
 
       // Check buttons
       expect(find.byKey(const Key('voice_model_download_settings_button')), findsOneWidget);

@@ -25,11 +25,13 @@ enum VoiceModalState {
 class VoiceRecordingModal extends StatefulWidget {
   final VoicePipelineCoordinator? coordinator;
   final DateTime? anchorDate;
+  final bool previewMode;
 
   const VoiceRecordingModal({
     super.key,
     this.coordinator,
     this.anchorDate,
+    this.previewMode = false,
   });
 
   /// Displays the voice recording modal bottom sheet.
@@ -37,6 +39,7 @@ class VoiceRecordingModal extends StatefulWidget {
     BuildContext context, {
     VoicePipelineCoordinator? coordinator,
     DateTime? anchorDate,
+    bool previewMode = false,
   }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     await showModalBottomSheet<void>(
@@ -49,6 +52,7 @@ class VoiceRecordingModal extends StatefulWidget {
       builder: (ctx) => VoiceRecordingModal(
         coordinator: coordinator,
         anchorDate: anchorDate,
+        previewMode: previewMode,
       ),
     );
   }
@@ -123,6 +127,17 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   }
 
   Future<void> _initSession() async {
+    if (widget.previewMode) {
+      if (!mounted) return;
+      _coordinator.updateTranscript('Lunch 250 rupees on HDFC, groceries 1200');
+      setState(() {
+        _isMicActive = true;
+        _currentAmplitude = 0.45;
+        _state = VoiceModalState.recording;
+        _statusMessage = 'Listening... Speak your transactions in rupees';
+      });
+      return;
+    }
     try {
       setState(() {
         _statusMessage = 'Preparing offline voice models...';
