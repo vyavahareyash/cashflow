@@ -65,6 +65,14 @@ Cashflow supports six distinct transaction types:
 - [x] Quick-toggle Privacy Mode to mask numerical balances (`$••••••`)
 - [x] Portable JSON and raw SQLite database backup/restore
 
+### E. Voice AI Journaling & Intelligent Extraction (ADR-0005 / ADR-0006)
+- [x] 100% offline continuous voice dictation for multi-transaction capture
+- [x] Platform-native on-device speech-to-text recognition (`speech_to_text`)
+- [x] On-device neural SLM entity extraction with GBNF grammar constraints (`llama_cpp_dart` / SmolLM2)
+- [x] Interactive transaction staging sheet with inline chip editing and batch approval
+- [x] Zero audio persistence: immediate WAV file deletion after transcription or cancel
+- [x] Wi-Fi gated model download manager with SHA-256 verification and on-demand RAM lifecycle
+
 ---
 
 ## 4. Platform Availability

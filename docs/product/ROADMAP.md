@@ -12,6 +12,7 @@
 | **Phase 1** | 1–4 | MVP core: accounts, categories, expenses, dashboard, and analytics |
 | **Phase 2** | 5–8 | Complete transaction lifecycle, goals, history, and payday-anchored budget behavior |
 | **Phase 3** | 9–12 | Data portability, documentation, polish, accessibility, and platform release readiness |
+| **Phase 4** | 13–15 | 100% Offline Voice AI Journaling: on-device speech & neural SLM extraction (ADR-0005/0006) |
 
 ---
 
@@ -80,6 +81,26 @@
 
 ### Sprint 3.4: Platform Release
 - Validate Android, iOS, and web builds, complete end-to-end coverage, resolve release blockers, and prepare platform artifacts.
+
+---
+
+## Phase 4: Offline Voice AI Journaling
+
+### Sprint 4.1: Edge Voice AI Architecture & On-Device Models (ADR-0005 / ADR-0006)
+- Research and benchmark edge STT and SLM neural models (SmolLM2-360M).
+- Establish zero-cloud, zero-audio-persistence, and Wi-Fi download gating invariants.
+- Platform-native on-device speech-to-text recognition (`speech_to_text`).
+
+### Sprint 4.2: Extraction Engine & Context Grounding
+- Implement GBNF grammar constraints for typed JSON transaction extraction.
+- ChatML system prompt generator dynamically grounding SQLite accounts, categories, and calendar date anchors.
+- Entity extraction running in isolated background thread (`llama_cpp_dart`).
+
+### Sprint 4.3: Interactive Staging & Atomic Batch Commit
+- Voice transaction staging sheet with inline interactive chips (Amount, Account, Category, Date).
+- Visual warning badges for unassigned entities and swipe-to-delete cards.
+- Atomic multi-transaction commit into SQLite via `db.transaction()` with state notification.
+- Zero audio persistence: immediate file purge upon transcription or session cancel.
 
 ---
 

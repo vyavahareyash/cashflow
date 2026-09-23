@@ -3,14 +3,14 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Database](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)](https://sqlite.org)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline-success)](#private-by-default)
-[![Roadmap](https://img.shields.io/badge/Roadmap-Offline_Voice_AI-7C3AED)](docs/user/VOICE_JOURNALING_VISION.md)
+[![Voice AI](https://img.shields.io/badge/Voice_AI-100%25_Offline-7C3AED)](docs/user/VOICE_JOURNALING.md)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Cashflow is a private, offline-first personal finance app built with Flutter. It solves the biggest problem with traditional budgeting apps by answering one practical question: **how much money can I actually spend right now without sabotaging my future goals?**
 
 Track real balances across cash and bank accounts, align budgets with your actual payday schedule, and reserve money in virtual envelopes for sinking funds—with zero bank credentials, zero cloud accounts, and zero tracking.
 
-> 🎙️ **Sneak Peek**: Tired of manual transaction forms? We're designing **100% Offline Voice Journaling**—speak your day's spending naturally, let on-device AI extract drafts, and approve them in seconds with zero cloud backends. **[Explore the Future Vision & Roadmap →](docs/user/VOICE_JOURNALING_VISION.md)**
+> 🎙️ **Zero-Friction Voice AI Journaling**: Tired of tedious manual transaction forms? Cashflow is more than a manual logbook and safe-to-spend planning calculator. Speak your daily spending naturally in an unstructured monologue, let on-device AI extract structured transactions, review in seconds with interactive chips, and batch-approve to your ledger. **100% private with zero cloud backends, zero telemetry, and zero audio persistence.** [Explore Voice AI Journaling →](docs/user/VOICE_JOURNALING.md)
 
 ---
 
@@ -40,6 +40,7 @@ Usable Balance = Total Account Money - Locked Goal Allocations
 
 ## Key Features
 
+- **Offline Voice AI Journaling**: Eliminate the #1 cause of budgeting friction—manual transaction logging. Tap the prominent microphone button and dictate multiple expenses, incomes, or transfers in continuous natural speech. Platform-native on-device speech recognition paired with a local neural model (SmolLM2) extracts amounts, accounts, categories, and relative dates with immediate audio deletion and zero cloud dependencies.
 - **Safe-to-Spend Dashboard**: Instantly see your true disposable balance alongside total physical assets and active goal locks.
 - **Privacy Mode**: Tap the eye icon to instantly mask all account balances, budgets, and transaction amounts (`$••••••`) when in public or recording screencasts.
 - **Custom Payday Cycles**: Support for custom salary cycle start days (e.g., 25th to 24th). Budgets and burn pace automatically adjust to your actual earning schedule.
@@ -87,8 +88,8 @@ Usable Balance = Total Account Money - Locked Goal Allocations
 Comprehensive guides and architectural specifications are available in the [`docs/`](docs/INDEX.md) directory:
 
 - [User Feature Guide](docs/user/FEATURE_GUIDE.md) — Comprehensive user manual for every feature and workflow.
+- [Offline Voice Journaling Guide](docs/user/VOICE_JOURNALING.md) — Frictionless on-device AI voice logging without forms or cloud backends.
 - [Onboarding & FAQ](docs/user/FAQ_AND_ONBOARDING.md) — 3-step setup guide and answers to common questions.
-- [Future Vision: Offline Voice Journaling](docs/user/VOICE_JOURNALING_VISION.md) — Upcoming on-device AI voice logging without forms or cloud backends.
 - [System Architecture](docs/engineering/ARCHITECTURE.md) — Three-tier architecture, reactive state model, and SQLite schema ER diagram.
 - [Calculations & Formulas](docs/engineering/CALCULATIONS.md) — Exact mathematical definitions for Usable Balance, Payday Cycles, and Daily Burn Pace.
 - [Development Guide](docs/engineering/DEVELOPMENT.md) — Developer setup, command cheatsheet, emulator guide, and screenshot automation.

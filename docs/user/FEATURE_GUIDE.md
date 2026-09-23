@@ -13,6 +13,7 @@ A complete walkthrough of Cashflow's features, interfaces, and core concepts.
 6. [Activity Ledger & Transaction Filtering](#6-activity-ledger--transaction-filtering)
 7. [Analytics, Trends & YTD Cashflow](#7-analytics-trends--ytd-cashflow)
 8. [Settings, Data Portability & Backup](#8-settings-data-portability--backup)
+9. [Offline Voice Journaling & AI Assistant](#9-offline-voice-journaling--ai-assistant)
 
 ---
 
@@ -162,3 +163,37 @@ Complete privacy, control, and zero vendor lock-in:
   - One-tap demo population to load realistic sample accounts, budgets, goals, and multi-month transactions for exploration.
 - **Reset All Data**:
   - Securely wipe and reinitialize the local database with clean defaults.
+
+---
+
+## 9. Offline Voice Journaling & AI Assistant
+
+Cashflow transcends traditional expense trackers that serve merely as static logbooks or planning calculators. By embedding an **intelligent on-device AI voice system**, Cashflow eliminates the #1 friction point in personal finance: **daily manual transaction entry fatigue**.
+
+### Why Voice AI Matters
+- **The Manual Logging Trap**: Opening multiple modal forms, typing numbers on numeric keyboards, selecting accounts, and picking categories 3–5 times a day leads to journaling fatigue and neglected budgets.
+- **Zero-Friction Dictation**: Speak your entire day's spending in a single conversational monologue.
+- **Total Privacy Invariant**: Unlike commercial voice assistants, all speech recognition and neural entity extraction happen **100% on your device**. No audio or financial data ever touches the cloud.
+
+### The Voice Journaling Flow
+1. **Prominent Entry Point**:
+   - Tap the prominent **Microphone FAB** anchored in the center of the bottom navigation bar.
+2. **Natural Monologue Recording**:
+   - Speak naturally: *"Paid \$12 for lunch with Chase, spent \$45 on groceries with debit, and received \$200 freelance payment into savings yesterday."*
+   - Watch live audio waveforms and real-time streaming transcripts validate your input on screen.
+3. **Smart Entity Grounding & Extraction**:
+   - On-device neural model (SmolLM2 with GBNF grammar constraints) parses entities against your actual SQLite accounts and categories.
+   - Automatically maps relative dates (*"yesterday"*, *"last Friday"*) to exact calendar dates.
+   - Defaults missing accounts to your primary account with an audit flag.
+4. **Interactive Review Staging Sheet**:
+   - Review draft cards before saving.
+   - Inferred or unassigned fields are highlighted with amber warning badges.
+   - Tap inline interactive chips (**Amount**, **Account**, **Category**, **Date**) to adjust values in place.
+   - Swipe away erroneous or unwanted draft cards.
+5. **Atomic Batch Commit**:
+   - Tap **Approve All** to insert all valid items into SQLite in a single atomic database transaction.
+   - Tap **Approve Valid** to commit finished items while keeping items needing review on screen.
+   - Closing the sheet discards drafts from RAM, leaving zero orphaned records in your database.
+6. **Zero Audio Persistence**:
+   - Temporary audio buffers are purged from disk immediately after transcription or on session cancel.
+

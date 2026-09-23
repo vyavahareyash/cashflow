@@ -7,8 +7,8 @@ This directory is the central documentation hub for Cashflow, containing user gu
 ## 📖 User Documentation
 
 - [User Feature Guide](user/FEATURE_GUIDE.md) — Walkthrough of all capabilities (Safe-to-Spend balance, privacy mode, payday cycles, burn pace, sinking funds, celebratory flair, atomic transfers, analytics, and backup tools).
+- [Offline Voice Journaling (AI-Powered)](user/VOICE_JOURNALING.md) — Frictionless on-device AI voice logging without forms or cloud backends.
 - [Onboarding & FAQ](user/FAQ_AND_ONBOARDING.md) — 3-step quickstart guide and answers to frequently asked questions about privacy, offline guarantees, bank decoupling, and envelope locking.
-- [Future Vision: Offline Voice Journaling](user/VOICE_JOURNALING_VISION.md) — Upcoming on-device AI voice logging without forms or cloud backends.
 
 ---
 

@@ -101,3 +101,22 @@ Navigate to **Settings** > **Data Management**:
 - **Export Backup (JSON)**: Creates a portable, human-readable JSON export of all accounts, categories, transactions, goals, and locks.
 - **Export Database (SQLite)**: Copies the raw `cashflow.db` file for full byte-level fidelity.
 - **Import Backup / Restore Database**: Select your previously saved JSON or `.db` file to restore your entire history. Clear feedback messages validate the operation before applying changes.
+
+---
+
+### Voice AI Journaling
+
+#### Does voice journaling send my audio or financial data to the cloud?
+**No, never.** All voice recognition and entity extraction run 100% locally on your device hardware:
+- Speech recognition uses your operating system's built-in on-device engine (`SpeechRecognizer` on Android, `SFSpeechRecognizer` on iOS).
+- Entity extraction runs a local quantized neural model (SmolLM2-360M) via `llama_cpp_dart`.
+- Temporary recording audio files (WAV) are deleted immediately upon transcription completion or session cancel.
+
+#### How do I set up Voice AI Journaling?
+1. Tap the **Microphone** button at the center of the navigation bar, or go to **Settings & Data** > **Voice AI & Offline Models**.
+2. Tap **Download Model Pack (~270 MB)** over Wi-Fi.
+3. Once downloaded and cryptographically verified via SHA-256, you can dictate transactions instantly.
+
+#### What if I prefer manual entry?
+Voice AI is completely opt-in. If you don't download the model pack, Cashflow works normally as a manual expense tracker and safe-to-spend calculator without consuming extra device storage.
+
