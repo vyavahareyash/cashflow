@@ -1,19 +1,81 @@
 import 'dart:io';
 
+import 'package:cashflow/components/voice_model_download_sheet.dart';
+import 'package:cashflow/components/voice_recording_modal.dart';
 import 'package:cashflow/components/voice_transaction_staging_sheet.dart';
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/draft_transaction.dart';
 import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/main.dart';
+import 'package:cashflow/services/audio_capture_service.dart';
 import 'package:cashflow/services/database_helper.dart';
+import 'package:cashflow/services/model_management_service.dart';
+import 'package:cashflow/services/slm_inference_service.dart';
+import 'package:cashflow/services/speech_to_text_service.dart';
+import 'package:cashflow/services/voice_audio_pipeline.dart';
+import 'package:cashflow/services/voice_pipeline_coordinator.dart';
 import 'package:cashflow/theme/theme_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' hide equals;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:record/record.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+class FakeAudioRecorderClient implements AudioRecorderClient {
+  bool permissionGranted;
+  bool recordingActive = false;
+  String? lastPath;
+
+  FakeAudioRecorderClient({this.permissionGranted = true});
+
+  @override
+  Future<bool> hasPermission() async => permissionGranted;
+
+  @override
+  Future<bool> isRecording() async => recordingActive;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {
+    lastPath = path;
+    recordingActive = true;
+    final file = File(path);
+    if (!file.parent.existsSync()) {
+      file.parent.createSync(recursive: true);
+    }
+    file.writeAsBytesSync(List.filled(200, 1));
+  }
+
+  @override
+  Future<String?> stop() async {
+    recordingActive = false;
+    return lastPath;
+  }
+
+  @override
+  Future<void> cancel() async {
+    recordingActive = false;
+    if (lastPath != null) {
+      final f = File(lastPath!);
+      if (f.existsSync()) f.deleteSync();
+    }
+  }
+
+  @override
+  Future<void> dispose() async {
+    recordingActive = false;
+  }
+
+  @override
+  Stream<Amplitude> onAmplitudeChanged(Duration interval) =>
+      const Stream.empty();
+
+  @override
+  Future<Amplitude> getAmplitude() async =>
+      Amplitude(current: -30.0, max: -10.0);
+}
 
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -554,7 +616,9 @@ void main() {
       expect(find.text('Missing or invalid amount'), findsOneWidget);
     });
 
-    testWidgets('12. MainNavigationScreen prominent microphone FAB launches staging sheet (US 3)', (tester) async {
+    testWidgets(
+        '12. MainNavigationScreen prominent microphone FAB guards on model install (US 3, 14, 19)',
+        (tester) async {
       DashboardScreen.resetStartupPrivacyFlag();
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
@@ -581,7 +645,7 @@ void main() {
       final fabFinder = find.byKey(const Key('dashboard_voice_entry_fab'));
       expect(fabFinder, findsOneWidget);
 
-      // Tap FAB
+      // Tap FAB when models not installed -> opens VoiceModelDownloadSheet
       await tester.tap(fabFinder);
       await tester.pump();
       for (int i = 0; i < 10; i++) {
@@ -589,9 +653,98 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
       }
 
-      // Staging sheet opened
-      expect(find.text('Staged Transactions'), findsOneWidget);
-      expect(find.text('Voice transaction note'), findsOneWidget);
+      // Model download guard sheet is displayed
+      expect(find.byType(VoiceModelDownloadSheet), findsOneWidget);
+      expect(find.text('Offline AI Models Required'), findsOneWidget);
+    });
+
+    testWidgets(
+        '13. MainNavigationScreen prominent microphone FAB launches VoiceRecordingModal when models installed (US 3, 14)',
+        (tester) async {
+      DashboardScreen.resetStartupPrivacyFlag();
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockModelDir = Directory(join(tempDir.path, 'installed_models'));
+      await tester.runAsync(() async {
+        for (final file in AiModelPackManifest.defaultPack.files) {
+          final f = File(join(mockModelDir.path, file.relativeFilePath));
+          await f.parent.create(recursive: true);
+          await f.writeAsString('dummy');
+        }
+      });
+      final mockManager = ModelManagementService(baseDirectory: mockModelDir);
+      ModelManagementService.setMockInstance(mockManager);
+      addTearDown(() => ModelManagementService.resetInstance());
+
+      final mockCoordinator = VoicePipelineCoordinator(
+        audioPipeline: VoiceAudioPipeline(
+          captureService: AudioCaptureService(
+            recorderClient: FakeAudioRecorderClient(permissionGranted: true),
+            tempDirectory: Directory(join(tempDir.path, 'audio')),
+          ),
+          sttService: SpeechToTextService(
+            engine: MockSttEngine(),
+            modelManager: mockManager,
+          ),
+        ),
+        speechToTextService: SpeechToTextService(
+          engine: MockSttEngine(),
+          modelManager: mockManager,
+        ),
+        slmService: SlmInferenceService(
+          engine: MockSlmEngine(),
+          modelService: mockManager,
+        ),
+        modelManager: mockManager,
+      );
+      addTearDown(() async => await mockCoordinator.dispose());
+
+      await tester.runAsync(() async {
+        final db = DatabaseHelper.instance;
+        await db.seedDatabase();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MainNavigationScreen(
+            onThemeToggle: () {},
+            voiceCoordinator: mockCoordinator,
+          ),
+        ),
+      );
+      await tester.pump();
+      for (int i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
+      }
+
+      final fabFinder = find.byKey(const Key('dashboard_voice_entry_fab'));
+      expect(fabFinder, findsOneWidget);
+
+      await tester.tap(fabFinder);
+      await tester.pump();
+      for (int i = 0; i < 40; i++) {
+        await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byKey(const Key('voice_recording_cancel_button')).evaluate().isNotEmpty ||
+            find.byKey(const Key('voice_recording_error_close_button')).evaluate().isNotEmpty) {
+          break;
+        }
+      }
+      expect(find.byType(VoiceRecordingModal), findsOneWidget);
+      expect(find.text('Voice Transaction Journaling'), findsOneWidget);
+      expect(find.byKey(const Key('voice_recording_cancel_button')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('voice_recording_cancel_button')));
+      await tester.pump();
+      for (int i = 0; i < 40; i++) {
+        await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byType(VoiceRecordingModal).evaluate().isEmpty) break;
+      }
     });
   });
 }

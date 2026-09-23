@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'audio_capture_service.dart';
 import 'speech_to_text_service.dart';
 
@@ -17,6 +19,13 @@ class VoiceAudioPipeline {
         speechToTextService = sttService ?? SpeechToTextService.instance;
 
   bool get isRecording => audioCaptureService.isRecording;
+
+  /// Stream of live normalized amplitude values [0.0, 1.0] from active recording.
+  Stream<double> get amplitudeStream => audioCaptureService.amplitudeStream;
+
+  /// Reads accumulated 16kHz mono Float32 audio samples from active recording.
+  Future<Float32List?> readActiveRecordingSamples() =>
+      audioCaptureService.readActiveRecordingSamples();
 
   /// Starts recording a 16kHz mono WAV voice monologue.
   Future<String> startRecording() async {

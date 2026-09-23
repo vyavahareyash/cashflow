@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -30,6 +31,8 @@ abstract class AudioRecorderClient {
   Future<String?> stop();
   Future<void> cancel();
   Future<void> dispose();
+  Stream<Amplitude> onAmplitudeChanged(Duration interval);
+  Future<Amplitude> getAmplitude();
 }
 
 /// Production implementation using package:record AudioRecorder.
@@ -57,6 +60,13 @@ class RecordAudioRecorderClient implements AudioRecorderClient {
 
   @override
   Future<void> dispose() => _recorder.dispose();
+
+  @override
+  Stream<Amplitude> onAmplitudeChanged(Duration interval) =>
+      _recorder.onAmplitudeChanged(interval);
+
+  @override
+  Future<Amplitude> getAmplitude() => _recorder.getAmplitude();
 }
 
 /// Captures user speech strictly configured for 16kHz mono 16-bit PCM WAV.
@@ -85,6 +95,54 @@ class AudioCaptureService {
 
   bool get isRecording => _isRecording;
   String? get activeRecordingPath => _activeRecordingPath;
+
+  /// Stream of normalized amplitude values [0.0, 1.0] from microphone input.
+  Stream<double> get amplitudeStream {
+    try {
+      return _recorderClient
+          .onAmplitudeChanged(const Duration(milliseconds: 80))
+          .map((amp) => ((amp.current + 55.0) / 55.0).clamp(0.0, 1.0));
+    } catch (_) {
+      return const Stream.empty();
+    }
+  }
+
+  /// Reads raw 16kHz mono Float32 audio samples accumulated so far in the active recording.
+  Future<Float32List?> readActiveRecordingSamples() async {
+    if (!_isRecording || _activeRecordingPath == null) return null;
+    try {
+      final file = File(_activeRecordingPath!);
+      if (!file.existsSync()) return null;
+      final bytes = file.readAsBytesSync();
+      // WAV header is at least 44 bytes. Anything <= 44 bytes has zero PCM sample data.
+      if (bytes.length <= 44) return null;
+
+      int dataOffset = 44;
+      for (int i = 12; i < bytes.length - 8; i++) {
+        if (bytes[i] == 0x64 &&
+            bytes[i + 1] == 0x61 &&
+            bytes[i + 2] == 0x74 &&
+            bytes[i + 3] == 0x61) {
+          dataOffset = i + 8;
+          break;
+        }
+      }
+      if (bytes.length <= dataOffset) return null;
+
+      final numSamples = (bytes.length - dataOffset) ~/ 2;
+      if (numSamples <= 0) return null;
+
+      final byteData = ByteData.sublistView(bytes, dataOffset);
+      final samples = Float32List(numSamples);
+      for (int i = 0; i < numSamples; i++) {
+        final int sampleInt = byteData.getInt16(i * 2, Endian.little);
+        samples[i] = sampleInt / 32768.0;
+      }
+      return samples;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Checks and requests microphone hardware permission.
   Future<bool> hasPermission() async {

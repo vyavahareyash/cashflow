@@ -9,9 +9,10 @@ import 'package:cashflow/screens/backup_restore_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/services/platform_database.dart';
 import 'package:cashflow/theme/theme_constants.dart';
-import 'package:cashflow/components/voice_transaction_staging_sheet.dart';
-import 'package:cashflow/models/draft_transaction.dart';
-import 'package:intl/intl.dart';
+import 'package:cashflow/components/voice_model_download_sheet.dart';
+import 'package:cashflow/components/voice_recording_modal.dart';
+import 'package:cashflow/services/model_management_service.dart';
+import 'package:cashflow/services/voice_pipeline_coordinator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -173,7 +174,13 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
 
 class MainNavigationScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
-  const MainNavigationScreen({super.key, required this.onThemeToggle});
+  final VoicePipelineCoordinator? voiceCoordinator;
+
+  const MainNavigationScreen({
+    super.key,
+    required this.onThemeToggle,
+    this.voiceCoordinator,
+  });
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -302,23 +309,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 hoverElevation: 0,
                 highlightElevation: 0,
                 shape: const CircleBorder(),
-                onPressed: () {
-                  VoiceTransactionStagingSheet.show(
-                    context,
-                    drafts: [
-                      DraftTransaction(
-                        amount: 150.0,
-                        type: 'expense',
-                        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                        note: 'Voice transaction note',
-                        hasUnassignedAccount: true,
-                        hasUnassignedCategory: true,
-                      ),
-                    ],
-                    onCommit: (approved) async {
-                      await DatabaseHelper.instance.commitDraftTransactions(approved);
-                    },
-                  );
+                onPressed: () async {
+                  final isInstalled =
+                      await ModelManagementService.instance.isModelPackInstalled();
+                  if (!context.mounted) return;
+                  if (!isInstalled) {
+                    await VoiceModelDownloadSheet.show(context);
+                  } else {
+                    await VoiceRecordingModal.show(
+                      context,
+                      coordinator: widget.voiceCoordinator,
+                    );
+                  }
                 },
                 child: ClipOval(
                   child: Image.asset(

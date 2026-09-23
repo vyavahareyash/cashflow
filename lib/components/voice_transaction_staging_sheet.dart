@@ -5,6 +5,7 @@ import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/draft_transaction.dart';
 import '../services/database_helper.dart';
+import '../services/model_management_service.dart';
 import '../theme/theme_constants.dart';
 
 /// Interactive modal bottom sheet for ephemeral draft transaction review (US 3, 8, 9, 10, 18, 20).
@@ -41,22 +42,27 @@ class VoiceTransactionStagingSheet extends StatefulWidget {
     VoidCallback? onDismiss,
   }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return showModalBottomSheet<List<DraftTransaction>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => VoiceTransactionStagingSheet(
-        drafts: drafts,
-        accounts: accounts,
-        categories: categories,
-        isPrivate: isPrivate,
-        onCommit: onCommit,
-        onDismiss: onDismiss,
-      ),
-    );
+    try {
+      return await showModalBottomSheet<List<DraftTransaction>>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => VoiceTransactionStagingSheet(
+          drafts: drafts,
+          accounts: accounts,
+          categories: categories,
+          isPrivate: isPrivate,
+          onCommit: onCommit,
+          onDismiss: onDismiss,
+        ),
+      );
+    } finally {
+      // US 16: Immediate model RAM deallocation on modal exit
+      await ModelManagementService.instance.unloadModelsFromMemory();
+    }
   }
 
   @override
