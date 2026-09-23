@@ -71,6 +71,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   void initState() {
     super.initState();
     _coordinator = widget.coordinator ?? VoicePipelineCoordinator();
+    _coordinator.isMicActiveListenable.addListener(_handleMicActiveChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initSession();
@@ -79,11 +80,28 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
   @override
   void dispose() {
+    _coordinator.isMicActiveListenable.removeListener(_handleMicActiveChanged);
     _amplitudeSubscription?.cancel();
     if (_coordinator.isRecording) {
       _coordinator.cancelRecording();
     }
     super.dispose();
+  }
+
+  void _handleMicActiveChanged() {
+    if (!mounted) return;
+    final isActive = _coordinator.isMicActiveListenable.value;
+    if (_isMicActive != isActive) {
+      setState(() {
+        _isMicActive = isActive;
+        if (!isActive) {
+          _currentAmplitude = 0.0;
+          _statusMessage = 'Microphone paused. Tap mic to resume';
+        } else {
+          _statusMessage = 'Listening... Speak your transactions in rupees';
+        }
+      });
+    }
   }
 
   Future<void> _initSession() async {
@@ -96,9 +114,11 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
       if (!mounted) return;
       setState(() {
-        _isMicActive = true;
+        _isMicActive = _coordinator.isMicActiveListenable.value;
         _state = VoiceModalState.recording;
-        _statusMessage = 'Listening... Speak your transactions in rupees';
+        _statusMessage = _isMicActive
+            ? 'Listening... Speak your transactions in rupees'
+            : 'Microphone paused. Tap mic to resume';
       });
 
       _amplitudeSubscription = _coordinator.amplitudeStream.listen((amp) {
@@ -128,19 +148,8 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
     if (_isMicActive) {
       await _coordinator.pauseListening();
-      if (!mounted) return;
-      setState(() {
-        _isMicActive = false;
-        _currentAmplitude = 0.0;
-        _statusMessage = 'Microphone paused. Tap mic to resume';
-      });
     } else {
       await _coordinator.resumeListening();
-      if (!mounted) return;
-      setState(() {
-        _isMicActive = true;
-        _statusMessage = 'Listening... Speak your transactions in rupees';
-      });
     }
   }
 

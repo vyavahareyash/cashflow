@@ -264,6 +264,35 @@ void main() {
       expect(coordinator.isMicPaused, isFalse);
     });
 
+    testWidgets('1d. Android stopping listening automatically reflects in button state as MIC OFF and allows resuming', (tester) async {
+      await tester.pumpWidget(buildTestApp(coordinator));
+      await tester.tap(find.byKey(const Key('open_modal_button')));
+      await tester.pump();
+      await waitForRecordingReady(tester);
+
+      expect(find.text('Listening'), findsOneWidget);
+      expect(find.text('MIC ON'), findsOneWidget);
+
+      // Simulate Android STT silence timeout or stop event:
+      // coordinator's isMicActiveListenable is updated to false
+      (coordinator.isMicActiveListenable as ValueNotifier<bool>).value = false;
+      await tester.pump();
+
+      // UI automatically reflects Android stopped listening
+      expect(find.text('Mic Off'), findsOneWidget);
+      expect(find.text('MIC OFF'), findsOneWidget);
+      expect(find.byIcon(Icons.mic_off_rounded), findsOneWidget);
+      expect(find.text('Microphone paused. Tap mic to resume'), findsOneWidget);
+
+      // User taps central mic button to resume
+      await tester.tap(find.byKey(const Key('voice_recording_mic_button')));
+      await tester.pump();
+
+      expect(find.text('Listening'), findsOneWidget);
+      expect(find.text('MIC ON'), findsOneWidget);
+      expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+    });
+
     testWidgets('2. Tap Cancel cancels capture and dismisses modal cleanly (US 13)', (tester) async {
       await tester.pumpWidget(buildTestApp(coordinator));
       await tester.tap(find.byKey(const Key('open_modal_button')));

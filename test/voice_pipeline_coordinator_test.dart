@@ -427,5 +427,21 @@ void main() {
         'Chai 20 rupees',
       );
     });
+
+    test('12. isMicActiveListenable stays in sync with startRecording, pauseListening, resumeListening, and cancelRecording', () async {
+      expect(coordinator.isMicActiveListenable.value, isFalse);
+
+      await coordinator.startRecording();
+      expect(coordinator.isMicActiveListenable.value, isTrue);
+
+      await coordinator.pauseListening();
+      expect(coordinator.isMicActiveListenable.value, isFalse);
+
+      await coordinator.resumeListening();
+      expect(coordinator.isMicActiveListenable.value, isTrue);
+
+      await coordinator.cancelRecording();
+      expect(coordinator.isMicActiveListenable.value, isFalse);
+    });
   });
 }
