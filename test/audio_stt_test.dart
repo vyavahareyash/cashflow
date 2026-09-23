@@ -127,6 +127,14 @@ class FakeAudioRecorderClient implements AudioRecorderClient {
   Future<void> dispose() async {
     recordingActive = false;
   }
+
+  @override
+  Stream<Amplitude> onAmplitudeChanged(Duration interval) =>
+      const Stream.empty();
+
+  @override
+  Future<Amplitude> getAmplitude() async =>
+      Amplitude(current: -30.0, max: -10.0);
 }
 
 void main() {

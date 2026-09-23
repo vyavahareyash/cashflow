@@ -51,6 +51,7 @@ class SttEngineException implements Exception {
 abstract class SttEngine {
   Future<void> initialize({required String modelDirPath});
   Future<String> transcribeFile(String wavFilePath);
+  Future<String> transcribeSamples(Float32List samples, {int sampleRate = 16000});
   Future<void> dispose();
   bool get isInitialized;
 }
@@ -59,6 +60,9 @@ abstract class SttEngine {
 class SherpaOnnxSttEngine implements SttEngine {
   sherpa.OfflineRecognizer? _recognizer;
   bool _initialized = false;
+  final double silenceThreshold;
+
+  SherpaOnnxSttEngine({this.silenceThreshold = 0.0005});
 
   @override
   bool get isInitialized => _initialized && _recognizer != null;
@@ -117,6 +121,41 @@ class SherpaOnnxSttEngine implements SttEngine {
   }
 
   @override
+  Future<String> transcribeSamples(
+    Float32List samples, {
+    int sampleRate = 16000,
+  }) async {
+    if (!isInitialized || _recognizer == null) {
+      throw const SttEngineException('STT engine is not initialized.');
+    }
+    if (samples.isEmpty) return '';
+
+    // Energy check: inspect maximum amplitude across samples to detect pure silence
+    double maxAmp = 0.0;
+    for (int i = 0; i < samples.length; i++) {
+      final a = samples[i].abs();
+      if (a > maxAmp) maxAmp = a;
+    }
+
+    if (maxAmp < silenceThreshold) {
+      return '';
+    }
+
+    final stream = _recognizer!.createStream();
+    try {
+      stream.acceptWaveform(
+        samples: samples,
+        sampleRate: sampleRate,
+      );
+      _recognizer!.decode(stream);
+      final result = _recognizer!.getResult(stream);
+      return result.text.trim();
+    } finally {
+      stream.free();
+    }
+  }
+
+  @override
   Future<String> transcribeFile(String wavFilePath) async {
     if (!isInitialized || _recognizer == null) {
       throw const SttEngineException('STT engine is not initialized.');
@@ -139,33 +178,24 @@ class SherpaOnnxSttEngine implements SttEngine {
         throw const SttSilentAudioException('Audio waveform is empty.');
       }
 
-      // Energy check: inspect maximum amplitude across samples to detect silence.
       double maxAmp = 0.0;
       for (int i = 0; i < waveData.samples.length; i++) {
         final a = waveData.samples[i].abs();
         if (a > maxAmp) maxAmp = a;
       }
 
-      if (maxAmp < 0.005) {
+      if (maxAmp < silenceThreshold) {
         throw const SttSilentAudioException('Audio contains only silence.');
       }
 
-      final stream = _recognizer!.createStream();
-      try {
-        stream.acceptWaveform(
-          samples: waveData.samples,
-          sampleRate: waveData.sampleRate,
-        );
-        _recognizer!.decode(stream);
-        final result = _recognizer!.getResult(stream);
-        final text = result.text.trim();
-        if (text.isEmpty) {
-          throw const SttSilentAudioException('No decipherable speech detected.');
-        }
-        return text;
-      } finally {
-        stream.free();
+      final text = await transcribeSamples(
+        waveData.samples,
+        sampleRate: waveData.sampleRate,
+      );
+      if (text.isEmpty) {
+        throw const SttSilentAudioException('No decipherable speech detected.');
       }
+      return text;
     } on SttSilentAudioException {
       rethrow;
     } catch (e) {
@@ -190,10 +220,12 @@ class MockSttEngine implements SttEngine {
   bool shouldFailInitialization = false;
   bool shouldThrowSilent = false;
   String defaultTranscript;
+  final double? silenceThreshold;
 
   MockSttEngine({
-    this.defaultTranscript = 'Lunch 12 dollars at Subway yesterday',
+    this.defaultTranscript = 'Chai 20 rupees on UPI yesterday',
     this.onTranscribe,
+    this.silenceThreshold,
   });
 
   @override
@@ -208,19 +240,70 @@ class MockSttEngine implements SttEngine {
   }
 
   @override
+  Future<String> transcribeSamples(
+    Float32List samples, {
+    int sampleRate = 16000,
+  }) async {
+    if (!_initialized) {
+      throw const SttEngineException('Mock STT engine is not initialized');
+    }
+    if (samples.isEmpty || shouldThrowSilent) {
+      return '';
+    }
+    if (silenceThreshold != null) {
+      double maxAmp = 0.0;
+      for (final s in samples) {
+        final a = s.abs();
+        if (a > maxAmp) maxAmp = a;
+      }
+      if (maxAmp < silenceThreshold!) {
+        return '';
+      }
+    }
+    return defaultTranscript;
+  }
+
+  @override
   Future<String> transcribeFile(String wavFilePath) async {
     if (!_initialized) {
       throw const SttEngineException('Mock STT engine is not initialized');
     }
 
     final file = File(wavFilePath);
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       throw SttEngineException('Audio file not found: $wavFilePath');
     }
 
-    final len = await file.length();
+    final len = file.lengthSync();
     if (len <= 44 || shouldThrowSilent) {
       throw const SttSilentAudioException('Audio contains only silence.');
+    }
+
+    if (silenceThreshold != null) {
+      final bytes = file.readAsBytesSync();
+      int dataOffset = 44;
+      for (int i = 12; i < bytes.length - 8; i++) {
+        if (bytes[i] == 0x64 &&
+            bytes[i + 1] == 0x61 &&
+            bytes[i + 2] == 0x74 &&
+            bytes[i + 3] == 0x61) {
+          dataOffset = i + 8;
+          break;
+        }
+      }
+      if (bytes.length <= dataOffset) {
+        throw const SttSilentAudioException('Audio contains only silence.');
+      }
+      final byteData = ByteData.sublistView(bytes, dataOffset);
+      final numSamples = (bytes.length - dataOffset) ~/ 2;
+      double maxAmp = 0.0;
+      for (int i = 0; i < numSamples; i++) {
+        final a = (byteData.getInt16(i * 2, Endian.little) / 32768.0).abs();
+        if (a > maxAmp) maxAmp = a;
+      }
+      if (maxAmp < silenceThreshold!) {
+        throw const SttSilentAudioException('Audio contains only silence.');
+      }
     }
 
     if (onTranscribe != null) {
@@ -307,6 +390,18 @@ class SpeechToTextService {
     final baseDir = await _modelManager.getModelDirectory();
     final moonshinePath = p.join(baseDir.path, 'moonshine');
     await _engine.initialize(modelDirPath: moonshinePath);
+  }
+
+  /// Transcribes raw 16kHz mono Float32 audio samples into text string.
+  Future<String> transcribeSamples(
+    Float32List samples, {
+    int sampleRate = 16000,
+  }) async {
+    if (!_engine.isInitialized) {
+      await initializeEngine();
+    }
+
+    return await _engine.transcribeSamples(samples, sampleRate: sampleRate);
   }
 
   /// Transcribes a 16kHz mono WAV file into text string.

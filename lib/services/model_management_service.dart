@@ -423,6 +423,12 @@ class ModelManagementService extends ChangeNotifier {
     }
   }
 
+  /// Checks whether the model pack is fully installed on disk.
+  Future<bool> isModelPackInstalled({bool verifyChecksums = false}) async {
+    final status = await checkInstalledStatus(verifyChecksums: verifyChecksums);
+    return status == ModelPackStatus.installed;
+  }
+
   /// Calculates the SHA-256 digest of a local file via streaming to avoid memory overhead.
   Future<String> calculateFileSha256(File file) async {
     final stream = file.openRead();

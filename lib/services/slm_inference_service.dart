@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 import 'package:path/path.dart' as p;
 
@@ -185,14 +184,13 @@ class MockSlmEngine implements SlmEngine {
 /// Facade coordinating SLM inference lifecycle with [ModelManagementService] (US 16).
 class SlmInferenceService {
   final SlmEngine _engine;
-  final ModelManagementService? _modelService;
+  final ModelManagementService? modelService;
 
   SlmInferenceService({
     SlmEngine? engine,
-    ModelManagementService? modelService,
-  })  : _engine = engine ?? LlamaCppSlmEngine(),
-        _modelService = modelService {
-    _modelService?.registerLifecycleHooks(
+    this.modelService,
+  })  : _engine = engine ?? LlamaCppSlmEngine() {
+    modelService?.registerLifecycleHooks(
       onUnload: () async => await dispose(),
     );
   }
@@ -203,8 +201,8 @@ class SlmInferenceService {
   /// Initializes the SLM engine using files managed by [ModelManagementService].
   Future<void> initialize({String? customModelPath}) async {
     String modelPath = customModelPath ?? '';
-    if (modelPath.isEmpty && _modelService != null) {
-      final dir = await _modelService.getModelDirectory();
+    if (modelPath.isEmpty && modelService != null) {
+      final dir = await modelService!.getModelDirectory();
       modelPath = p.join(
         dir.path,
         'smollm2',
@@ -227,6 +225,9 @@ class SlmInferenceService {
 
   /// Generates GBNF-constrained JSON from the prompt.
   Future<String> generate({required String prompt}) async {
+    if (!_engine.isInitialized && modelService != null) {
+      await initialize();
+    }
     return await _engine.generate(prompt: prompt);
   }
 
