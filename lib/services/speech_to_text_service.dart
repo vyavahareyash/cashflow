@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
+import 'package:speech_to_text/speech_recognition_error.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import 'model_management_service.dart';
 
@@ -15,12 +17,12 @@ class SttPermissionDeniedException implements Exception {
   String toString() => 'SttPermissionDeniedException: $message';
 }
 
-/// Thrown when required Moonshine STT model weights are not downloaded or missing.
+/// Thrown when required STT model weights are not downloaded or missing.
 class SttModelNotInstalledException implements Exception {
   final String message;
   const SttModelNotInstalledException([
     this.message =
-        'Moonshine STT model files are not installed. Download the Offline AI Model Pack in Settings.',
+        'Speech recognition service is not available or required models are missing.',
   ]);
 
   @override
@@ -47,175 +49,179 @@ class SttEngineException implements Exception {
       cause != null ? 'SttEngineException: $message (Cause: $cause)' : 'SttEngineException: $message';
 }
 
-/// Abstract contract for speech-to-text inference engines.
+/// Abstract contract for speech-to-text inference engines (ADR-0006).
 abstract class SttEngine {
-  Future<void> initialize({required String modelDirPath});
+  Future<void> initialize({String? modelDirPath});
+  bool get isInitialized;
+
+  /// Begins streaming speech recognition from the device microphone.
+  Future<void> startListening({
+    required void Function(String words, bool isFinal) onResult,
+    void Function(double soundLevel)? onSoundLevelChange,
+    void Function(String error)? onError,
+    String? localeId,
+  });
+
+  /// Stops listening and returns the finalized transcription string.
+  Future<String> stopListening();
+
+  /// Cancels active listening session immediately.
+  Future<void> cancelListening();
+
+  /// Fallback / file-based transcription methods for headless test fixtures:
   Future<String> transcribeFile(String wavFilePath);
   Future<String> transcribeSamples(Float32List samples, {int sampleRate = 16000});
+
   Future<void> dispose();
-  bool get isInitialized;
 }
 
-/// Production STT engine running sherpa_onnx with Moonshine Tiny INT8 models.
-class SherpaOnnxSttEngine implements SttEngine {
-  sherpa.OfflineRecognizer? _recognizer;
+/// Production STT engine running platform-native on-device speech recognition
+/// (Android SpeechRecognizer / iOS SFSpeechRecognizer) via package:speech_to_text (ADR-0006).
+class NativePlatformSttEngine implements SttEngine {
+  final stt.SpeechToText _speech;
   bool _initialized = false;
-  final double silenceThreshold;
+  bool _isListening = false;
+  String _lastRecognizedWords = '';
+  Completer<String>? _transcriptionCompleter;
 
-  SherpaOnnxSttEngine({this.silenceThreshold = 0.0005});
+  NativePlatformSttEngine({stt.SpeechToText? speech})
+      : _speech = speech ?? stt.SpeechToText();
 
   @override
-  bool get isInitialized => _initialized && _recognizer != null;
+  bool get isInitialized => _initialized && _speech.isAvailable;
+
+  bool get isListening => _isListening;
 
   @override
-  Future<void> initialize({required String modelDirPath}) async {
-    if (_initialized && _recognizer != null) return;
+  Future<void> initialize({String? modelDirPath}) async {
+    if (_initialized && _speech.isAvailable) return;
 
     try {
-      sherpa.initBindings();
-
-      final preprocessorPath = p.join(modelDirPath, 'preprocess.onnx');
-      final encoderPath = p.join(modelDirPath, 'encode.int8.onnx');
-      final uncachedDecoderPath = p.join(modelDirPath, 'uncached_decode.int8.onnx');
-      final cachedDecoderPath = p.join(modelDirPath, 'cached_decode.int8.onnx');
-      final tokensPath = p.join(modelDirPath, 'tokens.txt');
-
-      final requiredFiles = [
-        preprocessorPath,
-        encoderPath,
-        uncachedDecoderPath,
-        cachedDecoderPath,
-        tokensPath,
-      ];
-
-      for (final filePath in requiredFiles) {
-        if (!await File(filePath).exists()) {
-          throw SttModelNotInstalledException(
-            'Missing required Moonshine model file: ${p.basename(filePath)}',
-          );
-        }
-      }
-
-      final config = sherpa.OfflineRecognizerConfig(
-        model: sherpa.OfflineModelConfig(
-          moonshine: sherpa.OfflineMoonshineModelConfig(
-            preprocessor: preprocessorPath,
-            encoder: encoderPath,
-            uncachedDecoder: uncachedDecoderPath,
-            cachedDecoder: cachedDecoderPath,
-          ),
-          tokens: tokensPath,
-          numThreads: 1,
-          debug: false,
-        ),
+      _initialized = await _speech.initialize(
+        onError: (SpeechRecognitionError error) {
+          debugPrint('Native STT error: ${error.errorMsg} (permanent: ${error.permanent})');
+        },
+        onStatus: (String status) {
+          if (status == 'notListening' || status == 'done' || status == 'doneNoResult') {
+            _isListening = false;
+            if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+              _transcriptionCompleter!.complete(_lastRecognizedWords.trim());
+            }
+          }
+        },
+        debugLogging: kDebugMode,
       );
-
-      _recognizer = sherpa.OfflineRecognizer(config);
-      _initialized = true;
     } catch (e) {
       _initialized = false;
-      _recognizer = null;
-      if (e is SttModelNotInstalledException) rethrow;
-      throw SttEngineException('Failed to initialize SherpaOnnx STT engine: $e', e);
+      throw SttEngineException('Failed to initialize native speech recognizer: $e', e);
     }
   }
 
   @override
-  Future<String> transcribeSamples(
-    Float32List samples, {
-    int sampleRate = 16000,
+  Future<void> startListening({
+    required void Function(String words, bool isFinal) onResult,
+    void Function(double soundLevel)? onSoundLevelChange,
+    void Function(String error)? onError,
+    String? localeId,
   }) async {
-    if (!isInitialized || _recognizer == null) {
-      throw const SttEngineException('STT engine is not initialized.');
-    }
-    if (samples.isEmpty) return '';
-
-    // Energy check: inspect maximum amplitude across samples to detect pure silence
-    double maxAmp = 0.0;
-    for (int i = 0; i < samples.length; i++) {
-      final a = samples[i].abs();
-      if (a > maxAmp) maxAmp = a;
+    if (!_initialized) {
+      await initialize();
     }
 
-    if (maxAmp < silenceThreshold) {
-      return '';
+    if (!_speech.isAvailable) {
+      throw const SttEngineException('Native speech recognition is not available on this device.');
     }
 
-    final stream = _recognizer!.createStream();
+    _lastRecognizedWords = '';
+    _transcriptionCompleter = Completer<String>();
+    _isListening = true;
+
+    final options = stt.SpeechListenOptions(
+      onDevice: true,
+      partialResults: true,
+      cancelOnError: false,
+      listenMode: stt.ListenMode.dictation,
+      localeId: localeId,
+    );
+
     try {
-      stream.acceptWaveform(
-        samples: samples,
-        sampleRate: sampleRate,
+      await _speech.listen(
+        onResult: (SpeechRecognitionResult result) {
+          _lastRecognizedWords = result.recognizedWords;
+          onResult(result.recognizedWords, result.finalResult);
+          if (result.finalResult &&
+              _transcriptionCompleter != null &&
+              !_transcriptionCompleter!.isCompleted) {
+            _transcriptionCompleter!.complete(result.recognizedWords.trim());
+          }
+        },
+        listenOptions: options,
+        onSoundLevelChange: onSoundLevelChange != null
+            ? (level) {
+                final normalized = level <= -2.0
+                    ? 0.0
+                    : ((level + 2.0) / 12.0).clamp(0.0, 1.0);
+                onSoundLevelChange(normalized);
+              }
+            : null,
       );
-      _recognizer!.decode(stream);
-      final result = _recognizer!.getResult(stream);
-      return result.text.trim();
-    } finally {
-      stream.free();
+    } catch (e) {
+      _isListening = false;
+      onError?.call(e.toString());
+      throw SttEngineException('Failed to start native speech listening: $e', e);
     }
+  }
+
+  @override
+  Future<String> stopListening() async {
+    if (!_isListening && _lastRecognizedWords.isNotEmpty) {
+      return _lastRecognizedWords.trim();
+    }
+    _isListening = false;
+    await _speech.stop();
+    if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+      _transcriptionCompleter!.complete(_lastRecognizedWords.trim());
+    }
+    return _lastRecognizedWords.trim();
+  }
+
+  @override
+  Future<void> cancelListening() async {
+    _isListening = false;
+    _lastRecognizedWords = '';
+    if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+      _transcriptionCompleter!.complete('');
+    }
+    await _speech.cancel();
   }
 
   @override
   Future<String> transcribeFile(String wavFilePath) async {
-    if (!isInitialized || _recognizer == null) {
-      throw const SttEngineException('STT engine is not initialized.');
-    }
+    throw UnsupportedError(
+      'NativePlatformSttEngine does not support file-based decoding; use streaming speech recognition or MockSttEngine.',
+    );
+  }
 
-    final file = File(wavFilePath);
-    if (!await file.exists()) {
-      throw SttEngineException('WAV file does not exist at $wavFilePath');
-    }
-
-    final fileLength = await file.length();
-    // Standard RIFF header is 44 bytes. Anything <= 44 bytes has zero audio data.
-    if (fileLength <= 44) {
-      throw const SttSilentAudioException('Audio file contains no sample data.');
-    }
-
-    try {
-      final waveData = sherpa.readWave(wavFilePath);
-      if (waveData.samples.isEmpty) {
-        throw const SttSilentAudioException('Audio waveform is empty.');
-      }
-
-      double maxAmp = 0.0;
-      for (int i = 0; i < waveData.samples.length; i++) {
-        final a = waveData.samples[i].abs();
-        if (a > maxAmp) maxAmp = a;
-      }
-
-      if (maxAmp < silenceThreshold) {
-        throw const SttSilentAudioException('Audio contains only silence.');
-      }
-
-      final text = await transcribeSamples(
-        waveData.samples,
-        sampleRate: waveData.sampleRate,
-      );
-      if (text.isEmpty) {
-        throw const SttSilentAudioException('No decipherable speech detected.');
-      }
-      return text;
-    } on SttSilentAudioException {
-      rethrow;
-    } catch (e) {
-      throw SttEngineException('Failed during audio decoding: $e', e);
-    }
+  @override
+  Future<String> transcribeSamples(Float32List samples, {int sampleRate = 16000}) async {
+    throw UnsupportedError(
+      'NativePlatformSttEngine does not support sample-based decoding; use streaming speech recognition or MockSttEngine.',
+    );
   }
 
   @override
   Future<void> dispose() async {
-    try {
-      _recognizer?.free();
-    } catch (_) {}
-    _recognizer = null;
+    if (_isListening) {
+      await cancelListening();
+    }
     _initialized = false;
   }
 }
 
-/// Headless test mock for STT engine evaluation without native C++ libraries.
+/// Headless test mock for STT engine evaluation without native C++ libraries or platform channels.
 class MockSttEngine implements SttEngine {
   bool _initialized = false;
+  bool _isListening = false;
   String Function(String wavPath)? onTranscribe;
   bool shouldFailInitialization = false;
   bool shouldThrowSilent = false;
@@ -231,12 +237,51 @@ class MockSttEngine implements SttEngine {
   @override
   bool get isInitialized => _initialized;
 
+  bool get isListening => _isListening;
+
   @override
-  Future<void> initialize({required String modelDirPath}) async {
+  Future<void> initialize({String? modelDirPath}) async {
     if (shouldFailInitialization) {
       throw const SttEngineException('Simulated engine initialization failure');
     }
     _initialized = true;
+  }
+
+  @override
+  Future<void> startListening({
+    required void Function(String words, bool isFinal) onResult,
+    void Function(double soundLevel)? onSoundLevelChange,
+    void Function(String error)? onError,
+    String? localeId,
+  }) async {
+    if (!_initialized) {
+      throw const SttEngineException('Mock STT engine is not initialized');
+    }
+    if (shouldThrowSilent) {
+      _isListening = true;
+      onResult('', false);
+      return;
+    }
+    _isListening = true;
+    onSoundLevelChange?.call(0.5);
+    onResult(defaultTranscript, true);
+  }
+
+  @override
+  Future<String> stopListening() async {
+    if (!_initialized) {
+      throw const SttEngineException('Mock STT engine is not initialized');
+    }
+    _isListening = false;
+    if (shouldThrowSilent || defaultTranscript.trim().isEmpty) {
+      throw const SttSilentAudioException('Audio contains only silence.');
+    }
+    return defaultTranscript;
+  }
+
+  @override
+  Future<void> cancelListening() async {
+    _isListening = false;
   }
 
   @override
@@ -316,6 +361,7 @@ class MockSttEngine implements SttEngine {
   @override
   Future<void> dispose() async {
     _initialized = false;
+    _isListening = false;
   }
 }
 
@@ -341,7 +387,7 @@ class SpeechToTextService {
   SpeechToTextService({
     SttEngine? engine,
     ModelManagementService? modelManager,
-  })  : _engine = engine ?? SherpaOnnxSttEngine(),
+  })  : _engine = engine ?? NativePlatformSttEngine(),
         _modelManager = modelManager ?? ModelManagementService.instance {
     // Register RAM lifecycle hooks for on-demand weight loading and deallocation (US 16)
     _modelManager.registerLifecycleHooks(
@@ -351,45 +397,46 @@ class SpeechToTextService {
   }
 
   bool get isEngineInitialized => _engine.isInitialized;
+  bool get isNativeEngine => _engine is NativePlatformSttEngine;
+  SttEngine get engine => _engine;
 
-  /// Validates that Moonshine model files exist locally in application documents.
+  /// Validates engine availability. Platform-native STT requires 0 downloaded weights.
   Future<bool> checkModelsInstalled() async {
-    try {
-      final baseDir = await _modelManager.getModelDirectory();
-      final moonshineDir = Directory(p.join(baseDir.path, 'moonshine'));
-      if (!await moonshineDir.exists()) return false;
-
-      final requiredFiles = [
-        'preprocess.onnx',
-        'encode.int8.onnx',
-        'uncached_decode.int8.onnx',
-        'cached_decode.int8.onnx',
-        'tokens.txt',
-      ];
-
-      for (final filename in requiredFiles) {
-        if (!await File(p.join(moonshineDir.path, filename)).exists()) {
-          return false;
-        }
-      }
-      return true;
-    } catch (_) {
-      return false;
-    }
+    return true;
   }
 
   /// Initializes the speech recognizer into RAM.
   Future<void> initializeEngine() async {
     if (_engine.isInitialized) return;
+    await _engine.initialize();
+  }
 
-    final installed = await checkModelsInstalled();
-    if (!installed) {
-      throw const SttModelNotInstalledException();
+  /// Starts streaming speech recognition from device microphone.
+  Future<void> startListening({
+    required void Function(String words, bool isFinal) onResult,
+    void Function(double soundLevel)? onSoundLevelChange,
+    void Function(String error)? onError,
+    String? localeId,
+  }) async {
+    if (!_engine.isInitialized) {
+      await initializeEngine();
     }
+    await _engine.startListening(
+      onResult: onResult,
+      onSoundLevelChange: onSoundLevelChange,
+      onError: onError,
+      localeId: localeId,
+    );
+  }
 
-    final baseDir = await _modelManager.getModelDirectory();
-    final moonshinePath = p.join(baseDir.path, 'moonshine');
-    await _engine.initialize(modelDirPath: moonshinePath);
+  /// Stops streaming speech recognition and returns final transcript.
+  Future<String> stopListening() async {
+    return await _engine.stopListening();
+  }
+
+  /// Cancels streaming speech recognition.
+  Future<void> cancelListening() async {
+    await _engine.cancelListening();
   }
 
   /// Transcribes raw 16kHz mono Float32 audio samples into text string.

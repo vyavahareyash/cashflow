@@ -182,8 +182,28 @@ Transaction mutations must be executed inside database transactions:
 
 ## Offline Guarantees & Backup Integrity
 
-- **Zero Cloud Dependencies**: The app operates with zero network permission requirements in `AndroidManifest.xml` / `Info.plist`.
+- **Zero Cloud Dependencies**: The app operates with zero cloud backend or telemetry dependencies.
 - **Atomic Import/Export**:
   - Export produces JSON or raw SQLite file.
   - Import validates schema version and required entity tables before transaction commit.
   - Restoring a backup replaces the SQLite store within a single rollback-safe operation.
+
+---
+
+## Offline Voice AI Architecture (ADR-0006)
+
+Cashflow supports private, offline voice journaling using a two-stage local pipeline:
+
+1. **Speech-to-Text (STT) Layer**:
+   - Uses platform-native on-device speech recognition (`speech_to_text` wrapping Android `SpeechRecognizer` and iOS `SFSpeechRecognizer`).
+   - Configured with `requiresOnDeviceRecognition: true` / `EXTRA_PREFER_OFFLINE: true` for zero cloud communication.
+   - Eliminates STT weight downloads and reduces RAM footprint by ~50 MB.
+   - Streaming partial transcripts update `VoicePipelineCoordinator.liveTranscriptListenable` in real-time.
+2. **Small Language Model (SLM) Extraction**:
+   - Uses on-device SmolLM2-360M-Instruct (Q4_K_M GGUF, ~270 MB) via `llama_cpp_dart`.
+   - Constrained by a deterministic GBNF grammar to guarantee valid JSON extraction matching active accounts and categories.
+   - Includes deterministic heuristic fallback if SLM is unavailable.
+3. **Zero Audio Persistence (US 13)**:
+   - Voice input is processed ephemerally in RAM.
+   - No audio recordings or transcripts are persisted to disk or database without explicit user staging and approval.
+

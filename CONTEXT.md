@@ -45,7 +45,7 @@ An uncommitted, ephemeral in-memory transaction record parsed from voice or text
 _Avoid_: Pending transaction, unapproved log, temp entry, provisional transaction
 
 **Offline AI Model Pack**:
-A verified, locally stored neural weight bundle (Whisper STT and GBNF-constrained SLM) downloaded via explicit user initiation to perform zero-telemetry local inference.
+A verified, locally stored neural weight bundle (GBNF-constrained SLM with platform-native on-device speech recognition) downloaded via explicit user initiation to perform zero-telemetry local inference.
 _Avoid_: Cloud AI, backend service, remote model, telemetry bundle
 
 **Voice Transaction Staging**:

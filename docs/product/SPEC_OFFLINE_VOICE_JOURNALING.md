@@ -48,7 +48,7 @@ A private, 100% offline voice journaling system integrated directly into the Cas
 
 ### Core Architecture & Modules
 - **Audio Capture Module**: Captures microphone audio using the `record` package configured strictly for 16kHz mono 16-bit PCM WAV into a temporary file, and executes immediate file deletion upon transcription completion.
-- **Speech-to-Text Module**: Integrates `sherpa_onnx` with the Moonshine Tiny INT8 model (~30MB), leveraging variable-length RoPE attention to eliminate 30-second zero-padding overhead.
+- **Speech-to-Text Module**: Platform-native on-device speech recognition via `speech_to_text` (Android `SpeechRecognizer` / iOS `SFSpeechRecognizer`) configured for forced offline mode (ADR-0006), eliminating external model downloads and reducing RAM consumption.
 - **Entity Extraction Module**: Executes `SmolLM2-360M-Instruct` (Q4_K_M, ~230MB) via `llama_cpp_dart` in an isolated background Dart thread (`LlamaParent`), with GBNF grammar-constrained decoding.
 - **Model Weight Manager**: Manages explicit, user-initiated Wi-Fi downloads of verified static model bundles with SHA-256 checksum verification, stored in the application documents directory.
 - **Voice Transaction Staging UI**: Modal bottom sheet presenting in-memory `Draft Transaction` cards with inline interactive chips, visual validation badges, and partial batch commit actions.

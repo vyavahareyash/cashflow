@@ -40,6 +40,7 @@ flutter run -d chrome
 flutter run -d emulator-5554
 flutter run -d ios
 flutter run -d macos
+flutter run -d <wireless-device-id> # e.g. adb-RZCX127ARVK-Q5g91b._adb-tls-connect._tcp
 ```
 
 ### Static Analysis & Formatting
@@ -97,6 +98,50 @@ While `flutter run` is active in your terminal:
 
 ---
 
+## Android Wireless Debugging Workflow
+
+Run and debug Cashflow on a physical Android device over local Wi-Fi without a USB cable:
+
+### 1. Enable Wireless Debugging on Device
+1. Enable **Developer Options**: Go to **Settings → About Phone → Software Information** and tap **Build Number** 7 times.
+2. Go to **Settings → Developer Options → Wireless debugging** and toggle it **ON**.
+3. Confirm connection to the same local Wi-Fi network as your development machine.
+
+### 2. Connect via ADB
+Pair device (first-time setup only):
+```bash
+adb pair <ip-address>:<port> <pairing-code>
+```
+
+Connect via ADB (if not auto-connected via mDNS TLS):
+```bash
+adb connect <ip-address>:<port>
+```
+
+Verify connected devices:
+```bash
+flutter devices
+# or
+adb devices
+```
+
+### 3. Run Cashflow on Wireless Target
+Launch app on detected wireless device:
+```bash
+flutter run -d <wireless-device-id>
+
+# Example:
+flutter run -d adb-RZCX127ARVK-Q5g91b._adb-tls-connect._tcp
+```
+
+### 4. Interactive Development Controls
+While `flutter run` is active in your terminal:
+- Press `r` for **hot reload** (preserves state, updates widget tree).
+- Press `R` for **hot restart** (resets state, restarts application).
+- Press `q` to terminate the debug session.
+
+---
+
 ## Screenshot Automation
 
 The repository provides automated screenshot generation driven by Flutter integration tests:
@@ -135,8 +180,24 @@ Follow these rules to prevent test deadlocks or flaky failures:
 
 ## Release Builds
 
+### Google Play Store (Android App Bundle)
+Google Play Store requires production releases packaged as an Android App Bundle (`.aab`):
+
 ```bash
-# Android APK
+# Standard Play Store App Bundle (.aab)
+flutter build appbundle --release
+
+# With specific semantic version and build number:
+flutter build appbundle --release --build-name=1.0.0 --build-number=1
+
+# Output artifact location:
+# build/app/outputs/bundle/release/app-release.aab
+```
+
+### Other Platform Targets
+
+```bash
+# Android APK (direct sideloading / offline installation)
 flutter build apk --release
 
 # Web

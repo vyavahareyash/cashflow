@@ -13,13 +13,21 @@ import '../components/custom_card.dart';
 export '../components/export_backup_dialog.dart' show ExportFormat;
 
 class BackupRestoreScreen extends StatefulWidget {
-  const BackupRestoreScreen({super.key});
+  final bool scrollToVoiceModels;
+
+  const BackupRestoreScreen({
+    super.key,
+    this.scrollToVoiceModels = false,
+  });
 
   @override
   State<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
 }
 
 class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _voiceModelSectionKey = GlobalKey();
+
   bool _isProcessing = false;
   String _statusMessage = '';
   int _accountsCount = 0;
@@ -40,10 +48,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     _loadStats();
     ModelManagementService.instance.addListener(_onModelManagementChanged);
     _initModelManagement();
+
+    if (widget.scrollToVoiceModels) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final sectionContext = _voiceModelSectionKey.currentContext;
+        if (sectionContext != null) {
+          Scrollable.ensureVisible(
+            sectionContext,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+            alignment: 0.05,
+          );
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     ModelManagementService.instance.removeListener(_onModelManagementChanged);
     super.dispose();
   }
@@ -506,7 +530,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               size: 24,
             ),
             SizedBox(width: 8),
-            Text('Reset All Data?'),
+            Expanded(
+              child: Text('Reset All Data?'),
+            ),
           ],
         ),
         content: const Text(
@@ -566,12 +592,15 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       appBar: AppBar(
         title: const Text('Settings & Data', style: AppTypography.titleLarge),
       ),
-      body: ListView(
+      body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // 1. PRIVACY HERO CARD
           _buildPrivacyHeroCard(isDark),
           const SizedBox(height: AppSpacing.md),
@@ -621,9 +650,17 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const SizedBox(height: AppSpacing.xl),
 
           // 4. OFFLINE VOICE AI MODEL PACK
-          _buildSectionHeader('Voice AI & Offline Models', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildVoiceAiModelPackCard(isDark),
+          KeyedSubtree(
+            key: _voiceModelSectionKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader('Voice AI & Offline Models', isDark),
+                const SizedBox(height: AppSpacing.xs),
+                _buildVoiceAiModelPackCard(isDark),
+              ],
+            ),
+          ),
           const SizedBox(height: AppSpacing.xl),
 
           // 5. DEMO DATA GENERATOR
@@ -644,6 +681,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildAboutSystemCard(isDark),
           const SizedBox(height: AppSpacing.huge),
         ],
+        ),
       ),
     );
   }
@@ -1842,7 +1880,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     Text('Voice AI Model Pack', style: AppTypography.titleMedium),
                     const SizedBox(height: 2),
                     Text(
-                      'On-device Moonshine STT & SmolLM2 neural models (~390 MB)',
+                      'On-device SmolLM2 neural model (~270 MB)',
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
@@ -2078,7 +2116,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 key: const Key('voice_model_download_button'),
                 onPressed: () => _handleDownloadModels(context),
                 icon: const Icon(Icons.download_rounded, size: 18),
-                label: const Text('Download Model Pack (~390 MB)'),
+                label: const Text('Download Model Pack (~270 MB)'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.emerald700,
                   foregroundColor: Colors.white,
@@ -2112,12 +2150,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             children: const [
               Icon(Icons.network_cell_rounded, color: Colors.orange, size: 22),
               SizedBox(width: 8),
-              Text('Cellular Data Warning'),
+              Expanded(
+                child: Text('Cellular Data Warning'),
+              ),
             ],
           ),
           content: const Text(
             'You are currently connected to a cellular mobile network. '
-            'Downloading the Voice AI Model Pack will use approximately 390 MB of mobile data.\n\n'
+            'Downloading the Voice AI Model Pack will use approximately 270 MB of mobile data.\n\n'
             'Do you want to proceed over cellular data?',
           ),
           actions: [
@@ -2165,11 +2205,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             Icon(Icons.delete_outline_rounded,
                 color: AppColors.danger, size: 22),
             SizedBox(width: 8),
-            Text('Delete Voice AI Models?'),
+            Expanded(
+              child: Text('Delete Voice AI Models?'),
+            ),
           ],
         ),
         content: const Text(
-          'This will delete the on-device AI model files (~390 MB) to free disk space.\n\n'
+          'This will delete the on-device AI model files (~270 MB) to free disk space.\n\n'
           'Manual transaction entry remains 100% functional. You can re-download models anytime.',
         ),
         actions: [

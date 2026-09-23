@@ -13,7 +13,7 @@ import 'voice_entity_parser.dart';
 import 'voice_prompt_builder.dart';
 
 /// Coordinates the end-to-end voice capture, transcription, prompt grounding,
-/// and SLM/heuristic entity extraction pipeline (US 1, 2, 4, 5, 6, 7, 13, 16, 17).
+/// and SLM/heuristic entity extraction pipeline (ADR-0006, US 1, 2, 4, 5, 6, 7, 13, 16, 17).
 ///
 /// Decouples voice journaling orchestration from UI components, ensuring
 /// headless testability and strict adherence to zero-audio-persistence (US 13)
@@ -26,6 +26,9 @@ class VoicePipelineCoordinator {
   final DatabaseHelper dbHelper;
 
   final ValueNotifier<String> _liveTranscriptNotifier = ValueNotifier<String>('');
+  final StreamController<double> _amplitudeController =
+      StreamController<double>.broadcast();
+  StreamSubscription<double>? _audioPipelineAmpSubscription;
   Timer? _partialTranscribeTimer;
   bool _isTranscribingPartial = false;
 
@@ -46,9 +49,18 @@ class VoicePipelineCoordinator {
         slmService = slmService ??
             SlmInferenceService(
               modelService: modelManager ?? ModelManagementService.instance,
-            );
+            ) {
+    _audioPipelineAmpSubscription =
+        this.audioPipeline.amplitudeStream.listen((amp) {
+      if (!_amplitudeController.isClosed) {
+        _amplitudeController.add(amp);
+      }
+    });
+  }
 
-  bool get isRecording => audioPipeline.isRecording;
+  bool _isNativeRecording = false;
+
+  bool get isRecording => _isNativeRecording || audioPipeline.isRecording;
 
   /// Observable live streaming transcript updated during active recording.
   ValueListenable<String> get liveTranscriptListenable => _liveTranscriptNotifier;
@@ -57,7 +69,7 @@ class VoicePipelineCoordinator {
   String get currentLiveTranscript => _liveTranscriptNotifier.value;
 
   /// Stream of normalized amplitude values [0.0, 1.0] for voice-driven UI animations.
-  Stream<double> get amplitudeStream => audioPipeline.amplitudeStream;
+  Stream<double> get amplitudeStream => _amplitudeController.stream;
 
   /// Verifies model installation and prepares RAM resources (US 16).
   Future<void> prepareSession() async {
@@ -65,14 +77,45 @@ class VoicePipelineCoordinator {
     if (!installed) {
       throw const SttModelNotInstalledException();
     }
+    await speechToTextService.initializeEngine();
     await modelManager.loadModelsIntoMemory();
   }
 
-  /// Starts recording 16kHz mono WAV audio and begins live partial transcription.
+  /// Starts recording and begins live speech recognition.
   Future<String> startRecording() async {
     _liveTranscriptNotifier.value = '';
-    final path = await audioPipeline.startRecording();
-    _startPartialTranscriptionLoop();
+    final isNative = speechToTextService.isNativeEngine;
+    String path = '';
+    if (!isNative) {
+      path = await audioPipeline.startRecording();
+    } else {
+      _isNativeRecording = true;
+    }
+
+    try {
+      await speechToTextService.startListening(
+        onResult: (words, isFinal) {
+          if (words.trim().isNotEmpty) {
+            _liveTranscriptNotifier.value = words.trim();
+          }
+        },
+        onSoundLevelChange: (level) {
+          if (!_amplitudeController.isClosed) {
+            _amplitudeController.add(level);
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('STT startListening warning (fallback to pipeline): $e');
+      if (isNative) {
+        _isNativeRecording = false;
+        path = await audioPipeline.startRecording();
+      }
+    }
+
+    if (!isNative && audioPipeline.isRecording) {
+      _startPartialTranscriptionLoop();
+    }
     return path;
   }
 
@@ -92,7 +135,7 @@ class VoicePipelineCoordinator {
             }
           }
         } catch (_) {
-          // Gracefully continue recording if partial decode fails
+          // Gracefully continue recording if partial decode fails or unsupported
         } finally {
           _isTranscribingPartial = false;
         }
@@ -110,16 +153,29 @@ class VoicePipelineCoordinator {
   }) async {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
+    _isNativeRecording = false;
     final effectiveAnchor = anchorDate ?? DateTime.now();
 
-    // 1. Transcribe audio to text string with partial fallback
     String transcript = '';
     try {
-      transcript = await audioPipeline.stopAndTranscribe();
+      final sttText = await speechToTextService.stopListening();
+      if (sttText.trim().isNotEmpty) {
+        transcript = sttText.trim();
+      }
+    } catch (_) {}
+
+    // 1. Transcribe audio to text string with partial fallback
+    try {
+      if (audioPipeline.isRecording) {
+        final audioText = await audioPipeline.stopAndTranscribe();
+        if (transcript.isEmpty && audioText.trim().isNotEmpty) {
+          transcript = audioText.trim();
+        }
+      }
     } on SttSilentAudioException {
-      if (_liveTranscriptNotifier.value.trim().isNotEmpty) {
+      if (transcript.isEmpty && _liveTranscriptNotifier.value.trim().isNotEmpty) {
         transcript = _liveTranscriptNotifier.value.trim();
-      } else {
+      } else if (transcript.isEmpty) {
         rethrow;
       }
     }
@@ -178,14 +234,21 @@ class VoicePipelineCoordinator {
   Future<void> cancelRecording() async {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
+    _isNativeRecording = false;
     _liveTranscriptNotifier.value = '';
-    await audioPipeline.cancelRecording();
+    try {
+      await speechToTextService.cancelListening();
+    } catch (_) {}
+    if (audioPipeline.isRecording) {
+      await audioPipeline.cancelRecording();
+    }
   }
 
   /// Deallocates native model weights and isolates from RAM (US 16).
   Future<void> endSession() async {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
+    _isNativeRecording = false;
     await modelManager.unloadModelsFromMemory();
     await audioPipeline.purgeLingeringCache();
   }
@@ -194,6 +257,11 @@ class VoicePipelineCoordinator {
   Future<void> dispose() async {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
+    _isNativeRecording = false;
+    await _audioPipelineAmpSubscription?.cancel();
+    if (!_amplitudeController.isClosed) {
+      await _amplitudeController.close();
+    }
     _liveTranscriptNotifier.dispose();
     await audioPipeline.dispose();
     await slmService.dispose();
