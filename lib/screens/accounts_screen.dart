@@ -474,7 +474,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
               color: AppColors.emerald700,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  100,
+                ),
                 children: [
                   // 1. TOP SUMMARY CARD
                   _buildHeaderCard(isDark, availableLiquidity),
@@ -647,13 +652,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'accounts-add-fab',
-        onPressed: _showAddAccountDialog,
-        backgroundColor: AppColors.emerald700,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Account', style: AppTypography.labelLarge),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: Navigator.canPop(context) ? 20 : 88,
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: 'accounts-add-fab',
+          onPressed: _showAddAccountDialog,
+          backgroundColor: AppColors.emerald700,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Add Account', style: AppTypography.labelLarge),
+        ),
       ),
     );
   }

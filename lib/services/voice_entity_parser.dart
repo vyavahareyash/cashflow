@@ -265,7 +265,7 @@ class VoiceEntityParser {
 
       final double amount = (map['amount'] as num?)?.toDouble() ?? 0.0;
       final String type = (map['type'] as String?)?.toLowerCase() ?? 'expense';
-      final String note = (map['note'] as String?)?.trim() ?? '';
+      final String rawNote = (map['note'] as String?)?.trim() ?? '';
 
       // Date resolution
       String date = (map['date'] as String?) ?? '';
@@ -303,6 +303,24 @@ class VoiceEntityParser {
         }
       }
 
+      final sourceAcc = accounts.where((a) => a.id == accountId).firstOrNull;
+      final destAcc = destinationAccountId != null
+          ? accounts.where((a) => a.id == destinationAccountId).firstOrNull
+          : null;
+      final cat = categoryId != null
+          ? categories.where((c) => c.id == categoryId).firstOrNull
+          : null;
+
+      final note = isContaminatedNote(rawNote)
+          ? generateContextualNote(
+              rawText: rawNote,
+              type: type,
+              sourceAccount: sourceAcc,
+              destinationAccount: destAcc,
+              category: cat,
+            )
+          : rawNote;
+
       drafts.add(
         DraftTransaction(
           amount: amount,
@@ -312,6 +330,7 @@ class VoiceEntityParser {
           categoryId: categoryId,
           date: date,
           note: note,
+          rawSpeech: (map['raw_speech'] as String?) ?? (rawNote.isNotEmpty ? rawNote : null),
           hasUnassignedAccount: hasUnassignedAccount,
           hasUnassignedCategory: hasUnassignedCategory,
         ),
@@ -355,8 +374,11 @@ class VoiceEntityParser {
     final clean = text.trim();
     if (clean.isEmpty) return [];
 
-    // Split on explicit connectors like " and ", " also ", "\n", ";", or commas preceding amounts
-    final pattern = RegExp(r'(?:\band\b|\balso\b|\bthen\b|[;\n])', caseSensitive: false);
+    // Split on explicit connectors like " and ", " also ", "\n", ";", or commas preceding amounts / keywords
+    final pattern = RegExp(
+      r'(?:\b(?:and|also|then|plus|as well as)\b|[;\n]|,(?=\s*(?:\b(?:and|also|then|spent|paid|bought|moved|transfer|transferred|salary|deposit|received)\b|\$|\d)))',
+      caseSensitive: false,
+    );
     final rawParts = clean.split(pattern);
 
     final parts = <String>[];
@@ -475,19 +497,22 @@ class VoiceEntityParser {
       }
     }
 
-    // 6. Formulate clean note
-    String note = clause;
-    // Clean common fillers
-    note = note
-        .replaceAll(RegExp(r'\b\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?|\$)?\b', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\b(?:yesterday|today|last\s+[a-z]+|deposited|moved|from|to|on|at|for|in)\b', caseSensitive: false), '')
-        .trim();
-    if (note.isEmpty) {
-      note = type == 'income' ? 'Income' : (type == 'transfer' ? 'Transfer' : 'Expense');
-    } else {
-      // Capitalize first letter
-      note = note[0].toUpperCase() + note.substring(1);
-    }
+    // 6. Formulate clean contextual note from transaction context
+    final matchedSourceAcc = accounts.where((a) => a.id == sourceAccountId).firstOrNull;
+    final matchedDestAcc = destAccountId != null
+        ? accounts.where((a) => a.id == destAccountId).firstOrNull
+        : null;
+    final matchedCat = categoryId != null
+        ? categories.where((c) => c.id == categoryId).firstOrNull
+        : null;
+
+    final String note = generateContextualNote(
+      rawText: clause,
+      type: type,
+      sourceAccount: matchedSourceAcc,
+      destinationAccount: matchedDestAcc,
+      category: matchedCat,
+    );
 
     return DraftTransaction(
       amount: amount,
@@ -501,5 +526,151 @@ class VoiceEntityParser {
       hasUnassignedAccount: hasUnassignedAccount,
       hasUnassignedCategory: hasUnassignedCategory,
     );
+  }
+
+  /// Evaluates whether an extracted note contains raw sentence fragments,
+  /// full transcription phrases, dates, amounts, or conversational filler.
+  static bool isContaminatedNote(String note) {
+    final lower = note.trim().toLowerCase();
+    if (lower.isEmpty) return true;
+
+    // Has digits or currency tokens
+    if (RegExp(r'(?:\$|\b\d+(?:\.\d{1,2})?\b|dollars?|bucks?|rupees?|cents?)').hasMatch(lower)) {
+      return true;
+    }
+
+    // Has date or relative date words
+    if (RegExp(r'\b(?:yesterday|today|the day before yesterday|tomorrow|last\s+[a-z]+)\b').hasMatch(lower)) {
+      return true;
+    }
+
+    // Starts with conversational verbs
+    if (RegExp(r'^(?:spent|spend|bought|buy|paid|pay|ordered|transferred|moved|received|deposited)\b').hasMatch(lower)) {
+      return true;
+    }
+
+    // Contains conversational account connector phrases (e.g., "with chase", "on my card", "from checking to savings")
+    if (RegExp(r'\b(?:on\s+my\s+card|using\s+(?:my\s+)?card|from\s+.+?\s+to\s+)\b').hasMatch(lower)) {
+      return true;
+    }
+
+    // Too long to be a clean note title (> 5 words)
+    final words = lower.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.length > 5) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Title-cases text while leaving common minor prepositions lowercase.
+  static String toTitleCase(String text) {
+    if (text.trim().isEmpty) return '';
+    final words = text.trim().split(RegExp(r'\s+'));
+    const minorWords = {'at', 'for', 'in', 'on', 'to', 'with', 'a', 'an', 'the', 'of', 'and'};
+    final result = <String>[];
+    for (int i = 0; i < words.length; i++) {
+      final w = words[i];
+      if (w.isEmpty) continue;
+      if (i > 0 && minorWords.contains(w.toLowerCase())) {
+        result.add(w.toLowerCase());
+      } else {
+        result.add(w[0].toUpperCase() + w.substring(1));
+      }
+    }
+    return result.join(' ');
+  }
+
+  /// Generates a concise, context-driven transaction note based on transaction type,
+  /// resolved accounts, category, and extracted item/merchant keywords.
+  static String generateContextualNote({
+    required String rawText,
+    required String type,
+    Account? sourceAccount,
+    Account? destinationAccount,
+    Category? category,
+  }) {
+    // 1. Transfers: Standardize from account context
+    if (type == 'transfer') {
+      if (sourceAccount != null && destinationAccount != null) {
+        return 'Transfer: ${sourceAccount.name} → ${destinationAccount.name}';
+      } else if (destinationAccount != null) {
+        return 'Transfer to ${destinationAccount.name}';
+      } else if (sourceAccount != null) {
+        return 'Transfer from ${sourceAccount.name}';
+      }
+      return 'Transfer';
+    }
+
+    // 2. Strip transaction metadata already captured in structured fields
+    String cleaned = rawText;
+
+    // Currency symbols and units
+    cleaned = cleaned.replaceAll(
+      RegExp(r'(?:\$|\b)\s*\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|\b)', caseSensitive: false),
+      ' ',
+    );
+    // Standalone numbers
+    cleaned = cleaned.replaceAll(RegExp(r'\b\d+(?:\.\d{1,2})?\b'), ' ');
+
+    // Relative dates and weekday references
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\b(?:the day before yesterday|yesterday|today|tomorrow|last\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b', caseSensitive: false),
+      ' ',
+    );
+
+    // Source account name & keywords
+    if (sourceAccount != null) {
+      cleaned = cleaned.replaceAll(
+        RegExp(r'\b(?:on|using|with|via|from|to|into)\s+' + RegExp.escape(sourceAccount.name) + r'\b', caseSensitive: false),
+        ' ',
+      );
+      for (final word in sourceAccount.name.split(RegExp(r'\s+'))) {
+        if (word.length >= 3) {
+          cleaned = cleaned.replaceAll(
+            RegExp(r'\b(?:on|using|with|via)\s+' + RegExp.escape(word) + r'\b', caseSensitive: false),
+            ' ',
+          );
+        }
+      }
+    }
+
+    // Generic payment phrases
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\b(?:on\s+my\s+card|using\s+card|on\s+card|with\s+card|on\s+credit|with\s+debit|using\s+debit|using\s+upi|on\s+upi|in\s+cash|with\s+cash)\b', caseSensitive: false),
+      ' ',
+    );
+
+    // Transaction verbs
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\b(?:spent|spend|spending|bought|buy|buying|paid\s+for|paid|pay|paying|cost\s+me|cost|ordered|order|purchased|purchase|charged\s+to|charged|received|deposited|deposit|earned|moved|transfer|transferred)\b', caseSensitive: false),
+      ' ',
+    );
+
+    // Clean leading/trailing prepositions and conjunctions
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^\s*(?:for|at|on|with|from|to|using|in|into|and|also|then)\s+', caseSensitive: false),
+      ' ',
+    );
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\s+(?:for|at|on|with|from|to|using|in|into|and|also|then)\s*$', caseSensitive: false),
+      ' ',
+    );
+
+    // Normalize punctuation & whitespace
+    cleaned = cleaned.replaceAll(RegExp(r'[;,\.\-]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // 3. Fallback synthesis if cleaned text is empty or meaningless
+    if (cleaned.isEmpty || cleaned.length <= 1) {
+      if (type == 'income') {
+        return sourceAccount != null ? 'Income (${sourceAccount.name})' : 'Income';
+      }
+      if (category != null && category.name.isNotEmpty) {
+        return category.name;
+      }
+      return 'Expense';
+    }
+
+    return toTitleCase(cleaned);
   }
 }

@@ -9,6 +9,9 @@ import 'package:cashflow/services/voice_audio_pipeline.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
+import 'package:speech_to_text/speech_recognition_error.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 /// Helper to generate a valid RIFF WAVE PCM 16-bit audio file in memory.
 Uint8List createTestWavBytes({
@@ -135,6 +138,72 @@ class FakeAudioRecorderClient implements AudioRecorderClient {
   @override
   Future<Amplitude> getAmplitude() async =>
       Amplitude(current: -30.0, max: -10.0);
+}
+
+class FakeSpeechToText extends Fake implements stt.SpeechToText {
+  bool available = true;
+  void Function(String status)? statusListener;
+  void Function(SpeechRecognitionResult result)? resultListener;
+  bool isListening = false;
+
+  @override
+  bool get isAvailable => available;
+
+  @override
+  Future<bool> initialize({
+    stt.SpeechErrorListener? onError,
+    stt.SpeechStatusListener? onStatus,
+    dynamic debugLogging = false,
+    Duration finalTimeout = stt.SpeechToText.defaultFinalTimeout,
+    List<stt.SpeechConfigOption>? options,
+  }) async {
+    statusListener = onStatus;
+    return available;
+  }
+
+  @override
+  Future<dynamic> listen({
+    stt.SpeechResultListener? onResult,
+    Duration? listenFor,
+    Duration? pauseFor,
+    String? localeId,
+    stt.SpeechSoundLevelChange? onSoundLevelChange,
+    dynamic cancelOnError = false,
+    dynamic partialResults = true,
+    dynamic onDevice = false,
+    stt.ListenMode listenMode = stt.ListenMode.confirmation,
+    dynamic sampleRate = 0,
+    stt.SpeechListenOptions? listenOptions,
+  }) async {
+    resultListener = onResult;
+    isListening = true;
+    statusListener?.call('listening');
+    return true;
+  }
+
+  @override
+  Future<void> stop() async {
+    isListening = false;
+    statusListener?.call('notListening');
+  }
+
+  @override
+  Future<void> cancel() async {
+    isListening = false;
+    statusListener?.call('notListening');
+  }
+
+  void emitResult(String words, bool isFinal) {
+    final res = SpeechRecognitionResult(
+      [SpeechRecognitionWords(words, [words], 0.95)],
+      isFinal ? 1 : 0,
+    );
+    resultListener?.call(res);
+  }
+
+  void emitStatus(String status) {
+    statusListener?.call(status);
+  }
 }
 
 void main() {
@@ -308,6 +377,125 @@ void main() {
         () => mockEngine.transcribeFile(validWav.path),
         throwsA(isA<SttEngineException>()),
       );
+    });
+
+    test('NativePlatformSttEngine handles progressive corrections without duplication', () async {
+      final fakeSpeech = FakeSpeechToText();
+      final engine = NativePlatformSttEngine(speech: fakeSpeech);
+      await engine.initialize();
+
+      final emittedResults = <String>[];
+      await engine.startListening(
+        onResult: (words, isFinal) {
+          emittedResults.add(words);
+        },
+      );
+
+      // 1. Partial: initial misheard acoustic guess
+      fakeSpeech.emitResult('spend 50', false);
+      expect(emittedResults.last, equals('spend 50'));
+
+      // 2. Progressive correction from recognizer: 'spend 50' -> 'spent 250'
+      fakeSpeech.emitResult('spent 250', false);
+      expect(emittedResults.last, equals('spent 250'));
+      // Verify no duplication like 'spend 50, spent 250'
+      expect(emittedResults.last.contains('spend 50'), isFalse);
+
+      // 3. Extension of phrase
+      fakeSpeech.emitResult('spent 250 on lunch', true);
+      expect(emittedResults.last, equals('spent 250 on lunch'));
+
+      final finalTranscript = await engine.stopListening();
+      expect(finalTranscript, equals('spent 250 on lunch'));
+    });
+
+    test('NativePlatformSttEngine emits listening state change and commits on status notListening', () async {
+      final fakeSpeech = FakeSpeechToText();
+      final engine = NativePlatformSttEngine(speech: fakeSpeech);
+      await engine.initialize();
+
+      bool? listeningState;
+      await engine.startListening(
+        onResult: (_, __) {},
+        onListeningStateChanged: (active) {
+          listeningState = active;
+        },
+      );
+      expect(listeningState, isTrue);
+
+      // Partial words spoken in turn 1
+      fakeSpeech.emitResult('Chai 20 rupees', false);
+
+      // Android silence timeout triggers status 'notListening'
+      fakeSpeech.emitStatus('notListening');
+      expect(listeningState, isFalse);
+
+      // User resumes listening for turn 2
+      await engine.resumeListening();
+      expect(listeningState, isTrue);
+
+      fakeSpeech.emitResult('and 30 on snack', true);
+      final finalTranscript = await engine.stopListening();
+      expect(finalTranscript, equals('Chai 20 rupees, and 30 on snack'));
+    });
+
+    test('does not duplicate transcript when Android auto-stops on silence timeout', () async {
+      final fakeSpeech = FakeSpeechToText();
+      final engine = NativePlatformSttEngine(speech: fakeSpeech);
+      await engine.initialize();
+
+      String lastResult = '';
+      await engine.startListening(
+        onResult: (words, isFinal) {
+          lastResult = words;
+        },
+      );
+
+      // 1. User speaks words
+      fakeSpeech.emitResult('lunch 250 rupees', false);
+      expect(lastResult, equals('lunch 250 rupees'));
+
+      // 2. Recognizer emits final result for utterance
+      fakeSpeech.emitResult('lunch 250 rupees', true);
+      expect(lastResult, equals('lunch 250 rupees'));
+
+      // 3. Android silence timeout fires notListening
+      fakeSpeech.emitStatus('notListening');
+
+      // 4. Stop listening to retrieve final result for model prompt
+      final finalTranscript = await engine.stopListening();
+      expect(finalTranscript, equals('lunch 250 rupees'));
+      expect(lastResult, equals('lunch 250 rupees'));
+    });
+
+    test('updateTranscript updates committed buffer and appends subsequent speech', () async {
+      final fakeSpeech = FakeSpeechToText();
+      final engine = NativePlatformSttEngine(speech: fakeSpeech);
+      await engine.initialize();
+
+      String lastResult = '';
+      await engine.startListening(
+        onResult: (words, isFinal) {
+          lastResult = words;
+        },
+      );
+
+      // 1. Spoken words
+      fakeSpeech.emitResult('lunch 25 rupees', false);
+      expect(lastResult, equals('lunch 25 rupees'));
+
+      // 2. Pause
+      await engine.pauseListening();
+
+      // 3. User corrects typo manually
+      engine.updateTranscript('lunch 250 rupees');
+
+      // 4. User resumes and speaks additional items
+      await engine.resumeListening();
+      fakeSpeech.emitResult('and 30 tea', true);
+
+      final finalTranscript = await engine.stopListening();
+      expect(finalTranscript, equals('lunch 250 rupees, and 30 tea'));
     });
   });
 

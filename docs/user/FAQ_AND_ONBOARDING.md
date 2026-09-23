@@ -117,6 +117,12 @@ Navigate to **Settings** > **Data Management**:
 2. Tap **Download Model Pack (~270 MB)** over Wi-Fi.
 3. Once downloaded and cryptographically verified via SHA-256, you can dictate transactions instantly.
 
+#### Does voice journaling support languages other than English?
+**No, not currently.** Voice journaling is strictly English-only:
+- Speech-to-text defaults to device locale, but the downstream entity extraction model (`SmolLM2-360M-Instruct`) and prompting pipeline are tuned exclusively for English dictation.
+- Relative date math (*"yesterday"*, *"last Friday"*), currency terms, and category matching rules are hardcoded for English.
+- Multilingual models (`Qwen2.5-0.5B`) were evaluated but are not packaged to minimize app storage and memory pressure on lower-tier mobile hardware.
+
 #### What if I prefer manual entry?
 Voice AI is completely opt-in. If you don't download the model pack, Cashflow works normally as a manual expense tracker and safe-to-spend calculator without consuming extra device storage.
 

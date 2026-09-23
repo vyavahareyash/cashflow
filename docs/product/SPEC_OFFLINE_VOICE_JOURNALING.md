@@ -71,6 +71,13 @@ transaction ::= "{\n" space
 - The system prompt dynamically injects the calendar anchor (`today: YYYY-MM-DD (DayOfWeek)`) along with active SQLite entities: `accounts: [{id, name}]` and `categories: [{id, name}]`.
 - The SLM directly emits foreign keys matching existing SQLite records.
 
+### Language & Multilingual Scope
+- **Current Scope**: English-only dictation and parsing.
+- **STT Engine**: Platform-native speech recognition (`speech_to_text`) defaults to host device locale; however, the downstream SLM and deterministic parser assume English input.
+- **SLM & Prompting**: Bundles `SmolLM2-360M-Instruct` with an English system prompt in `VoicePromptBuilder`.
+- **Deterministic Fallback**: `VoiceEntityParser` regexes, weekday lookups, relative date math, currency tokens, and category associations are hardcoded in English.
+- **Multilingual Evaluation**: `Qwen2.5-0.5B-Instruct` (29+ languages) is documented as the architectural candidate for future multilingual expansion, unbundled in v1 to fit 3GB/4GB RAM budgets.
+
 ### Transaction Commit & State Notification
 - Approved `Draft Transaction` items are committed inside a single atomic SQLite transaction (`db.transaction(...)`).
 - A single increment of `DatabaseHelper.dataRevision` notifies all listening UI screens (`ListenableBuilder`) to reload fresh data simultaneously.

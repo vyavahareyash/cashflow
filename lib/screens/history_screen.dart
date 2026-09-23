@@ -43,6 +43,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _loadTransactions();
+    DatabaseHelper.dataRevision.addListener(_onDataChanged);
+  }
+
+  @override
+  void dispose() {
+    DatabaseHelper.dataRevision.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    if (mounted) {
+      _loadTransactions();
+    }
   }
 
   Future<void> _loadTransactions() async {
@@ -943,12 +956,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Transaction Ledger',
-          style: AppTypography.titleLarge,
-        ),
-      ),
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: const Text(
+                'Activity Ledger',
+                style: AppTypography.titleLarge,
+              ),
+            )
+          : null,
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.emerald700),
@@ -972,7 +987,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onRefresh: _loadTransactions,
               color: AppColors.emerald700,
               child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  100,
+                ),
                 children: [
                   // Search & Action Row
                   Row(

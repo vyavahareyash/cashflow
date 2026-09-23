@@ -488,4 +488,130 @@ void main() {
       );
     });
   });
+
+  group('Context-Aware Transaction Note Generation', () {
+    final anchorDate = DateTime(2026, 9, 22);
+    final mockAccounts = [
+      Account(id: 1, name: 'Checking', balance: 5000.0, type: 'Bank'),
+      Account(id: 2, name: 'Savings', balance: 12000.0, type: 'Savings'),
+      Account(id: 3, name: 'Chase Sapphire', balance: -450.0, type: 'Credit Card'),
+    ];
+    final mockCategories = [
+      Category(id: 10, name: 'Food & Dining', monthlyBudget: 600.0, type: 'expense'),
+      Category(id: 11, name: 'Groceries', monthlyBudget: 800.0, type: 'expense'),
+      Category(id: 12, name: 'Transportation', monthlyBudget: 300.0, type: 'expense'),
+    ];
+
+    test('Generates contextual note isolating merchant/item and stripping amounts, dates, accounts', () {
+      final drafts = VoiceEntityParser.parseTranscriptionSample(
+        'Spent 5 on coffee at Starbucks with Chase yesterday',
+        anchorDate: anchorDate,
+        accounts: mockAccounts,
+        categories: mockCategories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.note, 'Coffee at Starbucks');
+      expect(drafts.first.rawSpeech, 'Spent 5 on coffee at Starbucks with Chase yesterday');
+    });
+
+    test('Generates distinct contextual notes in multi-transaction monologue without bleeding', () {
+      const monologue =
+          'Spent 5 on coffee at Starbucks with Chase and 45 for groceries at Walmart on Checking yesterday';
+
+      final drafts = VoiceEntityParser.parseTranscriptionSample(
+        monologue,
+        anchorDate: anchorDate,
+        accounts: mockAccounts,
+        categories: mockCategories,
+      );
+
+      expect(drafts.length, 2);
+      expect(drafts[0].note, 'Coffee at Starbucks');
+      expect(drafts[0].amount, 5.0);
+      expect(drafts[0].accountId, 3);
+
+      expect(drafts[1].note, 'Groceries at Walmart');
+      expect(drafts[1].amount, 45.0);
+      expect(drafts[1].accountId, 1);
+    });
+
+    test('Standardizes transfer notes using source and destination account context', () {
+      final drafts = VoiceEntityParser.parseTranscriptionSample(
+        'Moved 250 dollars from Checking to Savings yesterday',
+        anchorDate: anchorDate,
+        accounts: mockAccounts,
+        categories: mockCategories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.type, 'transfer');
+      expect(drafts.first.note, 'Transfer: Checking → Savings');
+    });
+
+    test('Falls back to category name when speech contains no merchant or item name', () {
+      final note = VoiceEntityParser.generateContextualNote(
+        rawText: '25 dollars yesterday on Checking',
+        type: 'expense',
+        sourceAccount: mockAccounts.first,
+        category: mockCategories.first, // Food & Dining
+      );
+
+      expect(note, 'Food & Dining');
+    });
+
+    test('SLM parser automatically sanitizes contaminated transcript-echo notes', () {
+      const contaminatedSlmJson = '''
+[
+  {
+    "amount": 7.50,
+    "type": "expense",
+    "account_id": 3,
+    "destination_account_id": null,
+    "category_id": 10,
+    "date": "2026-09-21",
+    "note": "Spent 7.50 dollars on latte at Starbucks yesterday with Chase"
+  }
+]
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        contaminatedSlmJson,
+        anchorDate: anchorDate,
+        accounts: mockAccounts,
+        categories: mockCategories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.note, 'Latte at Starbucks');
+      expect(drafts.first.amount, 7.50);
+      expect(drafts.first.accountId, 3);
+    });
+
+    test('SLM parser standardizes transfer notes even if SLM returns colloquial phrase', () {
+      const transferSlmJson = '''
+[
+  {
+    "amount": 100.0,
+    "type": "transfer",
+    "account_id": 1,
+    "destination_account_id": 2,
+    "category_id": null,
+    "date": "2026-09-22",
+    "note": "Moved 100 from checking to savings"
+  }
+]
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        transferSlmJson,
+        anchorDate: anchorDate,
+        accounts: mockAccounts,
+        categories: mockCategories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.note, 'Transfer: Checking → Savings');
+    });
+  });
 }

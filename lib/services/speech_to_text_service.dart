@@ -59,8 +59,18 @@ abstract class SttEngine {
     required void Function(String words, bool isFinal) onResult,
     void Function(double soundLevel)? onSoundLevelChange,
     void Function(String error)? onError,
+    void Function(bool isListening)? onListeningStateChanged,
     String? localeId,
   });
+
+  /// Updates active transcribed buffer manually (e.g. user corrections when mic paused).
+  void updateTranscript(String newTranscript);
+
+  /// Pauses listening without ending the recording session.
+  Future<void> pauseListening();
+
+  /// Resumes listening within an active recording session.
+  Future<void> resumeListening();
 
   /// Stops listening and returns the finalized transcription string.
   Future<String> stopListening();
@@ -81,8 +91,19 @@ class NativePlatformSttEngine implements SttEngine {
   final stt.SpeechToText _speech;
   bool _initialized = false;
   bool _isListening = false;
+  bool _sessionActive = false;
+  bool _isPaused = false;
+
+  String _committedText = '';
+  String _currentTurnWords = '';
   String _lastRecognizedWords = '';
   Completer<String>? _transcriptionCompleter;
+
+  void Function(String words, bool isFinal)? _onResultCallback;
+  void Function(double soundLevel)? _onSoundLevelChangeCallback;
+  void Function(String error)? _onErrorCallback;
+  void Function(bool isListening)? _onListeningStateChangedCallback;
+  String? _currentLocaleId;
 
   NativePlatformSttEngine({stt.SpeechToText? speech})
       : _speech = speech ?? stt.SpeechToText();
@@ -91,6 +112,35 @@ class NativePlatformSttEngine implements SttEngine {
   bool get isInitialized => _initialized && _speech.isAvailable;
 
   bool get isListening => _isListening;
+  bool get isPaused => _isPaused;
+
+  static String _combineTranscripts(String base, String addition) {
+    final b = base.trim();
+    final a = addition.trim();
+    if (b.isEmpty) return a;
+    if (a.isEmpty) return b;
+
+    final bLower = b.toLowerCase();
+    final aLower = a.toLowerCase();
+
+    // Already identical, or base already ends with addition, or addition is already contained
+    if (bLower == aLower ||
+        bLower.endsWith(aLower) ||
+        bLower.endsWith(', $aLower') ||
+        bLower.split(', ').any((part) => part.trim() == aLower)) {
+      return b;
+    }
+    // Base is a prefix of addition: addition is an extended refinement of base
+    if (aLower.startsWith(bLower)) {
+      return a;
+    }
+
+    return '$b, $a';
+  }
+
+  @visibleForTesting
+  static String combineTranscripts(String base, String addition) =>
+      _combineTranscripts(base, addition);
 
   @override
   Future<void> initialize({String? modelDirPath}) async {
@@ -100,16 +150,36 @@ class NativePlatformSttEngine implements SttEngine {
       _initialized = await _speech.initialize(
         onError: (SpeechRecognitionError error) {
           debugPrint('Native STT error: ${error.errorMsg} (permanent: ${error.permanent})');
+          _isListening = false;
+          _onListeningStateChangedCallback?.call(false);
+          _onErrorCallback?.call(error.errorMsg);
         },
         onStatus: (String status) {
           if (status == 'notListening' || status == 'done' || status == 'doneNoResult') {
             _isListening = false;
-            if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
-              _transcriptionCompleter!.complete(_lastRecognizedWords.trim());
+
+            // Commit any active turn words that haven't been committed yet
+            if (_currentTurnWords.isNotEmpty) {
+              _committedText = _combineTranscripts(_committedText, _currentTurnWords);
+              _currentTurnWords = '';
+              _lastRecognizedWords = _committedText;
             }
+
+            // Immediately notify listener that native recognition has stopped
+            _onListeningStateChangedCallback?.call(false);
+
+            if (!_sessionActive) {
+              final finalTranscript = (_committedText.isNotEmpty ? _committedText : _lastRecognizedWords).trim();
+              if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+                _transcriptionCompleter!.complete(finalTranscript);
+              }
+            }
+          } else if (status == 'listening') {
+            _isListening = true;
+            _onListeningStateChangedCallback?.call(true);
           }
         },
-        debugLogging: kDebugMode,
+        debugLogging: false,
       );
     } catch (e) {
       _initialized = false;
@@ -122,8 +192,27 @@ class NativePlatformSttEngine implements SttEngine {
     required void Function(String words, bool isFinal) onResult,
     void Function(double soundLevel)? onSoundLevelChange,
     void Function(String error)? onError,
+    void Function(bool isListening)? onListeningStateChanged,
     String? localeId,
   }) async {
+    _sessionActive = true;
+    _isPaused = false;
+    _committedText = '';
+    _currentTurnWords = '';
+    _lastRecognizedWords = '';
+    _transcriptionCompleter = Completer<String>();
+    _onResultCallback = onResult;
+    _onSoundLevelChangeCallback = onSoundLevelChange;
+    _onErrorCallback = onError;
+    _onListeningStateChangedCallback = onListeningStateChanged;
+    _currentLocaleId = localeId;
+
+    await _startListeningSession();
+  }
+
+  Future<void> _startListeningSession() async {
+    if (!_sessionActive || _isPaused) return;
+
     if (!_initialized) {
       await initialize();
     }
@@ -132,67 +221,118 @@ class NativePlatformSttEngine implements SttEngine {
       throw const SttEngineException('Native speech recognition is not available on this device.');
     }
 
-    _lastRecognizedWords = '';
-    _transcriptionCompleter = Completer<String>();
     _isListening = true;
+    _onListeningStateChangedCallback?.call(true);
 
     final options = stt.SpeechListenOptions(
       onDevice: true,
       partialResults: true,
       cancelOnError: false,
       listenMode: stt.ListenMode.dictation,
-      localeId: localeId,
+      listenFor: const Duration(minutes: 5),
+      pauseFor: const Duration(seconds: 4),
+      localeId: _currentLocaleId,
     );
 
     try {
       await _speech.listen(
         onResult: (SpeechRecognitionResult result) {
-          _lastRecognizedWords = result.recognizedWords;
-          onResult(result.recognizedWords, result.finalResult);
-          if (result.finalResult &&
-              _transcriptionCompleter != null &&
-              !_transcriptionCompleter!.isCompleted) {
-            _transcriptionCompleter!.complete(result.recognizedWords.trim());
+          if (!_sessionActive || _isPaused) return;
+
+          final incoming = result.recognizedWords.trim();
+          if (incoming.isEmpty) return;
+
+          // Replace active turn words with latest hypothesis from recognizer.
+          // This allows native STT to correct earlier words ("50" -> "250") naturally
+          // without heuristic string matching or duplication.
+          _currentTurnWords = incoming;
+          final combined = _combineTranscripts(_committedText, _currentTurnWords);
+
+          _lastRecognizedWords = combined;
+          _onResultCallback?.call(combined, result.finalResult);
+
+          if (result.finalResult && _currentTurnWords.isNotEmpty) {
+            _committedText = combined;
+            _currentTurnWords = '';
           }
         },
         listenOptions: options,
-        onSoundLevelChange: onSoundLevelChange != null
-            ? (level) {
-                final normalized = level <= -2.0
-                    ? 0.0
-                    : ((level + 2.0) / 12.0).clamp(0.0, 1.0);
-                onSoundLevelChange(normalized);
-              }
-            : null,
+        onSoundLevelChange: (level) {
+          if (_onSoundLevelChangeCallback != null && !_isPaused) {
+            final normalized = level <= -2.0
+                ? 0.0
+                : ((level + 2.0) / 12.0).clamp(0.0, 1.0);
+            _onSoundLevelChangeCallback!(normalized);
+          }
+        },
       );
     } catch (e) {
       _isListening = false;
-      onError?.call(e.toString());
-      throw SttEngineException('Failed to start native speech listening: $e', e);
+      _onListeningStateChangedCallback?.call(false);
+      _onErrorCallback?.call(e.toString());
     }
+  }
+
+  @override
+  void updateTranscript(String newTranscript) {
+    _committedText = newTranscript.trim();
+    _currentTurnWords = '';
+    _lastRecognizedWords = _committedText;
+  }
+
+  @override
+  Future<void> pauseListening() async {
+    _isPaused = true;
+    _isListening = false;
+    if (_currentTurnWords.isNotEmpty) {
+      _committedText = _combineTranscripts(_committedText, _currentTurnWords);
+      _currentTurnWords = '';
+    }
+    _lastRecognizedWords = _committedText;
+    await _speech.stop();
+    _onListeningStateChangedCallback?.call(false);
+  }
+
+  @override
+  Future<void> resumeListening() async {
+    if (!_sessionActive) return;
+    _isPaused = false;
+    _currentTurnWords = '';
+    await _startListeningSession();
   }
 
   @override
   Future<String> stopListening() async {
-    if (!_isListening && _lastRecognizedWords.isNotEmpty) {
-      return _lastRecognizedWords.trim();
-    }
+    _sessionActive = false;
+    _isPaused = false;
     _isListening = false;
-    await _speech.stop();
-    if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
-      _transcriptionCompleter!.complete(_lastRecognizedWords.trim());
+    if (_currentTurnWords.isNotEmpty) {
+      _committedText = _combineTranscripts(_committedText, _currentTurnWords);
+      _currentTurnWords = '';
     }
-    return _lastRecognizedWords.trim();
+    await _speech.stop();
+    _onListeningStateChangedCallback?.call(false);
+
+    final finalTranscript = (_committedText.isNotEmpty ? _committedText : _lastRecognizedWords).trim();
+    if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+      _transcriptionCompleter!.complete(finalTranscript);
+    }
+    return finalTranscript;
   }
 
   @override
   Future<void> cancelListening() async {
+    _sessionActive = false;
+    _isPaused = false;
     _isListening = false;
+    _committedText = '';
+    _currentTurnWords = '';
     _lastRecognizedWords = '';
     if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
       _transcriptionCompleter!.complete('');
     }
     await _speech.cancel();
+    _onListeningStateChangedCallback?.call(false);
   }
 
   @override
@@ -211,6 +351,8 @@ class NativePlatformSttEngine implements SttEngine {
 
   @override
   Future<void> dispose() async {
+    _sessionActive = false;
+    _isPaused = false;
     if (_isListening) {
       await cancelListening();
     }
@@ -247,22 +389,30 @@ class MockSttEngine implements SttEngine {
     _initialized = true;
   }
 
+  bool _isPaused = false;
+  bool get isPaused => _isPaused;
+  void Function(bool isListening)? _onListeningStateChanged;
+
   @override
   Future<void> startListening({
     required void Function(String words, bool isFinal) onResult,
     void Function(double soundLevel)? onSoundLevelChange,
     void Function(String error)? onError,
+    void Function(bool isListening)? onListeningStateChanged,
     String? localeId,
   }) async {
+    _onListeningStateChanged = onListeningStateChanged;
     if (!_initialized) {
       throw const SttEngineException('Mock STT engine is not initialized');
     }
     if (shouldThrowSilent) {
       _isListening = true;
+      _onListeningStateChanged?.call(true);
       onResult('', false);
       return;
     }
     _isListening = true;
+    _onListeningStateChanged?.call(true);
     onSoundLevelChange?.call(0.5);
     onResult(defaultTranscript, true);
   }
@@ -273,6 +423,8 @@ class MockSttEngine implements SttEngine {
       throw const SttEngineException('Mock STT engine is not initialized');
     }
     _isListening = false;
+    _isPaused = false;
+    _onListeningStateChanged?.call(false);
     if (shouldThrowSilent || defaultTranscript.trim().isEmpty) {
       throw const SttSilentAudioException('Audio contains only silence.');
     }
@@ -280,8 +432,29 @@ class MockSttEngine implements SttEngine {
   }
 
   @override
+  void updateTranscript(String newTranscript) {
+    defaultTranscript = newTranscript;
+  }
+
+  @override
+  Future<void> pauseListening() async {
+    _isPaused = true;
+    _isListening = false;
+    _onListeningStateChanged?.call(false);
+  }
+
+  @override
+  Future<void> resumeListening() async {
+    _isPaused = false;
+    _isListening = true;
+    _onListeningStateChanged?.call(true);
+  }
+
+  @override
   Future<void> cancelListening() async {
     _isListening = false;
+    _isPaused = false;
+    _onListeningStateChanged?.call(false);
   }
 
   @override
@@ -416,6 +589,7 @@ class SpeechToTextService {
     required void Function(String words, bool isFinal) onResult,
     void Function(double soundLevel)? onSoundLevelChange,
     void Function(String error)? onError,
+    void Function(bool isListening)? onListeningStateChanged,
     String? localeId,
   }) async {
     if (!_engine.isInitialized) {
@@ -425,8 +599,24 @@ class SpeechToTextService {
       onResult: onResult,
       onSoundLevelChange: onSoundLevelChange,
       onError: onError,
+      onListeningStateChanged: onListeningStateChanged,
       localeId: localeId,
     );
+  }
+
+  /// Manually updates the active transcription buffer (e.g. user manual correction).
+  void updateTranscript(String newTranscript) {
+    _engine.updateTranscript(newTranscript);
+  }
+
+  /// Pauses active speech listening without closing the recording session.
+  Future<void> pauseListening() async {
+    await _engine.pauseListening();
+  }
+
+  /// Resumes speech listening within an active recording session.
+  Future<void> resumeListening() async {
+    await _engine.resumeListening();
   }
 
   /// Stops streaming speech recognition and returns final transcript.

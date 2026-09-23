@@ -372,5 +372,76 @@ void main() {
       expect(drafts.isNotEmpty, isTrue);
       expect(drafts.first.amount, 20.0);
     });
+
+    test('10. pauseListening and resumeListening toggle isMicPaused state and STT engine', () async {
+      await coordinator.startRecording();
+      expect(coordinator.isMicPaused, isFalse);
+
+      await coordinator.pauseListening();
+      expect(coordinator.isMicPaused, isTrue);
+
+      await coordinator.resumeListening();
+      expect(coordinator.isMicPaused, isFalse);
+
+      await coordinator.cancelRecording();
+    });
+
+    test('11. NativePlatformSttEngine.combineTranscripts prevents duplicate appended transcripts', () {
+      // 1. Identical repeated transcript (e.g. from trailing stop callback)
+      expect(
+        NativePlatformSttEngine.combineTranscripts('Chai 20 rupees', 'Chai 20 rupees'),
+        'Chai 20 rupees',
+      );
+
+      // 2. Case-insensitive duplicate
+      expect(
+        NativePlatformSttEngine.combineTranscripts('chai 20 rupees', 'Chai 20 rupees'),
+        'chai 20 rupees',
+      );
+
+      // 3. Progressive refinement/extension (new text starts with prior text)
+      expect(
+        NativePlatformSttEngine.combineTranscripts('Chai 20', 'Chai 20 rupees on UPI'),
+        'Chai 20 rupees on UPI',
+      );
+
+      // 4. Base already ends with the addition
+      expect(
+        NativePlatformSttEngine.combineTranscripts('Dinner 200, Chai 20 rupees', 'Chai 20 rupees'),
+        'Dinner 200, Chai 20 rupees',
+      );
+
+      // 5. Genuinely distinct utterances separated cleanly by comma
+      expect(
+        NativePlatformSttEngine.combineTranscripts('Chai 20 rupees', 'Dosa 50 rupees'),
+        'Chai 20 rupees, Dosa 50 rupees',
+      );
+
+      // 6. Empty base or empty addition
+      expect(
+        NativePlatformSttEngine.combineTranscripts('', 'Chai 20 rupees'),
+        'Chai 20 rupees',
+      );
+      expect(
+        NativePlatformSttEngine.combineTranscripts('Chai 20 rupees', ''),
+        'Chai 20 rupees',
+      );
+    });
+
+    test('12. isMicActiveListenable stays in sync with startRecording, pauseListening, resumeListening, and cancelRecording', () async {
+      expect(coordinator.isMicActiveListenable.value, isFalse);
+
+      await coordinator.startRecording();
+      expect(coordinator.isMicActiveListenable.value, isTrue);
+
+      await coordinator.pauseListening();
+      expect(coordinator.isMicActiveListenable.value, isFalse);
+
+      await coordinator.resumeListening();
+      expect(coordinator.isMicActiveListenable.value, isTrue);
+
+      await coordinator.cancelRecording();
+      expect(coordinator.isMicActiveListenable.value, isFalse);
+    });
   });
 }

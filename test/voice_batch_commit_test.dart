@@ -4,8 +4,8 @@ import 'package:cashflow/components/voice_transaction_staging_sheet.dart';
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/draft_transaction.dart';
-import 'package:cashflow/screens/analytics_screen.dart';
 import 'package:cashflow/screens/dashboard_screen.dart';
+import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/theme/theme_constants.dart';
 import 'package:flutter/material.dart';
@@ -459,7 +459,7 @@ void main() {
       expect(find.text('Keyboard Purchase'), findsOneWidget);
     });
 
-    testWidgets('7. Reactive state synchronization: Activity Ledger in AnalyticsScreen updates immediately upon commitDraftTransactions', (tester) async {
+    testWidgets('7. Reactive state synchronization: Activity Ledger in HistoryScreen updates immediately upon commitDraftTransactions', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -477,7 +477,7 @@ void main() {
       });
 
       await tester.pumpWidget(
-        buildTestableWidget(const AnalyticsScreen()),
+        buildTestableWidget(const HistoryScreen()),
       );
       await tester.pump();
       for (int i = 0; i < 20; i++) {
@@ -486,7 +486,7 @@ void main() {
         if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
       }
 
-      expect(find.text('Activity Ledger'), findsOneWidget);
+      expect(find.byType(HistoryScreen), findsOneWidget);
       expect(find.text('Electric Bill'), findsNothing);
 
       // Commit draft batch

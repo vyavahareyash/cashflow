@@ -26,6 +26,7 @@ class VoicePipelineCoordinator {
   final DatabaseHelper dbHelper;
 
   final ValueNotifier<String> _liveTranscriptNotifier = ValueNotifier<String>('');
+  final ValueNotifier<bool> _isMicActiveNotifier = ValueNotifier<bool>(false);
   final StreamController<double> _amplitudeController =
       StreamController<double>.broadcast();
   StreamSubscription<double>? _audioPipelineAmpSubscription;
@@ -52,18 +53,23 @@ class VoicePipelineCoordinator {
             ) {
     _audioPipelineAmpSubscription =
         this.audioPipeline.amplitudeStream.listen((amp) {
-      if (!_amplitudeController.isClosed) {
+      if (!_isMicPaused && !_amplitudeController.isClosed) {
         _amplitudeController.add(amp);
       }
     });
   }
 
   bool _isNativeRecording = false;
+  bool _isMicPaused = false;
 
   bool get isRecording => _isNativeRecording || audioPipeline.isRecording;
+  bool get isMicPaused => _isMicPaused;
 
   /// Observable live streaming transcript updated during active recording.
   ValueListenable<String> get liveTranscriptListenable => _liveTranscriptNotifier;
+
+  /// Observable microphone active listening state.
+  ValueListenable<bool> get isMicActiveListenable => _isMicActiveNotifier;
 
   /// Latest captured transcript string so far.
   String get currentLiveTranscript => _liveTranscriptNotifier.value;
@@ -83,6 +89,8 @@ class VoicePipelineCoordinator {
 
   /// Starts recording and begins live speech recognition.
   Future<String> startRecording() async {
+    _isMicPaused = false;
+    _isMicActiveNotifier.value = true;
     _liveTranscriptNotifier.value = '';
     final isNative = speechToTextService.isNativeEngine;
     String path = '';
@@ -100,8 +108,15 @@ class VoicePipelineCoordinator {
           }
         },
         onSoundLevelChange: (level) {
-          if (!_amplitudeController.isClosed) {
+          if (!_isMicPaused && !_amplitudeController.isClosed) {
             _amplitudeController.add(level);
+          }
+        },
+        onListeningStateChanged: (isListening) {
+          _isMicActiveNotifier.value = isListening;
+          _isMicPaused = !isListening;
+          if (!isListening && !_amplitudeController.isClosed) {
+            _amplitudeController.add(0.0);
           }
         },
       );
@@ -119,12 +134,29 @@ class VoicePipelineCoordinator {
     return path;
   }
 
+  /// Pauses active STT listening and mutes live audio amplitude.
+  Future<void> pauseListening() async {
+    _isMicPaused = true;
+    _isMicActiveNotifier.value = false;
+    if (!_amplitudeController.isClosed) {
+      _amplitudeController.add(0.0);
+    }
+    await speechToTextService.pauseListening();
+  }
+
+  /// Resumes STT listening and unpauses live audio analysis.
+  Future<void> resumeListening() async {
+    _isMicPaused = false;
+    _isMicActiveNotifier.value = true;
+    await speechToTextService.resumeListening();
+  }
+
   void _startPartialTranscriptionLoop() {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = Timer.periodic(
       const Duration(milliseconds: 1000),
       (_) async {
-        if (!isRecording || _isTranscribingPartial) return;
+        if (!isRecording || _isMicPaused || _isTranscribingPartial) return;
         try {
           final samples = await audioPipeline.readActiveRecordingSamples();
           if (samples != null && samples.length >= 8000) {
@@ -143,6 +175,12 @@ class VoicePipelineCoordinator {
     );
   }
 
+  /// Updates the live transcript manually (e.g. user corrections in UI when mic is paused).
+  void updateTranscript(String newTranscript) {
+    _liveTranscriptNotifier.value = newTranscript;
+    speechToTextService.updateTranscript(newTranscript);
+  }
+
   /// Stops recording, executes STT transcription, queries SQLite entities,
   /// grounds ChatML prompt, executes SLM inference (or heuristic fallback),
   /// and returns parsed [DraftTransaction] items.
@@ -150,16 +188,19 @@ class VoicePipelineCoordinator {
   /// Guarantees that ephemeral WAV files are purged from disk (US 13).
   Future<List<DraftTransaction>> stopAndProcess({
     DateTime? anchorDate,
+    String? overrideTranscript,
   }) async {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
     _isNativeRecording = false;
+    _isMicPaused = false;
+    _isMicActiveNotifier.value = false;
     final effectiveAnchor = anchorDate ?? DateTime.now();
 
-    String transcript = '';
+    String transcript = overrideTranscript?.trim() ?? '';
     try {
       final sttText = await speechToTextService.stopListening();
-      if (sttText.trim().isNotEmpty) {
+      if (transcript.isEmpty && sttText.trim().isNotEmpty) {
         transcript = sttText.trim();
       }
     } catch (_) {}
@@ -235,6 +276,8 @@ class VoicePipelineCoordinator {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
     _isNativeRecording = false;
+    _isMicPaused = false;
+    _isMicActiveNotifier.value = false;
     _liveTranscriptNotifier.value = '';
     try {
       await speechToTextService.cancelListening();
@@ -249,6 +292,8 @@ class VoicePipelineCoordinator {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
     _isNativeRecording = false;
+    _isMicPaused = false;
+    _isMicActiveNotifier.value = false;
     await modelManager.unloadModelsFromMemory();
     await audioPipeline.purgeLingeringCache();
   }
@@ -258,11 +303,14 @@ class VoicePipelineCoordinator {
     _partialTranscribeTimer?.cancel();
     _partialTranscribeTimer = null;
     _isNativeRecording = false;
+    _isMicPaused = false;
+    _isMicActiveNotifier.value = false;
     await _audioPipelineAmpSubscription?.cancel();
     if (!_amplitudeController.isClosed) {
       await _amplitudeController.close();
     }
     _liveTranscriptNotifier.dispose();
+    _isMicActiveNotifier.dispose();
     await audioPipeline.dispose();
     await slmService.dispose();
   }
