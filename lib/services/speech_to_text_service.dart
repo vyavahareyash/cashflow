@@ -120,8 +120,11 @@ class NativePlatformSttEngine implements SttEngine {
     final bLower = b.toLowerCase();
     final aLower = a.toLowerCase();
 
-    // Already identical or already ends with addition: no-op
-    if (bLower == aLower || bLower.endsWith(aLower)) {
+    // Already identical, or base already ends with addition, or addition is already contained
+    if (bLower == aLower ||
+        bLower.endsWith(aLower) ||
+        bLower.endsWith(', $aLower') ||
+        bLower.split(', ').any((part) => part.trim() == aLower)) {
       return b;
     }
     // Base is a prefix of addition: addition is an extended refinement of base
@@ -152,10 +155,11 @@ class NativePlatformSttEngine implements SttEngine {
           if (status == 'notListening' || status == 'done' || status == 'doneNoResult') {
             _isListening = false;
 
-            // Commit any active turn words to accumulated text
+            // Commit any active turn words that haven't been committed yet
             if (_currentTurnWords.isNotEmpty) {
               _committedText = _combineTranscripts(_committedText, _currentTurnWords);
               _currentTurnWords = '';
+              _lastRecognizedWords = _committedText;
             }
 
             // Immediately notify listener that native recognition has stopped
@@ -239,9 +243,7 @@ class NativePlatformSttEngine implements SttEngine {
           // This allows native STT to correct earlier words ("50" -> "250") naturally
           // without heuristic string matching or duplication.
           _currentTurnWords = incoming;
-          final combined = _committedText.isEmpty
-              ? _currentTurnWords
-              : '$_committedText, $_currentTurnWords';
+          final combined = _combineTranscripts(_committedText, _currentTurnWords);
 
           _lastRecognizedWords = combined;
           _onResultCallback?.call(combined, result.finalResult);

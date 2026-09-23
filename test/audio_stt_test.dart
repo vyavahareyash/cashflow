@@ -438,6 +438,35 @@ void main() {
       final finalTranscript = await engine.stopListening();
       expect(finalTranscript, equals('Chai 20 rupees, and 30 on snack'));
     });
+
+    test('does not duplicate transcript when Android auto-stops on silence timeout', () async {
+      final fakeSpeech = FakeSpeechToText();
+      final engine = NativePlatformSttEngine(speech: fakeSpeech);
+      await engine.initialize();
+
+      String lastResult = '';
+      await engine.startListening(
+        onResult: (words, isFinal) {
+          lastResult = words;
+        },
+      );
+
+      // 1. User speaks words
+      fakeSpeech.emitResult('lunch 250 rupees', false);
+      expect(lastResult, equals('lunch 250 rupees'));
+
+      // 2. Recognizer emits final result for utterance
+      fakeSpeech.emitResult('lunch 250 rupees', true);
+      expect(lastResult, equals('lunch 250 rupees'));
+
+      // 3. Android silence timeout fires notListening
+      fakeSpeech.emitStatus('notListening');
+
+      // 4. Stop listening to retrieve final result for model prompt
+      final finalTranscript = await engine.stopListening();
+      expect(finalTranscript, equals('lunch 250 rupees'));
+      expect(lastResult, equals('lunch 250 rupees'));
+    });
   });
 
   group('VoiceAudioPipeline - Zero Audio Persistence Invariant (US 13)', () {
