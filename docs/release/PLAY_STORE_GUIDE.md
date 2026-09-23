@@ -191,14 +191,14 @@ From this point forward, every new release is automated!
 
 1. Update version in `pubspec.yaml`:
    ```yaml
-   version: 4.0.0+11
+   version: 4.1.0+12
    ```
    *(Ensure the integer build number after `+` increases with each release).*
 
 2. Commit, tag, and push:
    ```bash
-   git commit -am "chore: bump version to 4.0.0+11"
-   git tag v4.0.0
+   git commit -am "chore: bump version to 4.1.0+12"
+   git tag v4.1.0
    git push origin main --tags
    ```
 

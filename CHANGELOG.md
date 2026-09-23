@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-09-23
+
+### Added
+- **Screenshot & Showcase Gallery Automation**: Modernized headless and Android screenshot automation with deterministic widget navigation, scroll offsets, and comprehensive Voice AI recording & transaction staging captures (#103).
+
+### Changed
+- **Release Pipeline Artifact Versioning**: Updated GitHub release workflow to stage flat release artifacts with explicit version-tagged filenames across APKs and bundles (#494c32d, #8e25072).
+
+### Fixed
+- **Dashboard Accounts Balance Hierarchy**: Aligned dashboard accounts snapshot with the accounts screen hierarchy to prominently display actual physical balance at top and usable balance (`balance - totalLocked`) below (#104).
+- **Android Model Download Network Permission**: Added missing `android.permission.INTERNET` to `AndroidManifest.xml` ensuring verified on-device neural model weights (SmolLM2) can be downloaded on demand without socket errors (da72ce9).
+- **Settings Version Synchronization**: Synchronized application version display in Settings & Data Backup screen to reflect current release `4.1.0 (Build 12)`.
+
+---
+
 ## [4.0.0] - 2026-09-23
 
 ### Added
