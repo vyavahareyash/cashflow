@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:cashflow/services/backup_platform.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:cashflow/services/model_management_service.dart';
+import 'package:cashflow/services/platform_security_service.dart';
 
 import '../components/export_backup_dialog.dart';
 import '../models/salary_cycle.dart';
@@ -41,6 +42,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   String _effectiveBackupDirectory = '';
   bool _voiceModelsWifiOnly = true;
   int _voiceModelsDiskUsage = 0;
+  bool _appLockEnabled = false;
+  bool _canUseBiometric = false;
 
   @override
   void initState() {
@@ -117,6 +120,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final lastBackup = await db.getLastBackupTimestamp();
       final defaultDir = kIsWeb ? '' : await db.getDefaultBackupDirectory();
       final effectiveDir = await db.getEffectiveBackupDirectory();
+      final appLockVal = await db.getSetting('app_lock_enabled');
+      final canBiometric = await PlatformSecurityService.instance.canAuthenticate();
 
       if (mounted) {
         setState(() {
@@ -129,6 +134,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _lastBackupTimestamp = lastBackup;
           _defaultBackupDirectory = defaultDir;
           _effectiveBackupDirectory = effectiveDir;
+          _appLockEnabled = appLockVal == '1';
+          _canUseBiometric = canBiometric;
         });
       }
     } catch (_) {}
@@ -144,6 +151,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         value
             ? 'Balances will be masked on app startup'
             : 'Balances will be visible on app startup',
+        isSuccess: true,
+      );
+    }
+  }
+
+  Future<void> _updateAppLock(bool value) async {
+    final authenticated = await PlatformSecurityService.instance.authenticate();
+    if (!authenticated) {
+      _showFeedback('Authentication required to change App Lock setting', isError: true);
+      return;
+    }
+    await DatabaseHelper.instance.setSetting('app_lock_enabled', value ? '1' : '0');
+    if (mounted) {
+      setState(() {
+        _appLockEnabled = value;
+      });
+      _showFeedback(
+        value
+            ? 'App Lock enabled with biometric / device PIN'
+            : 'App Lock disabled',
         isSuccess: true,
       );
     }
@@ -416,6 +443,30 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _handleImport() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Replace Database?'),
+        content: const Text(
+          'This will permanently replace ALL your current data '
+          '(accounts, transactions, goals, budgets) with the imported file.\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Replace Everything'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     setState(() {
       _isProcessing = true;
       _statusMessage = 'Importing database...';
@@ -441,6 +492,30 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _handleImportJSON() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Replace All Data?'),
+        content: const Text(
+          'This will permanently delete ALL your current data '
+          'and replace it with the imported JSON.\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Replace Everything'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     setState(() {
       _isProcessing = true;
       _statusMessage = 'Importing JSON...';
@@ -605,6 +680,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildPrivacyHeroCard(isDark),
           const SizedBox(height: AppSpacing.md),
           _buildPrivacyPreferencesCard(isDark),
+          if (_canUseBiometric) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildAppLockCard(isDark),
+          ],
           const SizedBox(height: AppSpacing.xl),
 
           // 2. FINANCIAL & CYCLE PREFERENCES
@@ -803,6 +882,55 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 value: _startInPrivacyMode,
                 activeTrackColor: AppColors.emerald600,
                 onChanged: (val) => _updateStartInPrivacyMode(val),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 1c. APP LOCK PREFERENCES CARD ---
+  Widget _buildAppLockCard(bool isDark) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald500.withValues(alpha: 0.12),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: const Icon(
+                  Icons.fingerprint_rounded,
+                  color: AppColors.emerald600,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('App Lock', style: AppTypography.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Require Biometric or Device PIN when opening or resuming Cashflow',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                key: const Key('app_lock_switch'),
+                value: _appLockEnabled,
+                activeTrackColor: AppColors.emerald600,
+                onChanged: (val) => _updateAppLock(val),
               ),
             ],
           ),

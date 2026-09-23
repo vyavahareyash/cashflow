@@ -10,11 +10,12 @@ Future<String?> saveBackupBytes(
   String? destinationDirectory,
   String? fullPath,
 }) async {
+  final safeName = basename(filename);
   String resolvedPath;
   if (fullPath != null && fullPath.isNotEmpty) {
     resolvedPath = fullPath;
   } else if (destinationDirectory != null && destinationDirectory.isNotEmpty) {
-    resolvedPath = join(destinationDirectory, filename);
+    resolvedPath = join(destinationDirectory, safeName);
   } else {
     String docsPath;
     if (Platform.environment.containsKey('FLUTTER_TEST')) {
@@ -27,7 +28,7 @@ Future<String?> saveBackupBytes(
         docsPath = Directory.systemTemp.path;
       }
     }
-    resolvedPath = join(docsPath, filename);
+    resolvedPath = join(docsPath, safeName);
   }
 
   final file = File(resolvedPath);

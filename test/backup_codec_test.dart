@@ -55,6 +55,24 @@ void main() {
     );
   });
 
+  test('sanitizes CSV formula injection characters (=, +, -, @, \\t, \\r)', () {
+    final csv = BackupCodec.transactionsCsv([
+      {
+        'amount': 25.50,
+        'category_name': '+Bonus',
+        'account_name': '@Checking',
+        'date': '2026-09-05',
+        'note': '=cmd|\' /C calc\'!A0',
+      },
+    ]);
+
+    expect(
+      csv,
+      'Amount,Category,Account,Date,Note\n'
+      '25.5,\'+Bonus,\'@Checking,2026-09-05,\'=cmd|\' /C calc\'!A0\n',
+    );
+  });
+
   test('rejects malformed table payloads', () {
     expect(
       () => BackupCodec.decode('{"accounts":{"id":1}}'),

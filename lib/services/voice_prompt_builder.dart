@@ -26,6 +26,13 @@ class VoicePromptBuilder {
     return '$ymd ($dayOfWeek)';
   }
 
+  static String _sanitizeChatMl(String input) {
+    return input
+        .replaceAll('<|im_start|>', '')
+        .replaceAll('<|im_end|>', '')
+        .replaceAll('<|endoftext|>', '');
+  }
+
   /// Builds a grounded ChatML prompt for entity extraction.
   static String buildPrompt({
     required String transcript,
@@ -33,12 +40,13 @@ class VoicePromptBuilder {
     required List<Account> accounts,
     required List<Category> categories,
   }) {
+    final cleanTranscript = _sanitizeChatMl(transcript);
     final anchorStr = formatAnchorDate(anchorDate);
 
     final accountsPayload = accounts.map((a) {
       return {
         'id': a.id,
-        'name': a.name,
+        'name': _sanitizeChatMl(a.name),
         'type': a.type,
       };
     }).toList();
@@ -46,7 +54,7 @@ class VoicePromptBuilder {
     final categoriesPayload = categories.map((c) {
       return {
         'id': c.id,
-        'name': c.name,
+        'name': _sanitizeChatMl(c.name),
         'type': c.type,
       };
     }).toList();
@@ -81,7 +89,7 @@ Extraction Instructions:
 Output MUST strictly be a JSON array conforming to the grammar without any Markdown formatting or commentary.
 <|im_end|>
 <|im_start|>user
-$transcript
+$cleanTranscript
 <|im_end|>
 <|im_start|>assistant
 ''';

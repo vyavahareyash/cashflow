@@ -535,7 +535,7 @@ class DatabaseHelper {
       }
 
       final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
-      final name = fileName ?? 'cashflow_backup.db';
+      final name = basename(fileName ?? 'cashflow_backup.db');
       final backupDir = Directory(targetDir);
       if (!await backupDir.exists()) {
         await backupDir.create(recursive: true);
@@ -557,22 +557,66 @@ class DatabaseHelper {
   }
 
   /// Imports a database file from a user-selected location.
-  Future<bool> importDatabase() async {
+  /// Validates SQLite header, stages to temp file, runs integrity check,
+  /// and maintains a .bak rollback copy.
+  Future<bool> importDatabase({List<int>? bytesForTesting}) async {
     if (kIsWeb) return false;
 
     try {
-      final bytes = await pickBackupBytes();
+      final bytes = bytesForTesting ?? await pickBackupBytes();
       if (bytes == null) return false;
+
+      // Validate SQLite magic bytes: first 16 bytes must be "SQLite format 3\0"
+      const sqliteHeader = [
+        0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66,
+        0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00,
+      ];
+      if (bytes.length < 16) return false;
+      for (int i = 0; i < 16; i++) {
+        if (bytes[i] != sqliteHeader[i]) return false;
+      }
 
       await close();
       _database = null;
 
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, 'money_tracker.db');
+      final bakPath = join(dbPath, 'money_tracker.db.bak');
+      final tmpPath = join(dbPath, 'money_tracker.db.tmp');
 
-      await File(path).writeAsBytes(bytes, flush: true);
+      // Create backup of current database
+      final currentFile = File(path);
+      if (await currentFile.exists()) {
+        await currentFile.copy(bakPath);
+      }
+
+      // Stage to temp file and validate
+      await File(tmpPath).writeAsBytes(bytes, flush: true);
+
+      // Verify integrity of the staged file
+      final testDb = await openDatabase(tmpPath, readOnly: true);
+      try {
+        final result = await testDb.rawQuery('PRAGMA integrity_check');
+        final status = result.first.values.first as String;
+        if (status != 'ok') {
+          await testDb.close();
+          await File(tmpPath).delete();
+          return false;
+        }
+      } finally {
+        await testDb.close();
+      }
+
+      // Replace current DB with validated file
+      await File(tmpPath).rename(path);
       await instance.database;
       notifyDataChanged();
+
+      // Clean up backup on success
+      final bakFile = File(bakPath);
+      if (await bakFile.exists()) {
+        await bakFile.delete();
+      }
 
       return true;
     } catch (e, stackTrace) {
@@ -582,6 +626,19 @@ class DatabaseHelper {
         error: e,
         stackTrace: stackTrace,
       );
+      // Attempt rollback from backup
+      try {
+        final dbPath = await getDatabasesPath();
+        final path = join(dbPath, 'money_tracker.db');
+        final bakPath = join(dbPath, 'money_tracker.db.bak');
+        final bakFile = File(bakPath);
+        if (await bakFile.exists()) {
+          await bakFile.copy(path);
+          await bakFile.delete();
+        }
+        _database = null;
+        await instance.database;
+      } catch (_) {}
       return false;
     }
   }
@@ -608,7 +665,15 @@ class DatabaseHelper {
 
   Future<int> deleteCategory(int id) async {
     final db = await instance.database;
-    final res = await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+    final res = await db.transaction((txn) async {
+      await txn.update(
+        'transactions',
+        {'category_id': null},
+        where: 'category_id = ?',
+        whereArgs: [id],
+      );
+      return await txn.delete('categories', where: 'id = ?', whereArgs: [id]);
+    });
     notifyDataChanged();
     return res;
   }
@@ -1101,11 +1166,16 @@ class DatabaseHelper {
   ) async {
     final acc = await txn.query(
       'accounts',
-      columns: ['type'],
+      columns: ['type', 'balance', 'name'],
       where: 'id = ?',
       whereArgs: [accountId],
     );
-    if (acc.isNotEmpty && acc.first['type'] == 'Credit Card') {
+    if (acc.isEmpty) return;
+    final type = acc.first['type'] as String?;
+    final currentBalance = (acc.first['balance'] as num).toDouble();
+    final name = acc.first['name'] as String? ?? 'Account';
+
+    if (type == 'Credit Card') {
       // For credit cards, balance is liability.
       // Negative adjustment (expense) increases liability; positive adjustment (payment) decreases liability.
       await txn.rawUpdate(
@@ -1113,6 +1183,11 @@ class DatabaseHelper {
         [adjustment, accountId],
       );
     } else {
+      if (adjustment < 0 && (currentBalance + adjustment) < -0.0001) {
+        throw StateError(
+          'Transaction amount exceeds account balance for $name (current balance: ₹${currentBalance.toStringAsFixed(2)}, requested: ₹${(-adjustment).toStringAsFixed(2)}).',
+        );
+      }
       await txn.rawUpdate(
         'UPDATE accounts SET balance = balance + ? WHERE id = ?',
         [adjustment, accountId],
@@ -1259,6 +1334,13 @@ class DatabaseHelper {
     if (result.isEmpty) return;
     double currentBalance = (result.first['balance'] as num).toDouble();
     String type = result.first['type'] as String? ?? 'Bank';
+    String name = result.first['name'] as String? ?? 'Account';
+
+    if (type != 'Credit Card' && (currentBalance - amount) < -0.0001) {
+      throw StateError(
+        'Expense amount exceeds account balance for $name (current balance: ₹${currentBalance.toStringAsFixed(2)}, requested: ₹${amount.toStringAsFixed(2)}).',
+      );
+    }
 
     final newBalance = type == 'Credit Card'
         ? currentBalance + amount
@@ -1408,6 +1490,21 @@ class DatabaseHelper {
           await _adjustAccountBalance(txn, accountId, amount);
           if (destinationAccountId != null) {
             await _adjustAccountBalance(txn, destinationAccountId, -amount);
+            final ccRows = await txn.query(
+              'credit_cards',
+              where: 'account_id = ?',
+              whereArgs: [destinationAccountId],
+            );
+            if (ccRows.isNotEmpty && (ccRows.first['auto_lock'] as int? ?? 1) == 1) {
+              final ccId = ccRows.first['id'] as int;
+              final defaultLockAcc = ccRows.first['default_lock_account_id'] as int? ?? accountId;
+              await txn.insert('locked_allocations', {
+                'goal_id': null,
+                'credit_card_id': ccId,
+                'account_id': defaultLockAcc,
+                'amount': amount,
+              });
+            }
           }
           break;
 
@@ -1527,6 +1624,46 @@ class DatabaseHelper {
           } else {
             await _adjustAccountBalance(txn, oldAccountId, oldAmount);
             await _adjustAccountBalance(txn, accountId, -amount);
+          }
+
+          // Sync CC locked allocations when expense amount changes
+          if (oldAmount != amount) {
+            final accType = await txn.query(
+              'accounts',
+              columns: ['type'],
+              where: 'id = ?',
+              whereArgs: [accountId],
+            );
+            if (accType.isNotEmpty && accType.first['type'] == 'Credit Card') {
+              final ccRows = await txn.query(
+                'credit_cards',
+                where: 'account_id = ?',
+                whereArgs: [accountId],
+              );
+              if (ccRows.isNotEmpty) {
+                final ccId = ccRows.first['id'] as int;
+                final locks = await txn.query(
+                  'locked_allocations',
+                  where: 'credit_card_id = ?',
+                  whereArgs: [ccId],
+                  orderBy: 'id DESC',
+                );
+                // Adjust the first lock that matches oldAmount
+                for (final lock in locks) {
+                  final lockAmount = (lock['amount'] as num).toDouble();
+                  if ((lockAmount - oldAmount).abs() < 0.005) {
+                    final lockId = lock['id'] as int;
+                    await txn.update(
+                      'locked_allocations',
+                      {'amount': amount},
+                      where: 'id = ?',
+                      whereArgs: [lockId],
+                    );
+                    break;
+                  }
+                }
+              }
+            }
           }
           break;
 
@@ -2230,44 +2367,23 @@ class DatabaseHelper {
     final db = await instance.database;
 
     await db.transaction((txn) async {
-      // 1. Find all locked allocations for this goal
-      final locks = await txn.query(
-        'locked_allocations',
-        where: 'goal_id = ?',
-        whereArgs: [goalId],
-      );
-
-      // 2. For each lock, refund the amount to the respective account
-      for (var lock in locks) {
-        final int accountId = lock['account_id'] as int;
-        final double amount = (lock['amount'] as num).toDouble();
-
-        List<Map> accRes = await txn.query(
-          'accounts',
-          where: 'id = ?',
-          whereArgs: [accountId],
-        );
-
-        if (accRes.isNotEmpty) {
-          double currentBalance = accRes.first['balance'];
-          await txn.update(
-            'accounts',
-            {'balance': currentBalance + amount},
-            where: 'id = ?',
-            whereArgs: [accountId],
-          );
-        }
-      }
-
-      // 3. Delete the goal itself
-      await txn.delete('goals', where: 'id = ?', whereArgs: [goalId]);
-
-      // 4. Delete all associated locked allocations
+      // 1. Delete all associated locked allocations (frees locked reserves back to usable balance without double-crediting)
       await txn.delete(
         'locked_allocations',
         where: 'goal_id = ?',
         whereArgs: [goalId],
       );
+
+      // 2. Disassociate historical transactions referencing this goal to prevent foreign key violations
+      await txn.update(
+        'transactions',
+        {'goal_id': null},
+        where: 'goal_id = ?',
+        whereArgs: [goalId],
+      );
+
+      // 3. Delete the goal itself
+      await txn.delete('goals', where: 'id = ?', whereArgs: [goalId]);
     });
     notifyDataChanged();
   }
@@ -2478,6 +2594,9 @@ class DatabaseHelper {
 
       // 3. Lock funds in bank account if specified
       if (lockBankAccountId != null) {
+        // Verify unreserved funds before locking
+        await _checkUsableFunds(txn, lockBankAccountId, amount);
+
         final ccRows = await txn.query(
           'credit_cards',
           where: 'account_id = ?',
@@ -2796,7 +2915,7 @@ class DatabaseHelper {
       );
 
       final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
-      final name = fileName ?? 'cashflow_backup.json';
+      final name = basename(fileName ?? 'cashflow_backup.json');
 
       final path = await saveBackupBytes(
         name,
@@ -2908,7 +3027,7 @@ class DatabaseHelper {
 
       final csv = BackupCodec.transactionsCsv(transactions);
       final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
-      final name = fileName ?? 'cashflow_transactions.csv';
+      final name = basename(fileName ?? 'cashflow_transactions.csv');
 
       return await saveBackupBytes(
         name,

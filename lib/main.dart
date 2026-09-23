@@ -13,6 +13,7 @@ import 'package:cashflow/components/voice_model_download_sheet.dart';
 import 'package:cashflow/components/voice_recording_modal.dart';
 import 'package:cashflow/services/model_management_service.dart';
 import 'package:cashflow/services/voice_pipeline_coordinator.dart';
+import 'package:cashflow/services/platform_security_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,18 +27,85 @@ Future<void> main() async {
     await dbHelper.seedDatabase();
   }
 
-  runApp(const MoneyTrackerApp());
+  final appLockSetting = await dbHelper.getSetting('app_lock_enabled');
+  final appLockEnabled = appLockSetting == '1';
+
+  runApp(MoneyTrackerApp(initialAppLockEnabled: appLockEnabled));
 }
 
 class MoneyTrackerApp extends StatefulWidget {
-  const MoneyTrackerApp({super.key});
+  final bool initialAppLockEnabled;
+
+  const MoneyTrackerApp({
+    super.key,
+    this.initialAppLockEnabled = false,
+  });
 
   @override
   State<MoneyTrackerApp> createState() => _MoneyTrackerAppState();
 }
 
-class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
+class _MoneyTrackerAppState extends State<MoneyTrackerApp>
+    with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
+  late bool _locked;
+  late bool _appLockEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _appLockEnabled = widget.initialAppLockEnabled;
+    _locked = widget.initialAppLockEnabled;
+    WidgetsBinding.instance.addObserver(this);
+    if (_locked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryUnlock());
+    } else {
+      _syncAppLock();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _syncAppLock() async {
+    final enabled = await DatabaseHelper.instance.getSetting('app_lock_enabled');
+    final isEnabled = enabled == '1';
+    if (mounted && isEnabled != _appLockEnabled) {
+      setState(() {
+        _appLockEnabled = isEnabled;
+        if (isEnabled) {
+          _locked = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) => _tryUnlock());
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      if (_appLockEnabled) {
+        setState(() => _locked = true);
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      _syncAppLock().then((_) {
+        if (_appLockEnabled && _locked) {
+          _tryUnlock();
+        }
+      });
+    }
+  }
+
+  Future<void> _tryUnlock() async {
+    final success = await PlatformSecurityService.instance.authenticate();
+    if (success && mounted) {
+      setState(() => _locked = false);
+    }
+  }
 
   void _toggleTheme() {
     setState(() {
@@ -54,6 +122,86 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (_locked) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Cashflow',
+        themeMode: _themeMode,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: AppColors.emerald700),
+          scaffoldBackgroundColor: AppColors.gray50,
+        ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.emerald700,
+            brightness: Brightness.dark,
+          ),
+          scaffoldBackgroundColor: AppColors.darkBg,
+        ),
+        home: Scaffold(
+          body: SafeArea(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _tryUnlock,
+              child: SizedBox.expand(
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: const Alignment(0, -0.6),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/icon/app_icon.jpeg',
+                          width: 96,
+                          height: 96,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              color: AppColors.emerald700,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_wallet_rounded,
+                              size: 48,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppColors.emerald400 : AppColors.emerald700)
+                                  .withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.lock_rounded,
+                              size: 32,
+                              color: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Cashflow',
