@@ -1,8 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cashflow/screens/dashboard_screen.dart';
-import 'package:cashflow/screens/budget_screen.dart';
-import 'package:cashflow/screens/goals_screen.dart';
+import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
 import 'package:cashflow/screens/analytics_screen.dart';
 import 'package:cashflow/screens/backup_restore_screen.dart';
@@ -349,21 +349,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final List<Widget> screens = [
       DashboardScreen(onNavigateTab: _onItemTapped),
-      const BudgetScreen(),
-      const GoalsScreen(),
-      const AccountsScreen(),
+      const HistoryScreen(),
       const AnalyticsScreen(),
+      const AccountsScreen(),
     ];
 
     final titles = [
       'Cashflow',
-      'Monthly Budgets',
-      'Sinking Funds',
+      'Activity Ledger',
+      'Spending Analytics',
       'My Accounts',
-      'Insights & Activity',
     ];
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: Row(
           children: [
@@ -428,53 +427,153 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ],
       ),
       body: IndexedStack(index: _selectedIndex, children: screens),
-      floatingActionButton: _selectedIndex == 0
-          ? Container(
-              height: 58,
-              width: 58,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Container(
+            height: 68,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(34),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
+                  blurRadius: 24,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 6),
+                ),
+                if (isDark)
                   BoxShadow(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.55),
+                    color: AppColors.emerald500.withValues(alpha: 0.12),
                     blurRadius: 16,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 2),
                   ),
-                ],
-                border: Border.all(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.6),
-                  width: 1.5,
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(34),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF14201C).withValues(alpha: 0.78)
+                        : Colors.white.withValues(alpha: 0.82),
+                    borderRadius: BorderRadius.circular(34),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF284136).withValues(alpha: 0.85)
+                          : Colors.white.withValues(alpha: 0.9),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildNavItem(
+                        index: 0,
+                        icon: Icons.dashboard_outlined,
+                        selectedIcon: Icons.dashboard_rounded,
+                        label: 'Home',
+                        isDark: isDark,
+                      ),
+                      _buildNavItem(
+                        index: 1,
+                        icon: Icons.receipt_long_outlined,
+                        selectedIcon: Icons.receipt_long_rounded,
+                        label: 'Activity',
+                        isDark: isDark,
+                      ),
+                      _buildVoiceCenterButton(isDark),
+                      _buildNavItem(
+                        index: 2,
+                        icon: Icons.pie_chart_outline_rounded,
+                        selectedIcon: Icons.pie_chart_rounded,
+                        label: 'Analytics',
+                        isDark: isDark,
+                      ),
+                      _buildNavItem(
+                        index: 3,
+                        icon: Icons.account_balance_outlined,
+                        selectedIcon: Icons.account_balance_rounded,
+                        label: 'Accounts',
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              child: FloatingActionButton(
-                key: const Key('dashboard_voice_entry_fab'),
-                heroTag: 'dashboard_voice_entry_fab',
-                tooltip: 'AI Voice Transaction Journaling',
-                backgroundColor: const Color(0xFF064E3B),
-                elevation: 0,
-                focusElevation: 0,
-                hoverElevation: 0,
-                highlightElevation: 0,
-                shape: const CircleBorder(),
-                onPressed: () async {
-                  final isInstalled =
-                      await ModelManagementService.instance.isModelPackInstalled();
-                  if (!context.mounted) return;
-                  if (!isInstalled) {
-                    await VoiceModelDownloadSheet.show(context);
-                  } else {
-                    await VoiceRecordingModal.show(
-                      context,
-                      coordinator: widget.voiceCoordinator,
-                    );
-                  }
-                },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceCenterButton(bool isDark) {
+    return Expanded(
+      child: Tooltip(
+        message: 'AI Voice Transaction Journaling',
+        child: InkWell(
+          key: const Key('dashboard_voice_entry_fab'),
+          onTap: () async {
+            final isInstalled =
+                await ModelManagementService.instance.isModelPackInstalled();
+            if (!mounted) return;
+            if (!isInstalled) {
+              await VoiceModelDownloadSheet.show(context);
+            } else {
+              await VoiceRecordingModal.show(
+                context,
+                coordinator: widget.voiceCoordinator,
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? const [
+                            Color(0xFF34D399),
+                            Color(0xFF10B981),
+                            Color(0xFF059669),
+                            Color(0xFF047857),
+                          ]
+                        : const [
+                            Color(0xFF34D399),
+                            Color(0xFF10B981),
+                            Color(0xFF059669),
+                            Color(0xFF047857),
+                          ],
+                  ),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF6EE7B7) : Colors.white,
+                    width: 2.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981)
+                          .withValues(alpha: isDark ? 0.55 : 0.40),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: ClipOval(
                   child: Image.asset(
                     'assets/icon/ai_voice_icon.jpg',
-                    width: 58,
-                    height: 58,
+                    width: 42,
+                    height: 42,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Stack(
                       alignment: Alignment.center,
@@ -482,15 +581,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         const Icon(
                           Icons.mic_rounded,
                           color: Colors.white,
-                          size: 26,
+                          size: 21,
                         ),
                         Positioned(
-                          top: 4,
-                          right: 4,
+                          top: 3,
+                          right: 3,
                           child: Icon(
                             Icons.auto_awesome,
                             color: Colors.amber.shade300,
-                            size: 13,
+                            size: 11,
                           ),
                         ),
                       ],
@@ -498,38 +597,76 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   ),
                 ),
               ),
-            )
-          : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
-            label: 'Home',
+              const SizedBox(height: 2),
+              Text(
+                'Voice',
+                style: AppTypography.labelSmall.copyWith(
+                  color: isDark ? AppColors.emerald300 : AppColors.emerald800,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.pie_chart_outline_rounded),
-            selectedIcon: Icon(Icons.pie_chart_rounded),
-            label: 'Budgets',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData selectedIcon,
+    required String label,
+    required bool isDark,
+  }) {
+    final isSelected = _selectedIndex == index;
+    final primaryColor = isDark ? AppColors.emerald300 : AppColors.emerald800;
+    final unselectedColor = isDark ? AppColors.gray400 : AppColors.gray500;
+    final color = isSelected ? primaryColor : unselectedColor;
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _onItemTapped(index),
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? (isDark
+                          ? AppColors.emerald900.withValues(alpha: 0.5)
+                          : AppColors.emerald100)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  isSelected ? selectedIcon : icon,
+                  color: color,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: color,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 10.5,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.savings_outlined),
-            selectedIcon: Icon(Icons.savings_rounded),
-            label: 'Goals',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_outlined),
-            selectedIcon: Icon(Icons.account_balance_rounded),
-            label: 'Accounts',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights_rounded),
-            label: 'Insights',
-          ),
-        ],
+        ),
       ),
     );
   }

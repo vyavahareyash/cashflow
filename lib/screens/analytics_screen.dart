@@ -5,18 +5,16 @@ import 'package:intl/intl.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
-import 'history_screen.dart';
-
 class AnalyticsScreen extends StatefulWidget {
-  const AnalyticsScreen({super.key});
+  final int? initialIndex;
+
+  const AnalyticsScreen({super.key, this.initialIndex});
 
   @override
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends State<AnalyticsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Map<String, double> _categorySpending = {};
   Map<String, double> _monthlySpendings = {};
   bool _isYtd = false;
@@ -28,7 +26,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     final today = DateTime.now();
     _startDate = DateTime(today.year, today.month, 1);
     _endDate = today;
@@ -39,7 +36,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   @override
   void dispose() {
     DatabaseHelper.dataRevision.removeListener(_onDataChanged);
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -107,39 +103,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: Container(
-          color: isDark ? AppColors.darkSurface : AppColors.white,
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: AppColors.emerald600,
-            indicatorWeight: 3,
-            labelColor: isDark ? AppColors.emerald400 : AppColors.emerald700,
-            unselectedLabelColor: isDark
-                ? AppColors.gray400
-                : AppColors.gray600,
-            tabs: const [
-              Tab(
-                icon: Icon(Icons.receipt_long_rounded, size: 18),
-                text: 'Activity Ledger',
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: const Text(
+                'Spending Analytics',
+                style: AppTypography.titleLarge,
               ),
-              Tab(
-                icon: Icon(Icons.pie_chart_rounded, size: 18),
-                text: 'Analytics & Trends',
-              ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : null,
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.emerald700),
             )
-          : TabBarView(
-              controller: _tabController,
-              children: [const HistoryScreen(), _buildAnalyticsTab(isDark)],
-            ),
+          : _buildAnalyticsTab(isDark),
     );
   }
 
@@ -151,7 +127,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       onRefresh: _loadAllData,
       color: AppColors.emerald700,
       child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          100,
+        ),
         children: [
           // Month Selector Card
           _buildMonthSelectorCard(isDark),

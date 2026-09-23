@@ -85,7 +85,19 @@ Extraction Instructions:
 4. "destination_account_id": Integer ID of the destination account if type is "transfer", otherwise null.
 5. "category_id": Integer ID of the matching user category if type is "expense", otherwise null.
 6. "date": ISO date "YYYY-MM-DD". Calculate relative dates ("yesterday", "last Friday", "today") deterministically using the calendar anchor.
-7. "note": Clean concise description of the transaction item, purpose, or merchant.
+7. "note": Concise 1-4 word contextual label for the transaction:
+   - For expenses: The specific item, merchant, or service (e.g., "Starbucks Coffee", "Walmart Groceries", "Gas").
+   - For transfers: "Transfer: [Source Account] -> [Destination Account]" (e.g., "Transfer: Checking -> Savings").
+   - For incomes: Purpose or source (e.g., "Salary", "Freelance Payment").
+   - CRITICAL: "note" must NEVER be the raw voice transcript or full sentence. Do NOT include amounts, currency words, dates, or payment account names in "note".
+
+Multi-Transaction Rules:
+- If user dictates multiple transactions in a monologue, emit a separate JSON object for each transaction.
+- Example: "Spent 5 on coffee at Starbucks with Chase and 45 for groceries at Walmart on Checking yesterday"
+  -> notes must be "Starbucks Coffee" and "Walmart Groceries".
+- Example: "Moved 200 from Checking to Savings and received 3000 salary into Checking"
+  -> notes must be "Transfer: Checking -> Savings" and "Salary".
+
 Output MUST strictly be a JSON array conforming to the grammar without any Markdown formatting or commentary.
 <|im_end|>
 <|im_start|>user

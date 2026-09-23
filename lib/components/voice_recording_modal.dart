@@ -61,12 +61,11 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   late final VoicePipelineCoordinator _coordinator;
   StreamSubscription<double>? _amplitudeSubscription;
   double _currentAmplitude = 0.0;
+  bool _isMicActive = true;
 
   VoiceModalState _state = VoiceModalState.initiating;
   String _statusMessage = 'Preparing offline voice models...';
   String? _errorMessage;
-  int _elapsedSeconds = 0;
-  Timer? _durationTimer;
 
   @override
   void initState() {
@@ -81,7 +80,6 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   @override
   void dispose() {
     _amplitudeSubscription?.cancel();
-    _durationTimer?.cancel();
     if (_coordinator.isRecording) {
       _coordinator.cancelRecording();
     }
@@ -98,6 +96,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
       if (!mounted) return;
       setState(() {
+        _isMicActive = true;
         _state = VoiceModalState.recording;
         _statusMessage = 'Listening... Speak your transactions in rupees';
       });
@@ -106,14 +105,6 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
         if (mounted) {
           setState(() {
             _currentAmplitude = amp;
-          });
-        }
-      });
-
-      _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) {
-          setState(() {
-            _elapsedSeconds++;
           });
         }
       });
@@ -132,10 +123,31 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     }
   }
 
+  Future<void> _toggleMic() async {
+    if (_state != VoiceModalState.recording) return;
+
+    if (_isMicActive) {
+      await _coordinator.pauseListening();
+      if (!mounted) return;
+      setState(() {
+        _isMicActive = false;
+        _currentAmplitude = 0.0;
+        _statusMessage = 'Microphone paused. Tap mic to resume';
+      });
+    } else {
+      await _coordinator.resumeListening();
+      if (!mounted) return;
+      setState(() {
+        _isMicActive = true;
+        _statusMessage = 'Listening... Speak your transactions in rupees';
+      });
+    }
+  }
+
   Future<void> _stopAndProcess() async {
     _amplitudeSubscription?.cancel();
-    _durationTimer?.cancel();
     setState(() {
+      _isMicActive = false;
       _state = VoiceModalState.processing;
       _statusMessage = 'Transcribing speech & extracting transactions...';
     });
@@ -151,12 +163,39 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
       Navigator.of(context).pop();
 
       if (drafts.isEmpty) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No transactions recognized. Please speak clearly with amounts in rupees and items.',
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: isDark ? AppColors.darkText : AppColors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'No transactions recognized. Please speak clearly with amounts in rupees and items.',
+                    style: TextStyle(
+                      color: isDark ? AppColors.darkText : AppColors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            backgroundColor: AppColors.gray800,
+            backgroundColor: isDark ? AppColors.darkSurfaceElevated : AppColors.gray900,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isDark ? AppColors.darkBorder : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            duration: const Duration(seconds: 4),
           ),
         );
         await _coordinator.endSession();
@@ -198,7 +237,6 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
   Future<void> _cancel() async {
     _amplitudeSubscription?.cancel();
-    _durationTimer?.cancel();
     try {
       await _coordinator.cancelRecording();
       await _coordinator.endSession();
@@ -206,12 +244,6 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     if (mounted) {
       Navigator.of(context).pop();
     }
-  }
-
-  String _formatDuration(int totalSeconds) {
-    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
-    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 
   @override
@@ -307,25 +339,9 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
         // 2. Voice-Driven Reactive AI Waveform & Centered Mic Button
         _buildWaveformView(isDark),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.lg),
 
-        // 3. Elapsed Duration Timer
-        Semantics(
-          label: 'Recording duration ${_formatDuration(_elapsedSeconds)}',
-          child: Text(
-            _formatDuration(_elapsedSeconds),
-            key: const Key('voice_recording_duration_text'),
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-
-        // 4. Spoken Example Helper (Indian Context)
+        // 3. Spoken Example Helper (Indian Context)
         Text(
           'e.g., "Lunch 250 rupees on HDFC, 1200 rupees groceries yesterday"',
           style: AppTypography.bodySmall.copyWith(
@@ -343,7 +359,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
       valueListenable: _coordinator.liveTranscriptListenable,
       builder: (context, transcript, _) {
         final hasText = transcript.trim().isNotEmpty;
-        final isHearingVoice = _currentAmplitude > 0.08;
+        final isHearingVoice = _isMicActive && _currentAmplitude > 0.06;
 
         return Container(
           key: const Key('voice_recording_live_transcript_card'),
@@ -359,11 +375,13 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                 : AppColors.emerald500.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isHearingVoice
-                  ? AppColors.emerald500.withValues(alpha: 0.5)
-                  : isDark
-                      ? AppColors.darkBorder
-                      : AppColors.gray200,
+              color: !_isMicActive
+                  ? (isDark ? AppColors.darkBorder : AppColors.gray200)
+                  : isHearingVoice
+                      ? AppColors.emerald500.withValues(alpha: 0.5)
+                      : isDark
+                          ? AppColors.darkBorder
+                          : AppColors.gray200,
               width: 1.5,
             ),
           ),
@@ -371,16 +389,18 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header Row: AI Badge & Hearing Voice / Listening indicator
+              // Header Row: AI Badge & Hearing Voice / Listening / Mic Off indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.auto_awesome,
                         size: 14,
-                        color: AppColors.emerald500,
+                        color: _isMicActive
+                            ? AppColors.emerald500
+                            : (isDark ? AppColors.gray500 : AppColors.gray400),
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       Text(
@@ -388,7 +408,9 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                         style: AppTypography.labelSmall.copyWith(
                           color: isDark
                               ? AppColors.darkTextSecondary
-                              : AppColors.emerald700,
+                              : (_isMicActive
+                                  ? AppColors.emerald700
+                                  : AppColors.gray600),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -401,20 +423,29 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                         height: 8,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isHearingVoice
-                              ? AppColors.emerald500
-                              : (isDark ? AppColors.gray600 : AppColors.gray400),
+                          color: !_isMicActive
+                              ? (isDark ? AppColors.gray600 : AppColors.gray400)
+                              : isHearingVoice
+                                  ? AppColors.emerald500
+                                  : (isDark ? AppColors.gray600 : AppColors.gray400),
                         ),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isHearingVoice ? 'Hearing Voice' : 'Listening',
+                        !_isMicActive
+                            ? 'Mic Off'
+                            : (isHearingVoice ? 'Hearing Voice' : 'Listening'),
+                        key: const Key('voice_recording_header_status_badge'),
                         style: AppTypography.labelSmall.copyWith(
-                          color: isHearingVoice
-                              ? AppColors.emerald500
-                              : (isDark
+                          color: !_isMicActive
+                              ? (isDark
                                   ? AppColors.darkTextSecondary
-                                  : AppColors.gray500),
+                                  : AppColors.gray500)
+                              : isHearingVoice
+                                  ? AppColors.emerald500
+                                  : (isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.gray500),
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
                         ),
@@ -462,12 +493,12 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
   Widget _buildWaveformView(bool isDark) {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: _currentAmplitude),
+      tween: Tween<double>(begin: 0.0, end: _isMicActive ? _currentAmplitude : 0.0),
       duration: const Duration(milliseconds: 120),
       curve: Curves.easeOutQuad,
       builder: (context, animatedAmp, child) {
         return SizedBox(
-          height: 130,
+          height: 140,
           width: double.infinity,
           child: Stack(
             alignment: Alignment.center,
@@ -477,7 +508,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                 child: ExcludeSemantics(
                   child: CustomPaint(
                     painter: _VoiceReactiveWavePainter(
-                      amplitude: animatedAmp,
+                      amplitude: _isMicActive ? animatedAmp : 0.0,
                       isDark: isDark,
                     ),
                   ),
@@ -485,52 +516,118 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
               ),
 
               // Dynamic Voice-Reactive Glowing Aura Ring
-              ExcludeSemantics(
-                child: Container(
-                  width: 86 * (1.0 + animatedAmp * 0.45),
-                  height: 86 * (1.0 + animatedAmp * 0.45),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        AppColors.accent.withValues(
-                          alpha: (0.15 + animatedAmp * 0.35).clamp(0.0, 1.0),
-                        ),
-                        AppColors.emerald500.withValues(
-                          alpha: (0.1 + animatedAmp * 0.3).clamp(0.0, 1.0),
-                        ),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.2, 0.7, 1.0],
+              if (_isMicActive)
+                ExcludeSemantics(
+                  child: Container(
+                    width: 86 * (1.0 + animatedAmp * 0.45),
+                    height: 86 * (1.0 + animatedAmp * 0.45),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.accent.withValues(
+                            alpha: (0.15 + animatedAmp * 0.35).clamp(0.0, 1.0),
+                          ),
+                          AppColors.emerald500.withValues(
+                            alpha: (0.1 + animatedAmp * 0.3).clamp(0.0, 1.0),
+                          ),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.2, 0.7, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Centered AI Microphone Toggle Button
+              Semantics(
+                button: true,
+                label: _isMicActive ? 'Mute microphone' : 'Turn on microphone',
+                child: Material(
+                  color: _isMicActive
+                      ? AppColors.emerald600
+                      : (isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.gray300),
+                  shape: const CircleBorder(),
+                  elevation: _isMicActive ? 6 : 2,
+                  shadowColor: _isMicActive
+                      ? AppColors.emerald600.withValues(
+                          alpha: (0.35 + animatedAmp * 0.4).clamp(0.0, 1.0),
+                        )
+                      : Colors.transparent,
+                  child: InkWell(
+                    key: const Key('voice_recording_mic_button'),
+                    customBorder: const CircleBorder(),
+                    onTap: _toggleMic,
+                    child: SizedBox(
+                      width: 76,
+                      height: 76,
+                      child: Icon(
+                        _isMicActive
+                            ? Icons.mic_rounded
+                            : Icons.mic_off_rounded,
+                        size: 38,
+                        color: _isMicActive
+                            ? AppColors.white
+                            : (isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.gray700),
+                      ),
                     ),
                   ),
                 ),
               ),
 
-              // Centered AI Microphone Button
-              Semantics(
-                button: true,
-                label: 'Stop recording and process transactions',
-                child: Material(
-                  color: AppColors.emerald600,
-                  shape: const CircleBorder(),
-                  elevation: 6,
-                  shadowColor: AppColors.emerald600.withValues(
-                    alpha: (0.35 + animatedAmp * 0.4).clamp(0.0, 1.0),
-                  ),
-                  child: InkWell(
-                    key: const Key('voice_recording_mic_button'),
-                    customBorder: const CircleBorder(),
-                    onTap: _stopAndProcess,
-                    child: const SizedBox(
-                      width: 76,
-                      height: 76,
-                      child: Icon(
-                        Icons.mic_rounded,
-                        size: 38,
-                        color: AppColors.white,
-                      ),
+              // Mic ON / OFF status pill badge
+              Positioned(
+                bottom: 4,
+                child: Container(
+                  key: const Key('voice_recording_mic_badge'),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _isMicActive
+                        ? AppColors.emerald600
+                        : (isDark ? AppColors.darkSurfaceElevated : AppColors.gray600),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isMicActive
+                          ? AppColors.emerald500
+                          : (isDark ? AppColors.darkBorder : AppColors.gray500),
+                      width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isMicActive
+                              ? AppColors.emerald50
+                              : AppColors.gray400,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isMicActive ? 'MIC ON' : 'MIC OFF',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

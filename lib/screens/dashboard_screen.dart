@@ -13,6 +13,8 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/category_badge.dart';
 import '../components/app_dialogs.dart';
+import 'budget_screen.dart';
+import 'goals_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int tabIndex)? onNavigateTab;
@@ -193,9 +195,11 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
       color: AppColors.emerald700,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          100,
         ),
         children: [
           // 1. HERO USABLE BALANCE CARD
@@ -433,9 +437,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             color: AppColors.warning,
             isDark: isDark,
             onTap: () {
-              if (widget.onNavigateTab != null) {
-                widget.onNavigateTab!(2); // Navigate to Goals
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GoalsScreen()),
+              );
             },
           ),
         ),
@@ -448,9 +453,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             color: AppColors.info,
             isDark: isDark,
             onTap: () {
-              if (widget.onNavigateTab != null) {
-                widget.onNavigateTab!(1); // Navigate to Budgets
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BudgetScreen()),
+              );
             },
           ),
         ),
@@ -529,7 +535,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
 
     return CustomCard(
       onTap: () {
-        if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BudgetScreen()),
+        );
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,7 +703,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             ),
             TextButton(
               onPressed: () {
-                if (widget.onNavigateTab != null) widget.onNavigateTab!(2);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GoalsScreen()),
+                );
               },
               child: Text(
                 'View All (${_goals.length})',
@@ -749,9 +761,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                   child: CustomCard(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     onTap: () {
-                      if (widget.onNavigateTab != null) {
-                        widget.onNavigateTab!(2);
-                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const GoalsScreen()),
+                      );
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,7 +1032,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             ),
             TextButton(
               onPressed: () {
-                if (widget.onNavigateTab != null) widget.onNavigateTab!(4);
+                if (widget.onNavigateTab != null) widget.onNavigateTab!(1);
               },
               child: Text(
                 'Full History',

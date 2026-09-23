@@ -84,9 +84,20 @@ Cashflow adheres to uncompromising privacy guarantees:
 
 ---
 
+## Language & Multilingual Support
+
+- **Current Status**: **English only**. Transactions must be spoken in English.
+- **Speech Recognition (STT)**: Uses platform-native on-device speech recognition defaulting to system locale; downstream extraction expects English transcriptions.
+- **Neural Entity Extraction (SLM)**: The bundled model (`SmolLM2-360M-Instruct`) and ChatML prompt instructions are optimized for English phrasing.
+- **Deterministic Fallback**: Heuristic regexes, weekday resolvers, currency terms (`$`, dollars, bucks), and category keywords in `VoiceEntityParser` are English-only.
+- **Future Roadmap**: Multilingual models (`Qwen2.5-0.5B-Instruct` covering 29+ languages) were evaluated in [RESEARCH_VOICE_AI_SELECTION.md](../engineering/RESEARCH_VOICE_AI_SELECTION.md) and [ADR-0005](../adr/0005-offline-voice-transaction-entry.md), but are currently unbundled to preserve device storage and RAM on low-spec hardware.
+
+---
+
 ## Technical Specifications & Architecture
 
 For engineering details, schema contracts, and benchmark evaluations:
+- **Manual Testing Scripts (Indian Context)**: [Voice Testing Scripts](VOICE_MANUAL_TESTING_INDIAN_CONTEXT.md)
 - **Architectural Specification**: [Offline Voice Journaling Spec](../product/SPEC_OFFLINE_VOICE_JOURNALING.md)
 - **ADR-0005**: [Offline Voice Transaction Entry](../adr/0005-offline-voice-transaction-entry.md)
 - **ADR-0006**: [Platform-Native On-Device Speech Recognition](../adr/0006-platform-native-on-device-stt.md)

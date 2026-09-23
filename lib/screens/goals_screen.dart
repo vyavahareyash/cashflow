@@ -2543,6 +2543,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
         : 0.0;
 
     return Scaffold(
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: const Text('Sinking Funds'),
+              actions: [
+                IconButton(
+                  tooltip: 'New Goal',
+                  icon: const Icon(Icons.add_rounded),
+                  onPressed: _showAddGoalDialog,
+                ),
+              ],
+            )
+          : null,
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.emerald700),
@@ -2622,13 +2634,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'goals-add-fab',
-        onPressed: _showAddGoalDialog,
-        backgroundColor: AppColors.emerald700,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New Goal', style: AppTypography.labelLarge),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: Navigator.canPop(context) ? 20 : 88,
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: 'goals-add-fab',
+          onPressed: _showAddGoalDialog,
+          backgroundColor: AppColors.emerald700,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('New Goal', style: AppTypography.labelLarge),
+        ),
       ),
     );
   }

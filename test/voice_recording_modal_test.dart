@@ -212,7 +212,7 @@ void main() {
       expect(find.byKey(const Key('voice_recording_live_transcript_card')), findsOneWidget);
       expect(find.byKey(const Key('voice_recording_live_transcript_text')), findsOneWidget);
       expect(find.textContaining('rupees'), findsWidgets);
-      expect(find.byKey(const Key('voice_recording_duration_text')), findsOneWidget);
+      expect(find.byKey(const Key('voice_recording_duration_text')), findsNothing);
       expect(find.byKey(const Key('voice_recording_cancel_button')), findsOneWidget);
       expect(find.byKey(const Key('voice_recording_done_button')), findsOneWidget);
     });
@@ -232,6 +232,36 @@ void main() {
       await tester.pump();
 
       expect(find.text('Chai 20 rupees on UPI yesterday'), findsOneWidget);
+    });
+
+    testWidgets('1c. Tapping central mic button toggles mic between ON and OFF states with visual indicators', (tester) async {
+      await tester.pumpWidget(buildTestApp(coordinator));
+      await tester.tap(find.byKey(const Key('open_modal_button')));
+      await tester.pump();
+      await waitForRecordingReady(tester);
+
+      // Initially active: shows 'Listening' and 'MIC ON'
+      expect(find.text('Listening'), findsOneWidget);
+      expect(find.text('MIC ON'), findsOneWidget);
+      expect(coordinator.isMicPaused, isFalse);
+
+      // Tap central mic button -> pauses listening
+      await tester.tap(find.byKey(const Key('voice_recording_mic_button')));
+      await tester.pump();
+
+      expect(find.text('Mic Off'), findsOneWidget);
+      expect(find.text('MIC OFF'), findsOneWidget);
+      expect(find.byIcon(Icons.mic_off_rounded), findsOneWidget);
+      expect(coordinator.isMicPaused, isTrue);
+
+      // Tap central mic button again -> resumes listening
+      await tester.tap(find.byKey(const Key('voice_recording_mic_button')));
+      await tester.pump();
+
+      expect(find.text('Listening'), findsOneWidget);
+      expect(find.text('MIC ON'), findsOneWidget);
+      expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
+      expect(coordinator.isMicPaused, isFalse);
     });
 
     testWidgets('2. Tap Cancel cancels capture and dismisses modal cleanly (US 13)', (tester) async {
@@ -343,6 +373,28 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 
       handle.dispose();
+    });
+
+    testWidgets('7. Empty drafts displays dark mode readable SnackBar', (tester) async {
+      mockSttEngine.initialize(modelDirPath: modelDir.path);
+      mockSttEngine.defaultTranscript = 'Hello how are you doing today';
+      mockSlmEngine.initialize(modelPath: 'dummy');
+      mockSlmEngine.defaultResponse = '[]'; // No financial entities
+
+      await tester.pumpWidget(buildTestApp(coordinator));
+      await tester.tap(find.byKey(const Key('open_modal_button')));
+      await tester.pump();
+      await waitForRecordingReady(tester);
+
+      await tester.tap(find.byKey(const Key('voice_recording_done_button')));
+      await tester.pump();
+
+      for (int i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      expect(find.textContaining('No transactions recognized'), findsOneWidget);
     });
   });
 }

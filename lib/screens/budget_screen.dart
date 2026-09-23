@@ -335,6 +335,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final incomeCategories = _categories.where((c) => c.isIncome).toList();
 
     return Scaffold(
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: const Text('Monthly Budgets'),
+              actions: [
+                IconButton(
+                  tooltip: _selectedTab == 'expense' ? 'Add Budget' : 'Add Category',
+                  icon: const Icon(Icons.add_rounded),
+                  onPressed: () => _showCategoryDialog(),
+                ),
+              ],
+            )
+          : null,
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.emerald700),
@@ -516,15 +528,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'budget-add-fab',
-        onPressed: () => _showCategoryDialog(),
-        backgroundColor: AppColors.emerald700,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(
-          _selectedTab == 'expense' ? 'Add Budget' : 'Add Category',
-          style: AppTypography.labelLarge,
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: Navigator.canPop(context) ? 20 : 88,
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: 'budget-add-fab',
+          onPressed: () => _showCategoryDialog(),
+          backgroundColor: AppColors.emerald700,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add_rounded),
+          label: Text(
+            _selectedTab == 'expense' ? 'Add Budget' : 'Add Category',
+            style: AppTypography.labelLarge,
+          ),
         ),
       ),
     );
