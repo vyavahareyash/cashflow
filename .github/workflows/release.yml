@@ -73,14 +73,18 @@ jobs:
           fi
           ls -la
 
+      - name: Stage Release Artifacts Flat
+        run: |
+          mkdir -p build/dist
+          cp build/app/outputs/flutter-apk/cashflow*.apk build/dist/
+          cp build/app/outputs/bundle/release/cashflow-release.aab build/dist/
+          ls -la build/dist/
+
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-artifacts
-          path: |
-            build/app/outputs/flutter-apk/cashflow*.apk
-            build/app/outputs/bundle/release/cashflow-release.aab
-            build/app/outputs/bundle/release/app-release.aab
+          path: build/dist/*
           retention-days: 1
 
   build-web:
@@ -170,7 +174,9 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: "Cashflow ${{ github.ref_name }}"
-          files: release-assets/*
+          files: |
+            release-assets/*
+            release-assets/**/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
