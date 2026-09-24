@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon/playstore_feature_graphic_1024x500.png" alt="Cashflow Feature Graphic" width="100%">
+  <img src="assets/banner.webp" alt="Cashflow Preview" width="100%">
 </p>
 
 # Cashflow
