@@ -1800,6 +1800,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const Divider(height: 16),
           _buildInfoRow('Storage Engine', 'SQLite (Local-First)', isDark),
           const Divider(height: 16),
+          _buildInfoRow('License', 'GNU GPLv3', isDark),
+          const Divider(height: 16),
           _buildInfoRow('Default Currency', '₹ INR (Indian Rupee)', isDark),
           const Divider(height: 16),
           _buildInfoRow(
