@@ -51,10 +51,10 @@ jobs:
           EOF
 
       - name: Build Split APKs
-        run: flutter build apk --split-per-abi
+        run: flutter build apk --split-per-abi --dart-define=ENABLE_EXTERNAL_DONATIONS=true
 
       - name: Build Universal Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=ENABLE_EXTERNAL_DONATIONS=true
 
       - name: Build Android App Bundle (AAB)
         run: flutter build appbundle --release
@@ -104,40 +104,36 @@ jobs:
           path: build/dist/*
           retention-days: 1
 
-  build-web:
-    name: Build Web App
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Web
-        run: flutter build web --release
-
-      - name: Package Web App
-        run: |
-          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
-          cd build/web
-          zip -r ../../cashflow-web.zip .
-          cd ../..
-          cp cashflow-web.zip "cashflow-v${VERSION}-web.zip"
-
-      - name: Upload Web Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-bundle
-          path: |
-            cashflow-web.zip
-            cashflow-v*-web.zip
-          retention-days: 1
+  # Web build temporarily paused pending web-specific SQLite/audio FFI compatibility
+  # build-web:
+  #   name: Build Web App
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Set up Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
+  #         cache: true
+  #     - name: Install dependencies
+  #       run: flutter pub get
+  #     - name: Build Web
+  #       run: flutter build web --release
+  #     - name: Package Web App
+  #       run: |
+  #         VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+  #         cd build/web
+  #         zip -r ../../cashflow-web.zip .
+  #         cd ../..
+  #         cp cashflow-web.zip "cashflow-v${VERSION}-web.zip"
+  #     - name: Upload Web Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: web-bundle
+  #         path: |
+  #           cashflow-web.zip
+  #           cashflow-v*-web.zip
+  #         retention-days: 1
 
   build-ios:
     name: Build iOS App
@@ -180,8 +176,8 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
-    needs: [build-android, build-web, build-ios]
-    if: always() && (needs.build-android.result == 'success' || needs.build-web.result == 'success' || needs.build-ios.result == 'success')
+    needs: [build-android, build-ios]
+    if: always() && (needs.build-android.result == 'success' || needs.build-ios.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
