@@ -56,6 +56,14 @@ Usable Balance = Total Account Money - Locked Goal Allocations
 
 <table>
   <tr>
+    <td><img src="screenshots/17b-voice-listening-light.png" alt="Voice AI active recording screen"></td>
+    <td><img src="screenshots/17c-voice-staging-light.png" alt="Voice AI transaction staging sheet"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Zero-friction on-device voice dictation</b></td>
+    <td align="center"><b>Multi-draft transaction staging & review</b></td>
+  </tr>
+  <tr>
     <td><img src="screenshots/05-budget-light.png" alt="Monthly budget screen"></td>
     <td><img src="screenshots/08-goals-light.png" alt="Savings goals screen"></td>
   </tr>
@@ -73,13 +81,15 @@ Usable Balance = Total Account Money - Locked Goal Allocations
   </tr>
   <tr>
     <td><img src="screenshots/16-analytics-trends-light.png" alt="Spending trends screen"></td>
-    <td><img src="screenshots/17-backup-restore-light.png" alt="Backup and restore screen"></td>
+    <td><img src="screenshots/18-backup-restore-light.png" alt="Backup and restore screen"></td>
   </tr>
   <tr>
     <td align="center"><b>Review monthly trends & burn velocity</b></td>
     <td align="center"><b>Export & restore portable JSON / SQLite backups</b></td>
   </tr>
 </table>
+
+> 📸 **Visual Gallery**: Explore all 40+ light and dark screens, modal dialogs, and tablet layouts in the [Screenshot Gallery](screenshots/index.html).
 
 ---
 
