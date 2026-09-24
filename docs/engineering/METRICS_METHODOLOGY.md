@@ -20,7 +20,8 @@ Metrics are dynamically extracted from the repository tree via Git file plumbing
 - **Test Lines of Code (LOC)**:
   $$\text{test\_lines} = \sum_{f \in \text{test\_files}} \text{LineCount}(f)$$
 - **Automated Test Assertions / Cases**:
-  $$\text{test\_cases} = \sum_{f \in \text{test\_files}} \text{CountMatches}\left(f, \text{regex}(`\b(?:test|testWidgets)\(`)\right)$$
+  Calculated across all `test_files` matching test invocation signatures `\b(?:test|testWidgets)\(`:
+  $$\text{test\_cases} = \sum_{f \in \text{test\_files}} \text{CountMatches}(f, \text{pattern})$$
 - **Test-to-Production Ratio**:
   $$\text{Test Ratio (\%)} = \left( \frac{\text{test\_lines}}{\text{lib\_lines}} \right) \times 100$$
   *Current Benchmark: ~52.7% (top 5% of open-source mobile codebases).*
@@ -45,7 +46,7 @@ Extracted directly from git commit history without external API dependencies:
   ```bash
   git log --date=iso --pretty=format:'%h|%an|%ad|%s'
   ```
-- **Active Sprint Days**: Count of unique calendar dates ($YYYY-MM-DD$) with at least one commit:
+- **Active Sprint Days**: Count of unique calendar dates (`YYYY-MM-DD`) with at least one commit:
   $$\text{active\_days} = \left| \{ \text{Date}(c) \mid c \in \text{commits} \} \right|$$
 - **Velocity per Active Day**:
   $$v_{\text{LOC}} = \left\lfloor \frac{\text{Total Dart LOC}}{\max(1, \text{active\_days})} \right\rfloor \approx 2,880 \text{ LOC/day}$$
@@ -95,8 +96,8 @@ $$\text{Nominal Months} = \frac{\text{Effort (PM)}}{2.5}$$
 Estimates what a commercial digital product agency (US/EU) would quote to build this exact production software from scratch:
 - **Empirical Cross-Platform Density Multiplier**: $26\text{ billable hours / KLOC}$ (accounting for Flutter component reuse, UI layout, SQLite schema migrations, and custom state machines).
 $$\text{Agency Hours} = \lfloor \text{KLOC} \times 26 \rfloor \approx 1,034\text{ Hours}$$
-- **Blended Hourly Consultancy Billing Rate**: $\$125\text{ USD / hour}$ (conservative median for senior mobile/ML engineering consultancies).
-$$\text{Agency Commercial Cost} = \text{Agency Hours} \times \$125 \approx \$129,250\text{ USD}$$
+- **Blended Hourly Consultancy Billing Rate**: \$125 USD / hour (conservative median for senior mobile/ML engineering consultancies).
+$$\text{Agency Commercial Cost} = \text{Agency Hours} \times \text{\$}125 \approx \text{\$}129,250\text{ USD}$$
 
 ---
 
@@ -117,18 +118,18 @@ $$\text{Total AI Context Volume} = \text{total\_commits} \times 0.18\text{M} \ap
 - **Output (Completion) Ratio**: $30\%$ ($\approx 6.1\text{M Tokens}$)
 
 ### 5.2 Compute Spend & Token Pricing
-- **Blended Model Rate**: $\$3.50\text{ USD / Million Tokens}$ (weighted average across frontier reasoning models including Claude 3.5 Sonnet, Gemini 1.5 Pro, and GPT-4o).
-$$\text{Estimated AI Compute Spend} = \max\left(25.0, \text{Total AI Tokens (M)} \times \$3.50\right) \approx \$71.05\text{ USD}$$
+- **Blended Model Rate**: \$3.50 USD / Million Tokens (weighted average across frontier reasoning models including Claude 3.5 Sonnet, Gemini 1.5 Pro, and GPT-4o).
+$$\text{Estimated AI Compute Spend} = \max\left(25.0, \text{Total AI Tokens (M)} \times 3.50\right) \approx \text{\$}71.05\text{ USD}$$
 
 ### 5.3 Unit Economics per Artifact
 - **Cost per Commit**:
-  $$\text{Unit Cost}_{\text{commit}} = \frac{\text{Estimated AI Spend}}{\text{total\_commits}} \approx \frac{\$71.05}{113} \approx \$0.63 \text{ / commit}$$
+  $$\text{Unit Cost}_{\text{commit}} = \frac{\text{Estimated AI Spend}}{\text{total\_commits}} \approx \frac{\text{\$}71.05}{113} \approx \text{\$}0.63 \text{ / commit}$$
 - **Cost per 1,000 Lines of Tested Code (KLOC)**:
-  $$\text{Unit Cost}_{\text{KLOC}} = \frac{\text{Estimated AI Spend}}{\text{KLOC}} \approx \frac{\$71.05}{39.8} \approx \$1.78 \text{ / KLOC}$$
+  $$\text{Unit Cost}_{\text{KLOC}} = \frac{\text{Estimated AI Spend}}{\text{KLOC}} \approx \frac{\text{\$}71.05}{39.8} \approx \text{\$}1.78 \text{ / KLOC}$$
 
 ### 5.4 Capital Efficiency Multiplier
 Measures the capital leverage achieved by an AI-augmented solo engineer over a conventional software consultancy:
-$$\text{Capital Leverage Multiple} = \left\lfloor \frac{\text{Agency Commercial Cost}}{\text{Estimated AI Compute Spend}} \right\rfloor \approx \frac{\$129,250}{\$71.05} \approx 1,819\times$$
+$$\text{Capital Leverage Multiple} = \left\lfloor \frac{\text{Agency Commercial Cost}}{\text{Estimated AI Compute Spend}} \right\rfloor \approx \frac{\text{\$}129,250}{\text{\$}71.05} \approx 1,819\times$$
 
 ### 5.5 Human Focus Hours Saved
 $$\text{Actual Human Sprint Hours} = \text{active\_days} \times 12\text{ hrs/day} \approx 14 \times 12 = 168\text{ Hours}$$
@@ -153,6 +154,6 @@ The 6-axis readiness radar assesses software maturity on a normalized $0 \dots 1
 
 ## 7. Assumptions & Invariants Summary
 
-1. **Zero-Cloud Invariant**: Cashflow operates with zero cloud backend. App runtime AI token cost is strictly $\$0.00 / \text{month}$ for all end users.
+1. **Zero-Cloud Invariant**: Cashflow operates with zero cloud backend. App runtime AI token cost is strictly \$0.00 / month for all end users.
 2. **Deterministic Verification Gate**: AI speed does not compromise reliability because every commit must pass `flutter test --concurrency=1` with zero failures and zero analyzer warnings.
 3. **Reproducibility**: Running `python3 scripts/generate_report.py` re-executes all equations directly against the live Git DAG, ensuring that every number displayed in `reports/index.html` is mathematically verifiable.
