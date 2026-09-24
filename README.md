@@ -8,7 +8,7 @@
 [![Database](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)](https://sqlite.org)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline-success)](#private-by-default)
 [![Voice AI](https://img.shields.io/badge/Voice_AI-100%25_Offline-7C3AED)](docs/user/VOICE_JOURNALING.md)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 Cashflow is a private, offline-first personal finance app built with Flutter. It solves the biggest problem with traditional budgeting apps by answering one practical question: **how much money can I actually spend right now without sabotaging my future goals?**
 
