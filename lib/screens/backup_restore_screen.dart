@@ -10,6 +10,9 @@ import '../components/export_backup_dialog.dart';
 import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
+import '../components/custom_button.dart';
+import '../config/app_config.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 export '../components/export_backup_dialog.dart' show ExportFormat;
 
@@ -754,7 +757,15 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildDangerZoneCard(isDark),
           const SizedBox(height: AppSpacing.xl),
 
-          // 6. APP INFO & SYSTEM FOOTER
+          // 6. SUPPORT & OPEN SOURCE (Conditional on compile-time flag)
+          if (AppConfig.enableExternalDonations) ...[
+            _buildSectionHeader('Support & Open Source', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildSupportDevelopmentCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+
+          // 7. APP INFO & SYSTEM FOOTER
           _buildSectionHeader('System & About', isDark),
           const SizedBox(height: AppSpacing.xs),
           _buildAboutSystemCard(isDark),
@@ -1780,6 +1791,143 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: AppBorderRadius.mediumBorder,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- SUPPORT DEVELOPMENT CARD ---
+  Future<void> _openBuyMeACoffee() async {
+    final uri = Uri.parse(AppConfig.buyMeACoffeeUrl);
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open browser to visit support page.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open browser to visit support page.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildSupportDevelopmentCard(bool isDark) {
+    const bmcYellow = Color(0xFFFFDD00);
+    const bmcDarkText = Color(0xFF0D0C22);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: AppBorderRadius.largeBorder,
+        border: Border.all(
+          color: isDark
+              ? bmcYellow.withValues(alpha: 0.25)
+              : bmcYellow.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: bmcYellow.withValues(alpha: 0.12),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: bmcYellow.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/icon/bmc_cup_icon.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Support Development',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: isDark ? AppColors.darkText : AppColors.gray900,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '100% Free, Private & Offline',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Cashflow has zero ads, zero trackers, and zero subscriptions. If this app helps manage your budget, buying a coffee directly fuels continuous maintenance and new features!',
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark ? AppColors.gray300 : AppColors.gray700,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Material(
+            key: const Key('buy_me_a_coffee_button'),
+            color: bmcYellow,
+            borderRadius: BorderRadius.circular(14),
+            elevation: 2,
+            shadowColor: bmcYellow.withValues(alpha: 0.4),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: _openBuyMeACoffee,
+              child: Container(
+                width: double.infinity,
+                height: 52,
+                alignment: Alignment.center,
+                child: Image.asset(
+                  'assets/icon/bmc_official_button.png',
+                  height: 48,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
