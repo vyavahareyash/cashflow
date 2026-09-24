@@ -8,6 +8,7 @@
 [![Database](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)](https://sqlite.org)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline-success)](#private-by-default)
 [![Voice AI](https://img.shields.io/badge/Voice_AI-100%25_Offline-7C3AED)](docs/user/VOICE_JOURNALING.md)
+[![Interactive Report](https://img.shields.io/badge/Analytics-Interactive_Report-06B6D4?logo=googleanalytics&logoColor=white)](https://vyavahareyash.github.io/cashflow/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Buy Me A Coffee](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/vyavahareyash)
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=github)](https://github.com/sponsors/vyavahareyash)
@@ -27,6 +28,10 @@ Cashflow is 100% free, private, and open-source with zero ads, zero trackers, an
 <a href="https://buymeacoffee.com/vyavahareyash" target="_blank">
   <img src="assets/icon/bmc_official_button.png" alt="Buy Me A Coffee" height="46">
 </a>
+
+<br>
+
+> 📊 **Explore Engineering & Contribution Stats**: Interested in development velocity, COCOMO II effort estimations, test coverage ratios, and architectural value breakdown? Check out the **[Interactive Project Timeline & Analytics Report →](https://vyavahareyash.github.io/cashflow/)**.
 
 ---
 
