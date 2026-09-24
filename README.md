@@ -31,7 +31,7 @@ Cashflow is 100% free, private, and open-source with zero ads, zero trackers, an
 
 <br>
 
-> 📊 **Explore Engineering & Contribution Stats**: Interested in development velocity, COCOMO II effort estimations, test coverage ratios, and architectural value breakdown? Check out the **[Interactive Project Timeline & Analytics Report →](https://vyavahareyash.github.io/cashflow/)**.
+> 📊 **Engineering Analytics & AI Capital Efficiency**: Interested in development velocity, AI token economics (~1,600× capital leverage), sprint punchcard heatmaps, test coverage ratios, and architectural innovations? Check out the **[Interactive Project Analytics Report →](https://vyavahareyash.github.io/cashflow/)** (documented in our formal [Metrics Methodology](docs/engineering/METRICS_METHODOLOGY.md)).
 
 ---
 
