@@ -688,18 +688,18 @@
       <div class="kpi-card" style="--accent-color: var(--accent-amber);">
         <div class="kpi-label">Active Sprint Days</div>
         <div class="kpi-value">14 <span style="font-size: 1.1rem; color: var(--text-muted);">/ 40d</span></div>
-        <div class="kpi-subtext">Average ~8.7 commits/active day</div>
+        <div class="kpi-subtext">Average ~8.8 commits/active day</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-purple);">
         <div class="kpi-label">AI Tokens &amp; Compute</div>
-        <div class="kpi-value">~22.0M</div>
-        <div class="kpi-subtext">~$77.00 total token API credits spend</div>
+        <div class="kpi-value">~22.1M</div>
+        <div class="kpi-subtext">~$77.35 total token API credits spend</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-rose);">
         <div class="kpi-label">AI Capital Leverage</div>
-        <div class="kpi-value">~1,678&times;</div>
+        <div class="kpi-value">~1,670&times;</div>
         <div class="kpi-subtext">~$77 compute vs $129k agency baseline</div>
       </div>
     </div>
@@ -756,7 +756,7 @@
         <div class="callout-box">
           <div class="callout-title">Primary Deep-Work Window</div>
           <div class="callout-val">20:00 &ndash; 23:00 IST</div>
-          <div class="callout-sub">46 commits (37.7% of total development activity)</div>
+          <div class="callout-sub">47 commits (38.2% of total development activity)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Peak Sprint Days</div>
@@ -822,10 +822,10 @@
           <h4>AI Disruption & Token Economics</h4>
           <ul>
             <li><span>Development Augmentation</span> <span class="val">Agentic AI & LLM Pair Programming</span></li>
-            <li><span>Estimated LLM Context Volume</span> <span class="val">~22.0M Tokens</span></li>
-            <li><span>Estimated Compute Spend</span> <span class="val">~$77.0 USD in Token Credits</span></li>
+            <li><span>Estimated LLM Context Volume</span> <span class="val">~22.1M Tokens</span></li>
+            <li><span>Estimated Compute Spend</span> <span class="val">~$77.35 USD in Token Credits</span></li>
             <li><span>Hallucination Verification</span> <span class="val">326 tests + 27 visual markers</span></li>
-            <li><span>Capital Efficiency Multiplier</span> <span class="val">~1,678&times; vs Agency Spend</span></li>
+            <li><span>Capital Efficiency Multiplier</span> <span class="val">~1,670&times; vs Agency Spend</span></li>
             <li><span>Net Human Hours Saved</span> <span class="val">~866 Hours</span></li>
           </ul>
         </div>
@@ -862,12 +862,12 @@
       <div class="heatmap-callouts" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 0; margin-bottom: 1.5rem;">
         <div class="callout-box">
           <div class="callout-title">Total Context Throughput</div>
-          <div class="callout-val">~22.0M Tokens</div>
-          <div class="callout-sub">15.4M Prompt / 6.6M Completion (~180k tokens/commit)</div>
+          <div class="callout-val">~22.1M Tokens</div>
+          <div class="callout-sub">15.5M Prompt / 6.6M Completion (~180k tokens/commit)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Total AI Compute Spend</div>
-          <div class="callout-val">~$77.00 USD</div>
+          <div class="callout-val">~$77.35 USD</div>
           <div class="callout-sub">Blended ~$3.50/M tokens across planning, generation &amp; refactoring</div>
         </div>
         <div class="callout-box">
@@ -914,14 +914,14 @@
             <tr>
               <td>AI Compute &amp; Token Credits</td>
               <td>$0.00 (All Manual Labor)</td>
-              <td style="color: var(--accent-cyan); font-weight: 600;">~$77.00 USD</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~$77.35 USD</td>
               <td style="color: var(--accent-emerald); font-weight: 700;">Negligible Tooling Spend</td>
             </tr>
             <tr>
               <td>Total Capital Expenditure</td>
               <td>~$129,250 USD</td>
-              <td style="color: var(--accent-cyan); font-weight: 600;">~$77.00 USD</td>
-              <td style="color: var(--accent-emerald); font-weight: 800; font-size: 1rem;">~1,678&times; Capital Efficiency</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~$77.35 USD</td>
+              <td style="color: var(--accent-emerald); font-weight: 800; font-size: 1rem;">~1,670&times; Capital Efficiency</td>
             </tr>
             <tr>
               <td>End-User Runtime OpEx</td>
@@ -1194,7 +1194,7 @@
         <button class="filter-btn" onclick="filterType('Chore & Release')">Releases & Chores (16)</button>
         <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (7)</button>
         <button class="filter-btn" onclick="filterType('CI / CD')">CI / CD (6)</button>
-        <button class="filter-btn" onclick="filterType('Documentation')">Docs (13)</button>
+        <button class="filter-btn" onclick="filterType('Documentation')">Docs (14)</button>
         <input type="text" id="commitSearch" class="search-input" placeholder="Search commit message..." onkeyup="filterCommits()">
       </div>
 
@@ -1209,6 +1209,13 @@
             </tr>
           </thead>
           <tbody>
+
+            <tr data-type="Documentation" data-msg="docs: update project analytics metrics, token economics, and report dashboard statistics">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/52cc3a6" target="_blank" class="commit-hash">52cc3a6 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Documentation">Documentation</span></td>
+              <td>docs: update project analytics metrics, token economics, and report dashboard statistics</td>
+            </tr>
 
             <tr data-type="Design / Style" data-msg="style(reports): update report metrics, token economics, and value grid responsive layout">
               <td><a href="https://github.com/vyavahareyash/cashflow/commit/d199c4f" target="_blank" class="commit-hash">d199c4f &nearr;</a></td>
@@ -1553,13 +1560,6 @@
               <td>chore(release): bump version to 3.0.0+7 and update changelog</td>
             </tr>
 
-            <tr data-type="Feature" data-msg="feat(accounts): add credit card support with fund locking and bill pay (#65)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/0f64cfc" target="_blank" class="commit-hash">0f64cfc &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Feature">Feature</span></td>
-              <td>feat(accounts): add credit card support with fund locking and bill pay (#65)</td>
-            </tr>
-
           </tbody>
         </table>
       </div>
@@ -1612,7 +1612,7 @@
         labels: ["2026-08-15", "2026-08-16", "2026-09-05", "2026-09-08", "2026-09-09", "2026-09-13", "2026-09-14", "2026-09-15", "2026-09-17", "2026-09-19", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24"],
         datasets: [{
           label: 'Commits Per Active Day',
-          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 18],
+          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 19],
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           fill: true,
@@ -1633,7 +1633,7 @@
       }
     });
 
-    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 4, 5], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
+    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 4, 6], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const gridEl = document.getElementById('heatmapGrid');
 
@@ -1664,7 +1664,7 @@
         labels: ['Production Lib', 'Automated Tests', 'Documentation (MD)'],
         datasets: [{
           label: 'Lines of Code',
-          data: [26054, 13722, 8721],
+          data: [26054, 13722, 8723],
           backgroundColor: ['#06b6d4', '#10b981', '#8b5cf6'],
           borderRadius: 8
         }]

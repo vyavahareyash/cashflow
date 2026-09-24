@@ -2,6 +2,8 @@
 
 This document provides a comprehensive technical breakdown of all calculation formulas, heuristics, empirical constants, assumptions, and data extraction pipelines powering the **Cashflow Project Analytics & Engineering Portfolio Report** (`reports/index.html` and `scripts/generate_report.py`).
 
+> 🔗 **Live Dashboard**: View these calculations rendered dynamically in the **[Interactive Analytics & Portfolio Report →](https://vyavahareyash.github.io/cashflow/)**.
+
 ---
 
 ## 1. Codebase Volume & Footprint Extraction
