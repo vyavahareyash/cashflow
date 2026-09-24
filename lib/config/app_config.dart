@@ -38,7 +38,7 @@ class AppConfig {
 
   static const String _envLinkedInUrl = String.fromEnvironment(
     'LINKEDIN_URL',
-    defaultValue: 'https://www.linkedin.com/in/vyavahareyash',
+    defaultValue: 'https://www.linkedin.com/in/vyavahare-yash',
   );
 
   /// Visible-for-testing override for external donations visibility.
