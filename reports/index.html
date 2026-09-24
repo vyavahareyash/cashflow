@@ -635,13 +635,13 @@
       <div class="kpi-card" style="--accent-color: var(--accent-amber);">
         <div class="kpi-label">Active Sprint Days</div>
         <div class="kpi-value">14 <span style="font-size: 1.1rem; color: var(--text-muted);">/ 40d</span></div>
-        <div class="kpi-subtext">Average ~8.1 commits/active day</div>
+        <div class="kpi-subtext">Average ~8.3 commits/active day</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-rose);">
         <div class="kpi-label">Estimated Market Value</div>
-        <div class="kpi-value">$135k+</div>
-        <div class="kpi-subtext">~900-1,200 commercial dev hours</div>
+        <div class="kpi-value">$129k+</div>
+        <div class="kpi-subtext">~1,034 commercial dev hours</div>
       </div>
     </div>
 
@@ -676,7 +676,7 @@
         </div>
       </div>
       <p class="heatmap-desc">
-        Visual breakdown of commit timestamps across all 7 days of the week and 24 hours of the day. Demonstrates high-focus, disciplined deep-work bursts with peak velocity during evening sprint blocks (20:00 – 23:00) and weekend consolidation.
+        Visual breakdown of commit timestamps across all 7 days of the week and 24 hours of the day. Demonstrates high-focus, disciplined deep-work bursts with peak velocity during evening sprint blocks (20:00 &ndash; 23:00) and weekend consolidation.
       </p>
 
       <div class="heatmap-wrapper">
@@ -697,29 +697,29 @@
         <div class="callout-box">
           <div class="callout-title">Primary Deep-Work Window</div>
           <div class="callout-val">20:00 &ndash; 23:00 IST</div>
-          <div class="callout-sub">42 commits (37.2% of total development activity)</div>
+          <div class="callout-sub">40 commits (34.5% of total development activity)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Peak Sprint Days</div>
-          <div class="callout-val">Tuesday &amp; Weekend</div>
-          <div class="callout-sub">Tuesday (32 commits), Saturday (16), Sunday (20)</div>
+          <div class="callout-val">Tue &amp; Weekend</div>
+          <div class="callout-sub">Tue (32 commits), Sat (16), Sun (20)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Disciplined Planning Cadence</div>
-          <div class="callout-val">Zero Friday Commits</div>
+          <div class="callout-val">0 Friday Commits</div>
           <div class="callout-sub">Dedicated to testing validation, documentation &amp; roadmapping</div>
         </div>
       </div>
     </div>
 
-    <!-- Charts Row 2: Types & Effort -->
+    <!-- Charts Row 2: Composition & Effort -->
     <div class="charts-grid">
       <div class="chart-container">
         <div class="chart-title">
-          <span>Semantic Commit Distribution</span>
-          <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">115 Commits</span>
+          <span>Codebase Architecture Composition</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">Lines of Code</span>
         </div>
-        <canvas id="typeChart"></canvas>
+        <canvas id="compChart"></canvas>
       </div>
 
       <div class="chart-container">
@@ -747,12 +747,12 @@
         <div class="estimation-box">
           <h4>COCOMO II Algorithmic Model</h4>
           <ul>
-            <li><span>Nominal Size (KLOC)</span> <span class="val">40.3 KLOC</span></li>
+            <li><span>Nominal Size (KLOC)</span> <span class="val">39.8 KLOC</span></li>
             <li><span>Model Classification</span> <span class="val">Semi-Detached / Mobile</span></li>
-            <li><span>Effort Equation</span> <span class="val">2.4 × (40.3)^1.05</span></li>
-            <li><span>Estimated Person-Months</span> <span class="val">~11.2 PM</span></li>
-            <li><span>Estimated Standard Hours</span> <span class="val">~1,790 Dev Hours</span></li>
-            <li><span>Nominal Calendar Time</span> <span class="val">~5.4 Months (3-dev team)</span></li>
+            <li><span>Effort Equation</span> <span class="val">2.4 × (39.8)^1.05</span></li>
+            <li><span>Estimated Person-Months</span> <span class="val">~114.8 PM</span></li>
+            <li><span>Estimated Standard Hours</span> <span class="val">~18,368 Dev Hours</span></li>
+            <li><span>Nominal Calendar Time</span> <span class="val">~45.9 Months (3-dev team)</span></li>
           </ul>
         </div>
 
@@ -763,8 +763,8 @@
             <li><span>Specialized On-Device AI</span> <span class="val">Speech-to-Text + GBNF Grammar SLM</span></li>
             <li><span>QA Automation Footprint</span> <span class="val">326 tests + 27 UI visual markers</span></li>
             <li><span>Store & Distribution Ops</span> <span class="val">CI matrix (Android/iOS/Web) + In-App Billing</span></li>
-            <li><span>Billable Hours Estimate</span> <span class="val">900 – 1,200 Hours</span></li>
-            <li><span>Market Replacement Cost</span> <span class="val">$120,000 – $160,000 USD</span></li>
+            <li><span>Billable Hours Estimate</span> <span class="val">~1,034 Hours</span></li>
+            <li><span>Market Replacement Cost</span> <span class="val">$129k+ USD</span></li>
           </ul>
         </div>
 
@@ -774,9 +774,9 @@
             <li><span>Solo Developer</span> <span class="val">Yash Vyavahare</span></li>
             <li><span>Calendar Duration</span> <span class="val">40 Days (Aug 15 &ndash; Sep 24)</span></li>
             <li><span>Active Burst Days</span> <span class="val">14 High-Focus Days</span></li>
-            <li><span>Net Production Velocity</span> <span class="val">~2,880 LOC + Tests / Active Day</span></li>
-            <li><span>Semantic Release Cadence</span> <span class="val">1 Release every 2.6 Calendar Days</span></li>
-            <li><span>Efficiency Multiple</span> <span class="val">~6.8× vs Industry Average</span></li>
+            <li><span>Net Production Velocity</span> <span class="val">~2,841 LOC + Tests / Active Day</span></li>
+            <li><span>Semantic Release Cadence</span> <span class="val">1 Release every 2.7 Calendar Days</span></li>
+            <li><span>Efficiency Multiple</span> <span class="val">~109.3× vs Industry Average</span></li>
           </ul>
         </div>
       </div>
@@ -1032,7 +1032,7 @@
 
       <div class="filter-bar">
         <button class="filter-btn active" onclick="filterType('All')">All</button>
-        <button class="filter-btn" onclick="filterType('Feature')">Features (46)</button>
+        <button class="filter-btn" onclick="filterType('Feature')">Features (47)</button>
         <button class="filter-btn" onclick="filterType('Refactoring')">Refactoring (8)</button>
         <button class="filter-btn" onclick="filterType('Chore & Release')">Releases & Chores (16)</button>
         <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (7)</button>
@@ -1052,6 +1052,13 @@
             </tr>
           </thead>
           <tbody>
+
+            <tr data-type="Feature" data-msg="feat(ci): add automated report generation script and auto-update workflow (#110)">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/c209fc4" target="_blank" class="commit-hash">c209fc4 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Feature">Feature</span></td>
+              <td>feat(ci): add automated report generation script and auto-update workflow (#110)</td>
+            </tr>
 
             <tr data-type="Documentation" data-msg="docs: add early access testing enrollment link to readme">
               <td><a href="https://github.com/vyavahareyash/cashflow/commit/47b15fd" target="_blank" class="commit-hash">47b15fd &nearr;</a></td>
@@ -1396,13 +1403,6 @@
               <td>chore(release): bump version to 2.0.0+4 and update release notes</td>
             </tr>
 
-            <tr data-type="Documentation" data-msg="docs: complete user and developer documentation, clean up intermediate docs (#9) (#58)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/2a32d25" target="_blank" class="commit-hash">2a32d25 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Documentation">Documentation</span></td>
-              <td>docs: complete user and developer documentation, clean up intermediate docs (#9) (#58)</td>
-            </tr>
-
           </tbody>
         </table>
       </div>
@@ -1422,7 +1422,7 @@
         labels: ["ACID & Data Integrity", "Automated Testing & QA", "Edge AI & Local SLM", "CI/CD & Release Ops", "Clean Architecture", "Product & UX Design"],
         datasets: [{
           label: 'Engineering Quality Index',
-          data: [98, 96, 94, 92, 97, 95],
+          data: [98, 95, 94, 92, 96, 95],
           backgroundColor: 'rgba(6, 182, 212, 0.25)',
           borderColor: '#06b6d4',
           pointBackgroundColor: '#10b981',
@@ -1452,7 +1452,7 @@
         labels: ["2026-08-15", "2026-08-16", "2026-09-05", "2026-09-08", "2026-09-09", "2026-09-13", "2026-09-14", "2026-09-15", "2026-09-17", "2026-09-19", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24"],
         datasets: [{
           label: 'Commits Per Active Day',
-          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 11],
+          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 12],
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           fill: true,
@@ -1473,7 +1473,7 @@
       }
     });
 
-    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 2, 0], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
+    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 3, 0], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const gridEl = document.getElementById('heatmapGrid');
 
@@ -1497,24 +1497,25 @@
       gridEl.innerHTML += rowHtml;
     });
 
-    const ctxType = document.getElementById('typeChart').getContext('2d');
-    const typeData = {"Documentation": 10, "Feature": 46, "Chore & Release": 16, "Bug Fix": 7, "CI / CD": 6, "Other": 19, "Testing": 2, "Refactoring": 8, "Design / Style": 1};
-    new Chart(ctxType, {
-      type: 'doughnut',
+    const ctxComp = document.getElementById('compChart').getContext('2d');
+    new Chart(ctxComp, {
+      type: 'bar',
       data: {
-        labels: Object.keys(typeData),
+        labels: ['Production Lib', 'Automated Tests', 'Documentation (MD)'],
         datasets: [{
-          data: Object.values(typeData),
-          backgroundColor: ['#10b981', '#c084fc', '#f59e0b', '#38bdf8', '#fb7185', '#64748b', '#ec4899', '#94a3b8'],
-          borderColor: '#090d16',
-          borderWidth: 2
+          label: 'Lines of Code',
+          data: [26054, 13722, 8504],
+          backgroundColor: ['#06b6d4', '#10b981', '#8b5cf6'],
+          borderRadius: 8
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'Plus Jakarta Sans', size: 11 }, boxWidth: 12, padding: 10 } }
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'Plus Jakarta Sans', size: 11 } } },
+          y: { grid: { color: 'rgba(255, 255, 255, 0.04)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
         }
       }
     });
@@ -1526,7 +1527,7 @@
         labels: ['COCOMO II Model', 'Agency Commercial', 'Cashflow Actual'],
         datasets: [{
           label: 'Estimated Engineering Hours',
-          data: [1790, 1050, 185],
+          data: [18368, 1034, 168],
           backgroundColor: ['#f43f5e', '#f59e0b', '#10b981'],
           borderRadius: 8
         }]
