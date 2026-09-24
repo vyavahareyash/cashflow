@@ -9,12 +9,24 @@
 [![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline-success)](#private-by-default)
 [![Voice AI](https://img.shields.io/badge/Voice_AI-100%25_Offline-7C3AED)](docs/user/VOICE_JOURNALING.md)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/vyavahareyash)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=github)](https://github.com/sponsors/vyavahareyash)
 
 Cashflow is a private, offline-first personal finance app built with Flutter. It solves the biggest problem with traditional budgeting apps by answering one practical question: **how much money can I actually spend right now without sabotaging my future goals?**
 
 Track real balances across cash and bank accounts, align budgets with your actual payday schedule, and reserve money in virtual envelopes for sinking funds—with zero bank credentials, zero cloud accounts, and zero tracking.
 
 > 🎙️ **Zero-Friction Voice AI Journaling**: Tired of tedious manual transaction forms? Cashflow is more than a manual logbook and safe-to-spend planning calculator. Speak your daily spending naturally in an unstructured monologue, let on-device AI extract structured transactions, review in seconds with interactive chips, and batch-approve to your ledger. **100% private with zero cloud backends, zero telemetry, and zero audio persistence.** [Explore Voice AI Journaling →](docs/user/VOICE_JOURNALING.md)
+
+---
+
+## Support Development
+
+Cashflow is 100% free, private, and open-source with zero ads, zero trackers, and zero subscriptions. If Cashflow helps you manage your money, buying a coffee or sponsoring development is greatly appreciated!
+
+<a href="https://buymeacoffee.com/vyavahareyash" target="_blank">
+  <img src="assets/icon/bmc_official_button.png" alt="Buy Me A Coffee" height="46">
+</a>
 
 ---
 
