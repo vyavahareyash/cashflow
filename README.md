@@ -39,6 +39,11 @@ Cashflow is 100% free, private, and open-source with zero ads, zero trackers, an
 
 [Download the latest APK: Cashflow](https://github.com/vyavahareyash/cashflow/releases/latest/download/cashflow-release.apk) · [View all release assets](https://github.com/vyavahareyash/cashflow/releases/latest)
 
+> 🚀 **Be the first to try latest features & updates!**  
+> Cashflow is currently in internal testing. Join the closed beta program on Google Play to test upcoming builds and new capabilities before anyone else.  
+> 👉 **[Join Early Access & Beta Testing →](https://docs.google.com/forms/d/e/1FAIpQLSeS5t2W5TJENUD73Hy1zwWp6KLg0rB2z24ROziZVXlws4Af9Q/viewform?usp=dialog)**
+
+
 <p align="center">
   <img src="screenshots/01-dashboard-light.png" alt="Cashflow Dashboard" width="400">
 </p>
