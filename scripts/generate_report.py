@@ -814,10 +814,13 @@ def main():
         </p>
       </div>
       <div class="header-meta">
-        <div class="meta-tag">Author & Architect: {commits[0]['author'] if commits else 'Yash Vyavahare'}</div>
+        <div class="meta-tag">Author &amp; Architect: {commits[0]['author'] if commits else 'Yash Vyavahare'}</div>
         <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
           Span: {commits[-1]['date'] if commits else ''} &rarr; {commits[0]['date'] if commits else ''}
         </div>
+        <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="font-size: 0.8rem; color: var(--accent-cyan); text-decoration: none; font-family: var(--font-mono); margin-top: 0.2rem;">
+          📐 Metrics &amp; Formulas Specification &nearr;
+        </a>
       </div>
     </header>
 
@@ -951,11 +954,14 @@ def main():
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan);">📐</span>
-          Software Engineering Economics & AI Disruption
+          Software Engineering Economics &amp; AI Disruption
         </div>
+        <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="font-size: 0.85rem; color: var(--accent-cyan); font-family: var(--font-mono); text-decoration: none;">
+          Read Math &amp; Formulas Specification &nearr;
+        </a>
       </div>
       <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
-        Benchmarking Cashflow's construction across traditional agency economics, AI-assisted development economics, and real delivered velocity.
+        Benchmarking Cashflow's construction across traditional agency economics, AI-assisted development economics, and real delivered velocity. Full derivation in <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">METRICS_METHODOLOGY.md</a>.
       </p>
 
       <div class="estimation-grid">
@@ -1234,7 +1240,10 @@ def main():
 
     <footer>
       <div>Generated autonomously for <strong>Cashflow</strong> &bull; Offline-First Open Source Financial Intelligence</div>
-      <div style="margin-top: 0.4rem; font-size: 0.8rem; color: #64748b;">Repository: vyavahareyash/cashflow &bull; Licensed under GNU GPLv3</div>
+      <div style="margin-top: 0.4rem; font-size: 0.8rem; color: #64748b;">
+        Repository: vyavahareyash/cashflow &bull; Licensed under GNU GPLv3 &bull;
+        <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">Calculation Methodology &amp; Assumptions &nearr;</a>
+      </div>
     </footer>
   </div>
 
