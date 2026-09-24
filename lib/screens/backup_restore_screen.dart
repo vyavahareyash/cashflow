@@ -2145,7 +2145,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         children: [
           _buildInfoRow('Application', 'Cashflow', isDark),
           const Divider(height: 16),
-          _buildInfoRow('Version', '4.2.0 (Build 15)', isDark),
+          _buildInfoRow('Version', '4.3.0 (Build 16)', isDark),
           const Divider(height: 16),
           _buildInfoRow('Storage Engine', 'SQLite (Local-First)', isDark),
           const Divider(height: 16),
@@ -2195,64 +2195,125 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   Widget _buildDeveloperFooter(bool isDark) {
     final textColor = isDark ? AppColors.gray400 : AppColors.gray600;
     final borderColor = isDark ? AppColors.darkBorder : AppColors.gray200;
-    final footerBg = isDark ? AppColors.darkSurface : AppColors.gray50;
+    final footerBg = isDark ? AppColors.darkSurface : Colors.white;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: footerBg,
         borderRadius: AppBorderRadius.mediumBorder,
         border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Created by ${AppConfig.developerName}',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: isDark ? AppColors.gray200 : AppColors.gray800,
-                    fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? const [AppColors.emerald700, AppColors.emerald500]
+                        : const [AppColors.emerald600, AppColors.emerald400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isDark ? AppColors.emerald500 : AppColors.emerald600)
+                          .withValues(alpha: 0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Open Source & Offline-First',
+                alignment: Alignment.center,
+                child: Text(
+                  'YV',
                   style: AppTypography.labelSmall.copyWith(
-                    color: textColor,
-                    fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Created by ${AppConfig.developerName}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark ? AppColors.darkText : AppColors.gray900,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.verified_user_outlined,
+                          size: 12,
+                          color: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Open Source & Offline-First',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: textColor,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.xs),
-          _buildSocialChip(
-            key: const Key('developer_github_button'),
-            label: 'GitHub',
-            icon: Icons.code_rounded,
-            isDark: isDark,
-            onTap: () => _openExternalUrl(
-              AppConfig.gitHubUrl,
-              'Could not open GitHub repository.',
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          _buildSocialChip(
-            key: const Key('developer_linkedin_button'),
-            label: 'LinkedIn',
-            icon: Icons.person_outline_rounded,
-            isDark: isDark,
-            onTap: () => _openExternalUrl(
-              AppConfig.linkedInUrl,
-              'Could not open LinkedIn profile.',
-            ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSocialChip(
+                  key: const Key('developer_github_button'),
+                  label: 'GitHub',
+                  icon: Icons.code_rounded,
+                  isDark: isDark,
+                  onTap: () => _openExternalUrl(
+                    AppConfig.gitHubUrl,
+                    'Could not open GitHub repository.',
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildSocialChip(
+                  key: const Key('developer_linkedin_button'),
+                  label: 'LinkedIn',
+                  icon: Icons.person_outline_rounded,
+                  isDark: isDark,
+                  onTap: () => _openExternalUrl(
+                    AppConfig.linkedInUrl,
+                    'Could not open LinkedIn profile.',
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2268,33 +2329,39 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }) {
     return Material(
       key: key,
-      color: Colors.transparent,
+      color: isDark ? AppColors.darkSurfaceElevated : AppColors.gray50,
+      borderRadius: AppBorderRadius.smallBorder,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppBorderRadius.smallBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: AppBorderRadius.smallBorder,
             border: Border.all(
-              color: isDark ? AppColors.darkBorder : AppColors.gray300,
+              color: isDark ? AppColors.darkBorder : AppColors.gray200,
             ),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                size: 14,
+                size: 15,
                 color: isDark ? AppColors.primaryLight : AppColors.primary,
               ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: AppTypography.labelSmall.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                  color: isDark ? AppColors.darkText : AppColors.gray900,
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: isDark ? AppColors.darkText : AppColors.gray900,
+                  ),
                 ),
               ),
             ],
