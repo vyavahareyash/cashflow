@@ -597,10 +597,36 @@ def main():
       line-height: 1.5;
     }}
 
+    .timeline-container {{
+      max-height: 440px;
+      overflow-y: auto;
+      padding-right: 0.75rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }}
+
+    .timeline-container::-webkit-scrollbar {{
+      width: 6px;
+    }}
+
+    .timeline-container::-webkit-scrollbar-track {{
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 4px;
+    }}
+
+    .timeline-container::-webkit-scrollbar-thumb {{
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }}
+
+    .timeline-container::-webkit-scrollbar-thumb:hover {{
+      background: var(--accent-cyan);
+    }}
+
     .timeline {{
       position: relative;
       padding-left: 2rem;
-      margin-top: 1.5rem;
+      margin-top: 0.5rem;
     }}
 
     .timeline::before {{
@@ -1126,11 +1152,15 @@ def main():
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon" style="background: rgba(139, 92, 246, 0.2); color: var(--accent-purple);">🚀</span>
-          Version Progression & Release Milestones
+          Version Progression &amp; Release Milestones
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
+          {len(releases)} SemVer Tags &bull; Scroll to explore
         </div>
       </div>
 
-      <div class="timeline">
+      <div class="timeline-container">
+        <div class="timeline">
 """
 
     for rel in reversed(releases):
@@ -1148,6 +1178,7 @@ def main():
 """
 
     html += f"""
+        </div>
       </div>
     </div>
 
