@@ -24,11 +24,7 @@
       --font-mono: 'JetBrains Mono', monospace;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
@@ -41,10 +37,7 @@
       padding: 2.5rem 1.5rem;
     }
 
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-    }
+    .container { max-width: 1280px; margin: 0 auto; }
 
     header {
       margin-bottom: 2.5rem;
@@ -287,7 +280,6 @@
       filter: brightness(1.3);
     }
 
-    /* Shading levels */
     .heat-0 { background: rgba(255, 255, 255, 0.03); }
     .heat-1 { background: rgba(6, 182, 212, 0.25); border: 1px solid rgba(6, 182, 212, 0.4); }
     .heat-2 { background: rgba(6, 182, 212, 0.55); border: 1px solid rgba(6, 182, 212, 0.7); }
@@ -366,10 +358,7 @@
       color: var(--accent-cyan);
     }
 
-    .estimation-box ul {
-      list-style: none;
-      padding-left: 0;
-    }
+    .estimation-box ul { list-style: none; padding-left: 0; }
 
     .estimation-box li {
       font-size: 0.9rem;
@@ -485,9 +474,7 @@
       transition: background 0.2s ease;
     }
 
-    .tag-badge:hover {
-      background: rgba(6, 182, 212, 0.3);
-    }
+    .tag-badge:hover { background: rgba(6, 182, 212, 0.3); }
 
     .timeline-date {
       font-size: 0.825rem;
@@ -537,10 +524,7 @@
       max-width: 300px;
     }
 
-    .search-input:focus {
-      outline: none;
-      border-color: var(--accent-cyan);
-    }
+    .search-input:focus { outline: none; border-color: var(--accent-cyan); }
 
     .table-container {
       max-height: 400px;
@@ -573,9 +557,7 @@
       color: #cbd5e1;
     }
 
-    tr:hover td {
-      background: rgba(255, 255, 255, 0.02);
-    }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
     .commit-hash {
       font-family: var(--font-mono);
@@ -584,9 +566,7 @@
       text-decoration: none;
     }
 
-    .commit-hash:hover {
-      text-decoration: underline;
-    }
+    .commit-hash:hover { text-decoration: underline; }
 
     .pill {
       display: inline-block;
@@ -700,9 +680,7 @@
       </p>
 
       <div class="heatmap-wrapper">
-        <div class="heatmap-grid" id="heatmapGrid">
-          <!-- Rendered via JS -->
-        </div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
       </div>
 
       <div class="heatmap-legend">
@@ -739,7 +717,7 @@
       <div class="chart-container">
         <div class="chart-title">
           <span>Semantic Commit Distribution</span>
-          <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">113 Commits</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">115 Commits</span>
         </div>
         <canvas id="typeChart"></canvas>
       </div>
@@ -1054,12 +1032,12 @@
 
       <div class="filter-bar">
         <button class="filter-btn active" onclick="filterType('All')">All</button>
-        <button class="filter-btn" onclick="filterType('Feature')">Features (45)</button>
+        <button class="filter-btn" onclick="filterType('Feature')">Features (46)</button>
         <button class="filter-btn" onclick="filterType('Refactoring')">Refactoring (8)</button>
         <button class="filter-btn" onclick="filterType('Chore & Release')">Releases & Chores (16)</button>
         <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (7)</button>
         <button class="filter-btn" onclick="filterType('CI / CD')">CI / CD (6)</button>
-        <button class="filter-btn" onclick="filterType('Documentation')">Docs (9)</button>
+        <button class="filter-btn" onclick="filterType('Documentation')">Docs (10)</button>
         <input type="text" id="commitSearch" class="search-input" placeholder="Search commit message..." onkeyup="filterCommits()">
       </div>
 
@@ -1074,6 +1052,20 @@
             </tr>
           </thead>
           <tbody>
+
+            <tr data-type="Documentation" data-msg="docs: add early access testing enrollment link to readme">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/47b15fd" target="_blank" class="commit-hash">47b15fd &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Documentation">Documentation</span></td>
+              <td>docs: add early access testing enrollment link to readme</td>
+            </tr>
+
+            <tr data-type="Feature" data-msg="feat(reports): add interactive engineering analytics report and pages workflow (#109)">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/19da8b5" target="_blank" class="commit-hash">19da8b5 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Feature">Feature</span></td>
+              <td>feat(reports): add interactive engineering analytics report and pages workflow (#109)</td>
+            </tr>
 
             <tr data-type="Chore & Release" data-msg="chore(release): bump version to 4.2.0+15">
               <td><a href="https://github.com/vyavahareyash/cashflow/commit/9ef6f80" target="_blank" class="commit-hash">9ef6f80 &nearr;</a></td>
@@ -1411,33 +1403,18 @@
               <td>docs: complete user and developer documentation, clean up intermediate docs (#9) (#58)</td>
             </tr>
 
-            <tr data-type="Testing" data-msg="test(dashboard): add comprehensive calculation integration tests & verify backup/import (#27) (#57)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/a918274" target="_blank" class="commit-hash">a918274 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Testing">Testing</span></td>
-              <td>test(dashboard): add comprehensive calculation integration tests & verify backup/import (#27) (#57)</td>
-            </tr>
-
-            <tr data-type="Feature" data-msg="feat(ux): add backup freshness timestamp and goal completion celebratory flair (#56)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/accf1cc" target="_blank" class="commit-hash">accf1cc &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Feature">Feature</span></td>
-              <td>feat(ux): add backup freshness timestamp and goal completion celebratory flair (#56)</td>
-            </tr>
-
           </tbody>
         </table>
       </div>
     </div>
 
     <footer>
-      <div>Generated for <strong>Cashflow</strong> &bull; Offline-First Open Source Financial Intelligence</div>
+      <div>Generated autonomously for <strong>Cashflow</strong> &bull; Offline-First Open Source Financial Intelligence</div>
       <div style="margin-top: 0.4rem; font-size: 0.8rem; color: #64748b;">Repository: vyavahareyash/cashflow &bull; Licensed under GNU GPLv3</div>
     </footer>
   </div>
 
   <script>
-    // 1. Radar Chart (Engineering Rigor)
     const ctxRadar = document.getElementById('radarChart').getContext('2d');
     new Chart(ctxRadar, {
       type: 'radar',
@@ -1450,45 +1427,24 @@
           borderColor: '#06b6d4',
           pointBackgroundColor: '#10b981',
           pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: '#10b981',
           borderWidth: 2
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#0f172a',
-            borderColor: '#334155',
-            borderWidth: 1,
-            titleFont: { family: 'Plus Jakarta Sans' },
-            bodyFont: { family: 'JetBrains Mono' }
-          }
-        },
+        plugins: { legend: { display: false } },
         scales: {
           r: {
             angleLines: { color: 'rgba(255, 255, 255, 0.08)' },
             grid: { color: 'rgba(255, 255, 255, 0.08)' },
-            pointLabels: {
-              color: '#cbd5e1',
-              font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }
-            },
-            ticks: {
-              backdropColor: 'transparent',
-              color: '#64748b',
-              stepSize: 20,
-              min: 0,
-              max: 100
-            }
+            pointLabels: { color: '#cbd5e1', font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' } },
+            ticks: { backdropColor: 'transparent', color: '#64748b', stepSize: 20, min: 0, max: 100 }
           }
         }
       }
     });
 
-    // 2. Timeline Chart
     const ctxTimeline = document.getElementById('timelineChart').getContext('2d');
     new Chart(ctxTimeline, {
       type: 'line',
@@ -1496,56 +1452,37 @@
         labels: ["2026-08-15", "2026-08-16", "2026-09-05", "2026-09-08", "2026-09-09", "2026-09-13", "2026-09-14", "2026-09-15", "2026-09-17", "2026-09-19", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24"],
         datasets: [{
           label: 'Commits Per Active Day',
-          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 9],
+          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 11],
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           fill: true,
           tension: 0.35,
           borderWidth: 2,
           pointBackgroundColor: '#10b981',
-          pointRadius: 4,
-          pointHoverRadius: 6
+          pointRadius: 4
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#0f172a',
-            borderColor: '#334155',
-            borderWidth: 1,
-            titleFont: { family: 'Plus Jakarta Sans' },
-            bodyFont: { family: 'JetBrains Mono' }
-          }
-        },
+        plugins: { legend: { display: false } },
         scales: {
-          x: {
-            grid: { color: 'rgba(255, 255, 255, 0.04)' },
-            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
-          },
-          y: {
-            grid: { color: 'rgba(255, 255, 255, 0.04)' },
-            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
-          }
+          x: { grid: { color: 'rgba(255, 255, 255, 0.04)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } },
+          y: { grid: { color: 'rgba(255, 255, 255, 0.04)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
         }
       }
     });
 
-    // 3. Render Heatmap Grid
-    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 0, 0], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
+    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 2, 0], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const gridEl = document.getElementById('heatmapGrid');
 
-    // Header row (Empty corner + 24 hours)
     let headerHtml = '<div></div>';
     for (let h = 0; h < 24; h++) {
       headerHtml += `<div class="heatmap-header-cell">${h < 10 ? '0' + h : h}</div>`;
     }
     gridEl.innerHTML = headerHtml;
 
-    // Day rows
     days.forEach(day => {
       let rowHtml = `<div class="heatmap-day-label">${day}</div>`;
       const hours = heatmapData[day] || new Array(24).fill(0);
@@ -1555,24 +1492,20 @@
         else if (count >= 3) heatClass = 'heat-3';
         else if (count >= 2) heatClass = 'heat-2';
         else if (count >= 1) heatClass = 'heat-1';
-
         rowHtml += `<div class="heatmap-cell ${heatClass}" title="${day} ${h}:00 &mdash; ${count} commits"></div>`;
       });
       gridEl.innerHTML += rowHtml;
     });
 
-    // 4. Commit Types Chart
     const ctxType = document.getElementById('typeChart').getContext('2d');
-    const typeData = {"Chore & Release": 16, "Feature": 45, "Documentation": 9, "Bug Fix": 7, "CI / CD": 6, "Other": 19, "Testing": 2, "Refactoring": 8, "Design / Style": 1};
+    const typeData = {"Documentation": 10, "Feature": 46, "Chore & Release": 16, "Bug Fix": 7, "CI / CD": 6, "Other": 19, "Testing": 2, "Refactoring": 8, "Design / Style": 1};
     new Chart(ctxType, {
       type: 'doughnut',
       data: {
         labels: Object.keys(typeData),
         datasets: [{
           data: Object.values(typeData),
-          backgroundColor: [
-            '#10b981', '#c084fc', '#f59e0b', '#38bdf8', '#fb7185', '#64748b', '#ec4899', '#94a3b8'
-          ],
+          backgroundColor: ['#10b981', '#c084fc', '#f59e0b', '#38bdf8', '#fb7185', '#64748b', '#ec4899', '#94a3b8'],
           borderColor: '#090d16',
           borderWidth: 2
         }]
@@ -1581,20 +1514,11 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              color: '#cbd5e1',
-              font: { family: 'Plus Jakarta Sans', size: 11 },
-              boxWidth: 12,
-              padding: 10
-            }
-          }
+          legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'Plus Jakarta Sans', size: 11 }, boxWidth: 12, padding: 10 } }
         }
       }
     });
 
-    // 5. Effort Estimation Comparison Chart
     const ctxEffort = document.getElementById('effortChart').getContext('2d');
     new Chart(ctxEffort, {
       type: 'bar',
@@ -1612,19 +1536,12 @@
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: '#cbd5e1', font: { family: 'Plus Jakarta Sans', size: 11 } }
-          },
-          y: {
-            grid: { color: 'rgba(255, 255, 255, 0.04)' },
-            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
-          }
+          x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { family: 'Plus Jakarta Sans', size: 11 } } },
+          y: { grid: { color: 'rgba(255, 255, 255, 0.04)' }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
         }
       }
     });
 
-    // Filtering logic
     let currentFilter = 'All';
     function filterType(type) {
       currentFilter = type;
