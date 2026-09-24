@@ -127,18 +127,24 @@ def main():
     date_chart_values = [date_counts[d] for d in sorted_dates]
     active_days = len(date_counts)
 
-    # 6. Dynamic Effort & Estimation Math
+    # 6. Dynamic Effort & AI Disruption Economics
     cocomo_pm = round(2.4 * (kloc ** 1.05), 1)
     cocomo_hours = int(cocomo_pm * 160)
     nominal_cal_months = round(cocomo_pm / 2.5, 1)
     agency_hours = int(kloc * 26)  # Empirical ~26 hrs per KLOC in modern cross-platform Flutter
+    agency_cost = agency_hours * 125
     actual_burst_hours = int(active_days * 12)
-    market_val_k = int(agency_hours * 125 / 1000)
+    market_val_k = int(agency_cost / 1000)
     market_val_str = f"${market_val_k}k+"
     velocity_loc_per_day = int(total_dart_loc / max(1, active_days))
     commits_per_day = round(total_commits / max(1, active_days), 1)
     release_cadence_days = round(40.0 / max(1, len(releases)), 1)
     test_ratio_pct = round((test_lines / max(1, lib_lines)) * 100, 1)
+
+    # AI Disruption & Token Economics
+    estimated_ai_tokens_m = round(total_commits * 0.18, 1)  # ~180k tokens per commit lifecycle
+    estimated_ai_spend_usd = max(25, int(estimated_ai_tokens_m * 3.5))  # Blended ~$3.50/M tokens
+    capital_efficiency_mult = int(agency_cost / max(1, estimated_ai_spend_usd))
 
     # 7. Dynamic Radar Dimensions
     radar_labels = [
@@ -800,9 +806,9 @@ def main():
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-rose);">
-        <div class="kpi-label">Estimated Market Value</div>
-        <div class="kpi-value">{market_val_str}</div>
-        <div class="kpi-subtext">~{agency_hours:,} commercial dev hours</div>
+        <div class="kpi-label">AI Capital Leverage</div>
+        <div class="kpi-value">~{capital_efficiency_mult:,}&times;</div>
+        <div class="kpi-subtext">&le;${estimated_ai_spend_usd} AI compute vs ${market_val_k}k agency baseline</div>
       </div>
     </div>
 
@@ -897,47 +903,47 @@ def main():
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan);">📐</span>
-          Software Engineering Estimation & Velocity
+          Software Engineering Economics & AI Disruption
         </div>
       </div>
       <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
-        Using standardized <strong>COCOMO II (Constructive Cost Model)</strong> and empirical mobile engineering delivery metrics, we benchmarked Cashflow's construction against conventional commercial execution.
+        Benchmarking Cashflow's construction across traditional agency economics, AI-assisted development economics, and real delivered velocity.
       </p>
 
       <div class="estimation-grid">
         <div class="estimation-box">
-          <h4>COCOMO II Algorithmic Model</h4>
+          <h4>Pre-AI Agency Baseline</h4>
           <ul>
-            <li><span>Nominal Size (KLOC)</span> <span class="val">{kloc:.1f} KLOC</span></li>
-            <li><span>Model Classification</span> <span class="val">Semi-Detached / Mobile</span></li>
-            <li><span>Effort Equation</span> <span class="val">2.4 × ({kloc:.1f})^1.05</span></li>
-            <li><span>Estimated Person-Months</span> <span class="val">~{cocomo_pm} PM</span></li>
-            <li><span>Estimated Standard Hours</span> <span class="val">~{cocomo_hours:,} Dev Hours</span></li>
-            <li><span>Nominal Calendar Time</span> <span class="val">~{nominal_cal_months} Months (3-dev team)</span></li>
+            <li><span>Equivalent Engineering Team</span> <span class="val">1 Senior Mobile, 1 ML, 1 QA</span></li>
+            <li><span>Industry Delivery Velocity</span> <span class="val">~25 LOC / Dev Day</span></li>
+            <li><span>Estimated Commercial Hours</span> <span class="val">~{agency_hours:,} Dev Hours</span></li>
+            <li><span>Nominal Delivery Horizon</span> <span class="val">~{nominal_cal_months} Months</span></li>
+            <li><span>Standard Agency Billing</span> <span class="val">~${agency_cost:,} USD ($125/hr)</span></li>
+            <li><span>Infrastructure Maintenance</span> <span class="val">Recurring Cloud & Server Bills</span></li>
           </ul>
         </div>
 
         <div class="estimation-box">
-          <h4>Agency / Commercial Equivalent</h4>
+          <h4>AI Disruption & Token Economics</h4>
           <ul>
-            <li><span>Equivalent Engineering Team</span> <span class="val">1 Senior Mobile, 1 ML/Edge, 1 QA</span></li>
-            <li><span>Specialized On-Device AI</span> <span class="val">Speech-to-Text + GBNF Grammar SLM</span></li>
-            <li><span>QA Automation Footprint</span> <span class="val">{test_cases} tests + 27 UI visual markers</span></li>
-            <li><span>Store & Distribution Ops</span> <span class="val">CI matrix (Android/iOS/Web) + In-App Billing</span></li>
-            <li><span>Billable Hours Estimate</span> <span class="val">~{agency_hours:,} Hours</span></li>
-            <li><span>Market Replacement Cost</span> <span class="val">{market_val_str} USD</span></li>
+            <li><span>Development Augmentation</span> <span class="val">Agentic AI & LLM Pair Programming</span></li>
+            <li><span>Estimated LLM Context Volume</span> <span class="val">~{estimated_ai_tokens_m}M Tokens</span></li>
+            <li><span>Estimated Compute Spend</span> <span class="val">~${estimated_ai_spend_usd} USD in Token Credits</span></li>
+            <li><span>Hallucination Verification</span> <span class="val">{test_cases} tests + 27 visual markers</span></li>
+            <li><span>Capital Efficiency Multiplier</span> <span class="val">~{capital_efficiency_mult:,}&times; vs Agency Spend</span></li>
+            <li><span>Net Human Hours Saved</span> <span class="val">~{max(0, agency_hours - actual_burst_hours):,} Hours</span></li>
           </ul>
         </div>
 
         <div class="estimation-box">
-          <h4>Actual High-Velocity Delivery</h4>
+          <h4>Actual Delivered Solo Velocity</h4>
           <ul>
-            <li><span>Solo Developer</span> <span class="val">{commits[0]['author'] if commits else 'Yash Vyavahare'}</span></li>
-            <li><span>Calendar Duration</span> <span class="val">40 Days (Aug 15 &ndash; Sep 24)</span></li>
-            <li><span>Active Burst Days</span> <span class="val">{active_days} High-Focus Days</span></li>
+            <li><span>Lead Architect</span> <span class="val">{commits[0]['author'] if commits else 'Yash Vyavahare'}</span></li>
+            <li><span>Active High-Focus Days</span> <span class="val">{active_days} Days (40 calendar span)</span></li>
             <li><span>Net Production Velocity</span> <span class="val">~{velocity_loc_per_day:,} LOC + Tests / Active Day</span></li>
-            <li><span>Semantic Release Cadence</span> <span class="val">1 Release every {release_cadence_days} Calendar Days</span></li>
-            <li><span>Efficiency Multiple</span> <span class="val">~{(cocomo_hours / max(1, actual_burst_hours)):.1f}× vs Industry Average</span></li>
+            <li><span>Release Cadence</span> <span class="val">1 SemVer Release / {release_cadence_days} Days</span></li>
+            <li><span>End-User Cloud OpEx</span> <span class="val">$0.00 / Month (100% On-Device SLM)</span></li>
+            <li><span>Software License</span> <span class="val">GNU GPLv3 Copyleft</span></li>
           </ul>
         </div>
       </div>
@@ -1199,11 +1205,11 @@ def main():
     new Chart(ctxEffort, {{
       type: 'bar',
       data: {{
-        labels: ['COCOMO II Model', 'Agency Commercial', 'Cashflow Actual'],
+        labels: ['Agency Baseline Hours', 'AI-Augmented Solo Hours', 'Net Hours Saved via AI'],
         datasets: [{{
-          label: 'Estimated Engineering Hours',
-          data: [{cocomo_hours}, {agency_hours}, {actual_burst_hours}],
-          backgroundColor: ['#f43f5e', '#f59e0b', '#10b981'],
+          label: 'Engineering Hours',
+          data: [{agency_hours}, {actual_burst_hours}, {max(0, agency_hours - actual_burst_hours)}],
+          backgroundColor: ['#f59e0b', '#06b6d4', '#10b981'],
           borderRadius: 8
         }}]
       }},
