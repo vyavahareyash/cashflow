@@ -104,9 +104,21 @@
 
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 1.25rem;
       margin-bottom: 2.5rem;
+    }
+
+    @media (max-width: 992px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .kpi-card {
@@ -414,10 +426,36 @@
       line-height: 1.5;
     }
 
+    .timeline-container {
+      max-height: 440px;
+      overflow-y: auto;
+      padding-right: 0.75rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .timeline-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .timeline-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 4px;
+    }
+
+    .timeline-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+
+    .timeline-container::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
+    }
+
     .timeline {
       position: relative;
       padding-left: 2rem;
-      margin-top: 1.5rem;
+      margin-top: 0.5rem;
     }
 
     .timeline::before {
@@ -605,10 +643,13 @@
         </p>
       </div>
       <div class="header-meta">
-        <div class="meta-tag">Author & Architect: Yash Vyavahare</div>
+        <div class="meta-tag">Author &amp; Architect: Yash Vyavahare</div>
         <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
           Span: 2026-08-15 &rarr; 2026-09-24
         </div>
+        <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="font-size: 0.8rem; color: var(--accent-cyan); text-decoration: none; font-family: var(--font-mono); margin-top: 0.2rem;">
+          📐 Metrics &amp; Formulas Specification &nearr;
+        </a>
       </div>
     </header>
 
@@ -635,13 +676,19 @@
       <div class="kpi-card" style="--accent-color: var(--accent-amber);">
         <div class="kpi-label">Active Sprint Days</div>
         <div class="kpi-value">14 <span style="font-size: 1.1rem; color: var(--text-muted);">/ 40d</span></div>
-        <div class="kpi-subtext">Average ~8.3 commits/active day</div>
+        <div class="kpi-subtext">Average ~8.9 commits/active day</div>
+      </div>
+
+      <div class="kpi-card" style="--accent-color: var(--accent-purple);">
+        <div class="kpi-label">AI Tokens &amp; Compute</div>
+        <div class="kpi-value">~22.5M</div>
+        <div class="kpi-subtext">~$78.75 total token API credits spend</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-rose);">
-        <div class="kpi-label">Estimated Market Value</div>
-        <div class="kpi-value">$129k+</div>
-        <div class="kpi-subtext">~1,034 commercial dev hours</div>
+        <div class="kpi-label">AI Capital Leverage</div>
+        <div class="kpi-value">~1,641&times;</div>
+        <div class="kpi-subtext">~$79 compute vs $129k agency baseline</div>
       </div>
     </div>
 
@@ -697,7 +744,7 @@
         <div class="callout-box">
           <div class="callout-title">Primary Deep-Work Window</div>
           <div class="callout-val">20:00 &ndash; 23:00 IST</div>
-          <div class="callout-sub">40 commits (34.5% of total development activity)</div>
+          <div class="callout-sub">49 commits (39.2% of total development activity)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Peak Sprint Days</div>
@@ -736,49 +783,142 @@
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan);">📐</span>
-          Software Engineering Estimation & Velocity
+          Software Engineering Economics &amp; AI Disruption
         </div>
+        <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="font-size: 0.85rem; color: var(--accent-cyan); font-family: var(--font-mono); text-decoration: none;">
+          Read Math &amp; Formulas Specification &nearr;
+        </a>
       </div>
       <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
-        Using standardized <strong>COCOMO II (Constructive Cost Model)</strong> and empirical mobile engineering delivery metrics, we benchmarked Cashflow's construction against conventional commercial execution.
+        Benchmarking Cashflow's construction across traditional agency economics, AI-assisted development economics, and real delivered velocity. Full derivation in <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">METRICS_METHODOLOGY.md</a>.
       </p>
 
       <div class="estimation-grid">
         <div class="estimation-box">
-          <h4>COCOMO II Algorithmic Model</h4>
+          <h4>Pre-AI Agency Baseline</h4>
           <ul>
-            <li><span>Nominal Size (KLOC)</span> <span class="val">39.8 KLOC</span></li>
-            <li><span>Model Classification</span> <span class="val">Semi-Detached / Mobile</span></li>
-            <li><span>Effort Equation</span> <span class="val">2.4 × (39.8)^1.05</span></li>
-            <li><span>Estimated Person-Months</span> <span class="val">~114.8 PM</span></li>
-            <li><span>Estimated Standard Hours</span> <span class="val">~18,368 Dev Hours</span></li>
-            <li><span>Nominal Calendar Time</span> <span class="val">~45.9 Months (3-dev team)</span></li>
+            <li><span>Equivalent Engineering Team</span> <span class="val">1 Senior Mobile, 1 ML, 1 QA</span></li>
+            <li><span>Industry Delivery Velocity</span> <span class="val">~25 LOC / Dev Day</span></li>
+            <li><span>Estimated Commercial Hours</span> <span class="val">~1,034 Dev Hours</span></li>
+            <li><span>Nominal Delivery Horizon</span> <span class="val">~45.9 Months</span></li>
+            <li><span>Standard Agency Billing</span> <span class="val">~$129,250 USD ($125/hr)</span></li>
+            <li><span>Infrastructure Maintenance</span> <span class="val">Recurring Cloud & Server Bills</span></li>
           </ul>
         </div>
 
         <div class="estimation-box">
-          <h4>Agency / Commercial Equivalent</h4>
+          <h4>AI Disruption & Token Economics</h4>
           <ul>
-            <li><span>Equivalent Engineering Team</span> <span class="val">1 Senior Mobile, 1 ML/Edge, 1 QA</span></li>
-            <li><span>Specialized On-Device AI</span> <span class="val">Speech-to-Text + GBNF Grammar SLM</span></li>
-            <li><span>QA Automation Footprint</span> <span class="val">326 tests + 27 UI visual markers</span></li>
-            <li><span>Store & Distribution Ops</span> <span class="val">CI matrix (Android/iOS/Web) + In-App Billing</span></li>
-            <li><span>Billable Hours Estimate</span> <span class="val">~1,034 Hours</span></li>
-            <li><span>Market Replacement Cost</span> <span class="val">$129k+ USD</span></li>
+            <li><span>Development Augmentation</span> <span class="val">Agentic AI & LLM Pair Programming</span></li>
+            <li><span>Estimated LLM Context Volume</span> <span class="val">~22.5M Tokens</span></li>
+            <li><span>Estimated Compute Spend</span> <span class="val">~$78.75 USD in Token Credits</span></li>
+            <li><span>Hallucination Verification</span> <span class="val">326 tests + 27 visual markers</span></li>
+            <li><span>Capital Efficiency Multiplier</span> <span class="val">~1,641&times; vs Agency Spend</span></li>
+            <li><span>Net Human Hours Saved</span> <span class="val">~866 Hours</span></li>
           </ul>
         </div>
 
         <div class="estimation-box">
-          <h4>Actual High-Velocity Delivery</h4>
+          <h4>Actual Delivered Solo Velocity</h4>
           <ul>
-            <li><span>Solo Developer</span> <span class="val">Yash Vyavahare</span></li>
-            <li><span>Calendar Duration</span> <span class="val">40 Days (Aug 15 &ndash; Sep 24)</span></li>
-            <li><span>Active Burst Days</span> <span class="val">14 High-Focus Days</span></li>
+            <li><span>Lead Architect</span> <span class="val">Yash Vyavahare</span></li>
+            <li><span>Active High-Focus Days</span> <span class="val">14 Days (40 calendar span)</span></li>
             <li><span>Net Production Velocity</span> <span class="val">~2,841 LOC + Tests / Active Day</span></li>
-            <li><span>Semantic Release Cadence</span> <span class="val">1 Release every 2.7 Calendar Days</span></li>
-            <li><span>Efficiency Multiple</span> <span class="val">~109.3× vs Industry Average</span></li>
+            <li><span>Release Cadence</span> <span class="val">1 SemVer Release / 2.7 Days</span></li>
+            <li><span>End-User Cloud OpEx</span> <span class="val">$0.00 / Month (100% On-Device SLM)</span></li>
+            <li><span>Software License</span> <span class="val">GNU GPLv3 Copyleft</span></li>
           </ul>
         </div>
+      </div>
+    </div>
+
+    <!-- AI Tokens, Compute Economics & Developer Leverage -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-icon" style="background: rgba(139, 92, 246, 0.2); color: var(--accent-purple);">🤖</span>
+          AI Tokens, Compute Economics &amp; Developer Leverage
+        </div>
+        <div style="font-size: 0.85rem; color: var(--accent-cyan); font-family: var(--font-mono);">
+          Compute Spend vs Human Multiplier
+        </div>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+        Detailed accounting of LLM token throughput, API compute credits, unit economics per commit, and automated hallucination verification gates across Cashflow's build lifecycle.
+      </p>
+
+      <div class="heatmap-callouts" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 0; margin-bottom: 1.5rem;">
+        <div class="callout-box">
+          <div class="callout-title">Total Context Throughput</div>
+          <div class="callout-val">~22.5M Tokens</div>
+          <div class="callout-sub">15.7M Prompt / 6.8M Completion (~180k tokens/commit)</div>
+        </div>
+        <div class="callout-box">
+          <div class="callout-title">Total AI Compute Spend</div>
+          <div class="callout-val">~$78.75 USD</div>
+          <div class="callout-sub">Blended ~$3.50/M tokens across planning, generation &amp; refactoring</div>
+        </div>
+        <div class="callout-box">
+          <div class="callout-title">Unit Development Cost</div>
+          <div class="callout-val">$0.63 / Commit</div>
+          <div class="callout-sub">$1.98 per 1,000 lines of production &amp; test code</div>
+        </div>
+        <div class="callout-box">
+          <div class="callout-title">Hallucination Verification</div>
+          <div class="callout-val">0% Unverified Code</div>
+          <div class="callout-sub">326 automated tests + 27 visual UI screenshot markers</div>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+          <thead>
+            <tr>
+              <th style="padding: 0.75rem 1rem;">Engineering Dimension</th>
+              <th style="padding: 0.75rem 1rem;">Legacy Software Agency</th>
+              <th style="padding: 0.75rem 1rem; color: var(--accent-cyan);">Cashflow AI-Augmented Solo</th>
+              <th style="padding: 0.75rem 1rem; color: var(--accent-emerald);">Efficiency Differential</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Engineering Workforce</td>
+              <td>3–4 Developers (Mobile, ML, QA)</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">1 Solo Architect + AI Agent</td>
+              <td style="color: var(--accent-emerald); font-weight: 700;">3× Leaner Team</td>
+            </tr>
+            <tr>
+              <td>Calendar Duration</td>
+              <td>4–6 Calendar Months</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">14 Active Days (40 calendar span)</td>
+              <td style="color: var(--accent-emerald); font-weight: 700;">8.5× Faster Delivery</td>
+            </tr>
+            <tr>
+              <td>Engineering Dev Hours</td>
+              <td>~1,034 Billable Hours</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~168 Focused Human Hours</td>
+              <td style="color: var(--accent-emerald); font-weight: 700;">866 Hours Saved</td>
+            </tr>
+            <tr>
+              <td>AI Compute &amp; Token Credits</td>
+              <td>$0.00 (All Manual Labor)</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~$78.75 USD</td>
+              <td style="color: var(--accent-emerald); font-weight: 700;">Negligible Tooling Spend</td>
+            </tr>
+            <tr>
+              <td>Total Capital Expenditure</td>
+              <td>~$129,250 USD</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~$78.75 USD</td>
+              <td style="color: var(--accent-emerald); font-weight: 800; font-size: 1rem;">~1,641&times; Capital Efficiency</td>
+            </tr>
+            <tr>
+              <td>End-User Runtime OpEx</td>
+              <td>$50–$200/mo (Cloud servers &amp; API keys)</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">$0.00 / month forever</td>
+              <td style="color: var(--accent-emerald); font-weight: 700;">100% Offline Local SLM</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -847,11 +987,15 @@
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon" style="background: rgba(139, 92, 246, 0.2); color: var(--accent-purple);">🚀</span>
-          Version Progression & Release Milestones
+          Version Progression &amp; Release Milestones
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
+          15 SemVer Tags &bull; Scroll to explore
         </div>
       </div>
 
-      <div class="timeline">
+      <div class="timeline-container">
+        <div class="timeline">
 
         <div class="timeline-item">
           <div class="timeline-dot"></div>
@@ -1018,6 +1162,7 @@
           </div>
         </div>
 
+        </div>
       </div>
     </div>
 
@@ -1032,12 +1177,12 @@
 
       <div class="filter-bar">
         <button class="filter-btn active" onclick="filterType('All')">All</button>
-        <button class="filter-btn" onclick="filterType('Feature')">Features (47)</button>
+        <button class="filter-btn" onclick="filterType('Feature')">Features (50)</button>
         <button class="filter-btn" onclick="filterType('Refactoring')">Refactoring (8)</button>
         <button class="filter-btn" onclick="filterType('Chore & Release')">Releases & Chores (16)</button>
-        <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (7)</button>
+        <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (8)</button>
         <button class="filter-btn" onclick="filterType('CI / CD')">CI / CD (6)</button>
-        <button class="filter-btn" onclick="filterType('Documentation')">Docs (10)</button>
+        <button class="filter-btn" onclick="filterType('Documentation')">Docs (13)</button>
         <input type="text" id="commitSearch" class="search-input" placeholder="Search commit message..." onkeyup="filterCommits()">
       </div>
 
@@ -1052,6 +1197,69 @@
             </tr>
           </thead>
           <tbody>
+
+            <tr data-type="Documentation" data-msg="docs(methodology): add academic citations, empirical baselines, and scope clarifications">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/8e74c4c" target="_blank" class="commit-hash">8e74c4c &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Documentation">Documentation</span></td>
+              <td>docs(methodology): add academic citations, empirical baselines, and scope clarifications</td>
+            </tr>
+
+            <tr data-type="Bug Fix" data-msg="fix(docs): resolve katex parsing errors in metrics_methodology.md">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/969836f" target="_blank" class="commit-hash">969836f &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-BugFix">Bug Fix</span></td>
+              <td>fix(docs): resolve KaTeX parsing errors in METRICS_METHODOLOGY.md</td>
+            </tr>
+
+            <tr data-type="Documentation" data-msg="docs(reports): link metrics_methodology.md in header, economics section, and footer">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/8de7c92" target="_blank" class="commit-hash">8de7c92 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Documentation">Documentation</span></td>
+              <td>docs(reports): link METRICS_METHODOLOGY.md in header, economics section, and footer</td>
+            </tr>
+
+            <tr data-type="Documentation" data-msg="docs: add comprehensive calculation formulas, heuristics, and methodology document">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/d24696f" target="_blank" class="commit-hash">d24696f &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Documentation">Documentation</span></td>
+              <td>docs: add comprehensive calculation formulas, heuristics, and methodology document</td>
+            </tr>
+
+            <tr data-type="Design / Style" data-msg="style(reports): make release timeline scrollable with max-height constraint">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/7d8db29" target="_blank" class="commit-hash">7d8db29 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-DesignStyle">Design / Style</span></td>
+              <td>style(reports): make release timeline scrollable with max-height constraint</td>
+            </tr>
+
+            <tr data-type="Design / Style" data-msg="style(reports): balance top kpi cards into clean 3x2 responsive grid">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/918130d" target="_blank" class="commit-hash">918130d &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-DesignStyle">Design / Style</span></td>
+              <td>style(reports): balance top KPI cards into clean 3x2 responsive grid</td>
+            </tr>
+
+            <tr data-type="Feature" data-msg="feat(reports): prominently showcase ai tokens, compute spend, unit economics, and capital leverage">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/a2b0fe0" target="_blank" class="commit-hash">a2b0fe0 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Feature">Feature</span></td>
+              <td>feat(reports): prominently showcase AI tokens, compute spend, unit economics, and capital leverage</td>
+            </tr>
+
+            <tr data-type="Feature" data-msg="feat(reports): reframe estimation metrics with ai disruption economics and capital efficiency">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/dcdf648" target="_blank" class="commit-hash">dcdf648 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Feature">Feature</span></td>
+              <td>feat(reports): reframe estimation metrics with AI disruption economics and capital efficiency</td>
+            </tr>
+
+            <tr data-type="Feature" data-msg="feat(reports): make all effort estimations, documentation lines, radar scores, and heatmap callouts fully dynamic (#111)">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/3365f18" target="_blank" class="commit-hash">3365f18 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-24</td>
+              <td><span class="pill pill-Feature">Feature</span></td>
+              <td>feat(reports): make all effort estimations, documentation lines, radar scores, and heatmap callouts fully dynamic (#111)</td>
+            </tr>
 
             <tr data-type="Feature" data-msg="feat(ci): add automated report generation script and auto-update workflow (#110)">
               <td><a href="https://github.com/vyavahareyash/cashflow/commit/c209fc4" target="_blank" class="commit-hash">c209fc4 &nearr;</a></td>
@@ -1340,69 +1548,6 @@
               <td>fix: replace validation SnackBars with dialogs and improve edit account layout (fixes #67, fixes #71) (#73)</td>
             </tr>
 
-            <tr data-type="Bug Fix" data-msg="fix(calculations): segregate goal vs cc locks and exclude unbudgeted categories (#68) (#69) (#72)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/5ac1aac" target="_blank" class="commit-hash">5ac1aac &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-15</td>
-              <td><span class="pill pill-BugFix">Bug Fix</span></td>
-              <td>fix(calculations): segregate goal vs cc locks and exclude unbudgeted categories (#68) (#69) (#72)</td>
-            </tr>
-
-            <tr data-type="Chore & Release" data-msg="chore(release): bump version to 3.0.0+7 and update changelog">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/3d6c491" target="_blank" class="commit-hash">3d6c491 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-ChoreRelease">Chore & Release</span></td>
-              <td>chore(release): bump version to 3.0.0+7 and update changelog</td>
-            </tr>
-
-            <tr data-type="Feature" data-msg="feat(accounts): add credit card support with fund locking and bill pay (#65)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/0f64cfc" target="_blank" class="commit-hash">0f64cfc &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Feature">Feature</span></td>
-              <td>feat(accounts): add credit card support with fund locking and bill pay (#65)</td>
-            </tr>
-
-            <tr data-type="Chore & Release" data-msg="chore(release): bump version to 2.2.0+6 and update changelog">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/e25ff47" target="_blank" class="commit-hash">e25ff47 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-ChoreRelease">Chore & Release</span></td>
-              <td>chore(release): bump version to 2.2.0+6 and update changelog</td>
-            </tr>
-
-            <tr data-type="Feature" data-msg="feat(backup): allow custom backup path and confirmation before export (#59) (#64)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/1a01ceb" target="_blank" class="commit-hash">1a01ceb &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Feature">Feature</span></td>
-              <td>feat(backup): allow custom backup path and confirmation before export (#59) (#64)</td>
-            </tr>
-
-            <tr data-type="Chore & Release" data-msg="chore(release): bump version to v2.1.0">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/6ee4dab" target="_blank" class="commit-hash">6ee4dab &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-ChoreRelease">Chore & Release</span></td>
-              <td>chore(release): bump version to v2.1.0</td>
-            </tr>
-
-            <tr data-type="Feature" data-msg="feat(goals): multi-account goal settlement and unlock with limit validation (#63)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/e9ee81b" target="_blank" class="commit-hash">e9ee81b &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Feature">Feature</span></td>
-              <td>feat(goals): multi-account goal settlement and unlock with limit validation (#63)</td>
-            </tr>
-
-            <tr data-type="Documentation" data-msg="docs(readme): fix screenshot image paths to match active assets (#62)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/4b85f4a" target="_blank" class="commit-hash">4b85f4a &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-Documentation">Documentation</span></td>
-              <td>docs(readme): fix screenshot image paths to match active assets (#62)</td>
-            </tr>
-
-            <tr data-type="Chore & Release" data-msg="chore(release): bump version to 2.0.0+4 and update release notes">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/3b8a246" target="_blank" class="commit-hash">3b8a246 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-14</td>
-              <td><span class="pill pill-ChoreRelease">Chore & Release</span></td>
-              <td>chore(release): bump version to 2.0.0+4 and update release notes</td>
-            </tr>
-
           </tbody>
         </table>
       </div>
@@ -1410,7 +1555,10 @@
 
     <footer>
       <div>Generated autonomously for <strong>Cashflow</strong> &bull; Offline-First Open Source Financial Intelligence</div>
-      <div style="margin-top: 0.4rem; font-size: 0.8rem; color: #64748b;">Repository: vyavahareyash/cashflow &bull; Licensed under GNU GPLv3</div>
+      <div style="margin-top: 0.4rem; font-size: 0.8rem; color: #64748b;">
+        Repository: vyavahareyash/cashflow &bull; Licensed under GNU GPLv3 &bull;
+        <a href="https://github.com/vyavahareyash/cashflow/blob/main/docs/engineering/METRICS_METHODOLOGY.md" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">Calculation Methodology &amp; Assumptions &nearr;</a>
+      </div>
     </footer>
   </div>
 
@@ -1452,7 +1600,7 @@
         labels: ["2026-08-15", "2026-08-16", "2026-09-05", "2026-09-08", "2026-09-09", "2026-09-13", "2026-09-14", "2026-09-15", "2026-09-17", "2026-09-19", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24"],
         datasets: [{
           label: 'Commits Per Active Day',
-          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 12],
+          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 21],
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           fill: true,
@@ -1473,7 +1621,7 @@
       }
     });
 
-    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 3, 0], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
+    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 11, 1], "Fri": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const gridEl = document.getElementById('heatmapGrid');
 
@@ -1504,7 +1652,7 @@
         labels: ['Production Lib', 'Automated Tests', 'Documentation (MD)'],
         datasets: [{
           label: 'Lines of Code',
-          data: [26054, 13722, 8504],
+          data: [26054, 13722, 8666],
           backgroundColor: ['#06b6d4', '#10b981', '#8b5cf6'],
           borderRadius: 8
         }]
@@ -1524,11 +1672,11 @@
     new Chart(ctxEffort, {
       type: 'bar',
       data: {
-        labels: ['COCOMO II Model', 'Agency Commercial', 'Cashflow Actual'],
+        labels: ['Agency Baseline Hours', 'AI-Augmented Solo Hours', 'Net Hours Saved via AI'],
         datasets: [{
-          label: 'Estimated Engineering Hours',
-          data: [18368, 1034, 168],
-          backgroundColor: ['#f43f5e', '#f59e0b', '#10b981'],
+          label: 'Engineering Hours',
+          data: [1034, 168, 866],
+          backgroundColor: ['#f59e0b', '#06b6d4', '#10b981'],
           borderRadius: 8
         }]
       },
