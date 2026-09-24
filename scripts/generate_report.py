@@ -130,9 +130,6 @@ def main():
         'recent_commits': commits[:50]
     }
 
-    with open('reports/project_data.json', 'w') as f:
-        json.dump(data, f, indent=2)
-
     # Radar dimensions
     radar_labels = [
         "ACID & Data Integrity",
