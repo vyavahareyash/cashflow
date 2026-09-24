@@ -561,8 +561,20 @@ def main():
 
     .value-grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 1.25rem;
+    }}
+
+    @media (max-width: 992px) {{
+      .value-grid {{
+        grid-template-columns: repeat(2, 1fr);
+      }}
+    }}
+
+    @media (max-width: 640px) {{
+      .value-grid {{
+        grid-template-columns: 1fr;
+      }}
     }}
 
     .value-card {{
