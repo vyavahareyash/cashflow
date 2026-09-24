@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.1] - 2026-09-24
+
+### Changed
+- **License Migration to GNU GPLv3**: Relicensed the codebase from MIT to the GNU General Public License v3.0 (GPLv3), ensuring long-term software freedom and protecting against closed-source commercial clones (#106).
+- **System Information UI**: Added in-app license display (`GNU GPLv3`) within the System & About settings card (#106).
+
+### Documentation
+- **Privacy Policy Compliance**: Comprehensive update to `PRIVACY_POLICY.md` disclosing on-device microphone usage (`RECORD_AUDIO`), transient memory processing with zero audio persistence, network access (`INTERNET`) limited exclusively to user-initiated open-source model downloads, hardware-isolated biometrics (`USE_BIOMETRIC`), and local CSV/SQLite export formats (#105).
+- **Showcase & Visual Assets**: Embedded official feature graphic banner and promoted Voice AI live dictation and transaction staging captures to the top of the README showcase (#105).
+
+---
+
 ## [4.1.0] - 2026-09-23
 
 ### Added
