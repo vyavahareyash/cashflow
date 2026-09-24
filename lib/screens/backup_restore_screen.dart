@@ -12,6 +12,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_button.dart';
 import '../config/app_config.dart';
+import '../services/billing_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 export '../components/export_backup_dialog.dart' show ExportFormat;
@@ -55,6 +56,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     ModelManagementService.instance.addListener(_onModelManagementChanged);
     _initModelManagement();
 
+    if (AppConfig.enablePlayStoreTips) {
+      BillingService.instance.onPurchaseCompleted = _onTipCompleted;
+      BillingService.instance.initialize();
+    }
+
     if (widget.scrollToVoiceModels) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -75,6 +81,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   void dispose() {
     _scrollController.dispose();
     ModelManagementService.instance.removeListener(_onModelManagementChanged);
+    BillingService.instance.onPurchaseCompleted = null;
     super.dispose();
   }
 
@@ -758,7 +765,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           const SizedBox(height: AppSpacing.xl),
 
           // 6. SUPPORT & OPEN SOURCE (Conditional on compile-time flag)
-          if (AppConfig.enableExternalDonations) ...[
+          if (AppConfig.enableExternalDonations ||
+              AppConfig.enablePlayStoreTips) ...[
             _buildSectionHeader('Support & Open Source', isDark),
             const SizedBox(height: AppSpacing.xs),
             _buildSupportDevelopmentCard(isDark),
@@ -769,6 +777,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           _buildSectionHeader('System & About', isDark),
           const SizedBox(height: AppSpacing.xs),
           _buildAboutSystemCard(isDark),
+          const SizedBox(height: AppSpacing.md),
+          _buildDeveloperFooter(isDark),
           const SizedBox(height: AppSpacing.huge),
         ],
         ),
@@ -1800,9 +1810,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
   }
 
-  // --- SUPPORT DEVELOPMENT CARD ---
-  Future<void> _openBuyMeACoffee() async {
-    final uri = Uri.parse(AppConfig.buyMeACoffeeUrl);
+  // --- SUPPORT DEVELOPMENT & TIPS ---
+  Future<void> _openExternalUrl(String urlString, String errorMessage) async {
+    final uri = Uri.parse(urlString);
     try {
       final launched = await launchUrl(
         uri,
@@ -1810,25 +1820,53 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       );
       if (!launched && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open browser to visit support page.'),
-          ),
+          SnackBar(content: Text(errorMessage)),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open browser to visit support page.'),
-          ),
+          SnackBar(content: Text(errorMessage)),
         );
       }
     }
   }
 
+  Future<void> _openBuyMeACoffee() => _openExternalUrl(
+        AppConfig.buyMeACoffeeUrl,
+        'Could not open browser to visit support page.',
+      );
+
+  void _onTipCompleted() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: const RoundedRectangleBorder(
+          borderRadius: AppBorderRadius.largeBorder,
+        ),
+        title: const Row(
+          children: [
+            Text('☕'),
+            SizedBox(width: 8),
+            Text('Thank You!'),
+          ],
+        ),
+        content: const Text(
+          'Thank you so much for supporting Cashflow! Your contribution directly fuels open-source, private, and offline development.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSupportDevelopmentCard(bool isDark) {
     const bmcYellow = Color(0xFFFFDD00);
-    const bmcDarkText = Color(0xFF0D0C22);
 
     return Container(
       decoration: BoxDecoration(
@@ -1911,29 +1949,192 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Material(
-            key: const Key('buy_me_a_coffee_button'),
-            color: bmcYellow,
-            borderRadius: BorderRadius.circular(14),
-            elevation: 2,
-            shadowColor: bmcYellow.withValues(alpha: 0.4),
-            child: InkWell(
+          if (AppConfig.enableExternalDonations) ...[
+            Material(
+              key: const Key('buy_me_a_coffee_button'),
+              color: bmcYellow,
               borderRadius: BorderRadius.circular(14),
-              onTap: _openBuyMeACoffee,
-              child: Container(
-                width: double.infinity,
-                height: 52,
-                alignment: Alignment.center,
-                child: Image.asset(
-                  'assets/icon/bmc_official_button.png',
-                  height: 48,
-                  fit: BoxFit.contain,
+              elevation: 2,
+              shadowColor: bmcYellow.withValues(alpha: 0.4),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _openBuyMeACoffee,
+                child: Container(
+                  width: double.infinity,
+                  height: 52,
+                  alignment: Alignment.center,
+                  child: Image.asset(
+                    'assets/icon/bmc_official_button.png',
+                    height: 48,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
-          ),
+          ] else if (AppConfig.enablePlayStoreTips) ...[
+            _buildPlayStoreTipJar(isDark),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildPlayStoreTipJar(bool isDark) {
+    return ListenableBuilder(
+      listenable: BillingService.instance,
+      builder: (context, _) {
+        final billing = BillingService.instance;
+        if (billing.isLoading) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
+        if (!billing.isAvailable || billing.products.isEmpty) {
+          final message = !billing.isAvailable
+              ? 'Unable to connect to Google Play Store. Please ensure Play Store is available and connected.'
+              : (billing.errorMessage ??
+                  'Google Play products pending setup in Play Console or testing track.');
+
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurface : AppColors.gray50,
+              borderRadius: AppBorderRadius.mediumBorder,
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.gray200,
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  key: const Key('retry_billing_button'),
+                  onPressed: () => BillingService.instance.initialize(),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Check Connection'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor:
+                        isDark ? AppColors.primaryLight : AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: billing.products.map((product) {
+                final isDouble = product.id.contains('double');
+                final isPot = product.id.contains('pot');
+                final icon = isPot ? '☕☕☕' : (isDouble ? '☕☕' : '☕');
+                final title = isPot
+                    ? 'Coffee Pot'
+                    : (isDouble ? '2 Coffees' : '1 Coffee');
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Material(
+                      key: Key('tip_button_${product.id}'),
+                      color: isDark ? AppColors.darkSurface : Colors.white,
+                      borderRadius: AppBorderRadius.mediumBorder,
+                      elevation: 1,
+                      child: InkWell(
+                        borderRadius: AppBorderRadius.mediumBorder,
+                        onTap: billing.purchasePending
+                            ? null
+                            : () => billing.buyProduct(product),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                            horizontal: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                            border: Border.all(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.gray200,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(icon, style: const TextStyle(fontSize: 20)),
+                              const SizedBox(height: 4),
+                              Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.labelSmall.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppColors.darkText
+                                      : AppColors.gray900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                product.price,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.emerald400
+                                      : AppColors.emerald700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            if (billing.purchasePending) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ],
+            if (billing.errorMessage != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                billing.errorMessage!,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.danger,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -1988,6 +2189,118 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDeveloperFooter(bool isDark) {
+    final textColor = isDark ? AppColors.gray400 : AppColors.gray600;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.gray200;
+    final footerBg = isDark ? AppColors.darkSurface : AppColors.gray50;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: footerBg,
+        borderRadius: AppBorderRadius.mediumBorder,
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Created by ${AppConfig.developerName}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: isDark ? AppColors.gray200 : AppColors.gray800,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Open Source & Offline-First',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: textColor,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          _buildSocialChip(
+            key: const Key('developer_github_button'),
+            label: 'GitHub',
+            icon: Icons.code_rounded,
+            isDark: isDark,
+            onTap: () => _openExternalUrl(
+              AppConfig.gitHubUrl,
+              'Could not open GitHub repository.',
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          _buildSocialChip(
+            key: const Key('developer_linkedin_button'),
+            label: 'LinkedIn',
+            icon: Icons.person_outline_rounded,
+            isDark: isDark,
+            onTap: () => _openExternalUrl(
+              AppConfig.linkedInUrl,
+              'Could not open LinkedIn profile.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialChip({
+    required Key key,
+    required String label,
+    required IconData icon,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      key: key,
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppBorderRadius.smallBorder,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: AppBorderRadius.smallBorder,
+            border: Border.all(
+              color: isDark ? AppColors.darkBorder : AppColors.gray300,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isDark ? AppColors.primaryLight : AppColors.primary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  color: isDark ? AppColors.darkText : AppColors.gray900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
