@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/playstore_feature_graphic_1024x500.png" alt="Cashflow Feature Graphic" width="100%">
+</p>
+
 # Cashflow
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
