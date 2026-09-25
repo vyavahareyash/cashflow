@@ -10,6 +10,7 @@ import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 import '../components/pay_cc_bill_modal.dart';
 import '../components/app_dialogs.dart';
+import '../components/walkthrough/walkthrough_keys.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
 
@@ -816,6 +817,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Widget _buildHeaderCard(bool isDark, double availableLiquidity) {
     return Container(
+      key: WalkthroughKeys.accountsSummaryKey,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.white,
         borderRadius: AppBorderRadius.xlargeBorder,
