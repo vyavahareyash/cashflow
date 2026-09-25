@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.0] - 2026-09-25
+
+### Added
+- **Interactive Onboarding Walkthrough**: Added onboarding concept carousel, spotlight tour, and isolated demo mode for first-time user guidance and feature discovery (#120).
+- **Voice Category Validation & Auto-Reconciliation**: Added draft validation to auto-reconcile income categories, prevent category-type mismatches when committing drafts, dynamically inject accounts/categories into prompt instructions, and harden merchant/item note extraction (#124).
+
+### Changed
+- **Expense Category Symmetry**: Rebranded 'Expense Budgets' to 'Expense Categories' in the Budgets screen for visual symmetry with Income Categories (#124).
+- **CI/CD Hardening & Parallel Testing**: Added PR/push workflows, hardened release checks, enabled parallel test execution with SQLite database isolation, and resolved static analysis lints (#122).
+
+---
+
 ## [4.5.1] - 2026-09-25
 
 ### Fixed

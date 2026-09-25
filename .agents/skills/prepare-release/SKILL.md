@@ -88,14 +88,10 @@ flutter analyze
 ```
 Must exit with 0 errors and 0 warnings.
 
-### 3. Automated Test Suite (Mandatory `--concurrency=1`)
-```bash
-flutter test --concurrency=1
-```
-> [!IMPORTANT]
-> Never run tests with concurrency $>1$. Local SQLite (`sqflite_common_ffi`) locks database files concurrently, causing flaky `OS error 5` aborts.
+> [!NOTE]
+> Unit tests and coverage validation are enforced automatically by the Git pre-push hook during `git push`.
 
-### 4. Optional Verification: Screenshot Suite
+### 3. Optional Verification: Screenshot Suite
 > [!NOTE]
 > **Prompt User First**: Ask the user before running this step (e.g. "Do you want to re-run screenshot automation (`node scripts/capture_screenshots.mjs`) for this release?").
 If UI screens, themes, or layouts changed:
@@ -152,7 +148,7 @@ git push origin vX.Y.Z
 Pushing `vX.Y.Z` automatically triggers `.github/workflows/release.yml`:
 
 1. **`build-android`**:
-   - Runs unit tests (`flutter test -j 1`).
+   - Runs unit tests (`flutter test`).
    - Configures upload keystore (if secrets present).
    - Builds split APKs per ABI (`--dart-define=ENABLE_EXTERNAL_DONATIONS=true`).
    - Builds universal release APK.
@@ -178,7 +174,7 @@ A release is complete when:
 - [ ] `lib/screens/backup_restore_screen.dart` version string matches `X.Y.Z (Build B)`.
 - [ ] `CHANGELOG.md` documents all changes since previous tag.
 - [ ] `reports/index.html` regenerated via `python3 scripts/generate_report.py`.
-- [ ] `dart format`, `flutter analyze`, and `flutter test --concurrency=1` all pass green.
+- [ ] Pre-commit fast gates (formatting, analysis, syntax) and pre-push tests pass cleanly.
 - [ ] Commit created with message `chore(release): bump version to X.Y.Z+B`.
 - [ ] Annotated tag `vX.Y.Z` created.
 - [ ] Pushed to `origin main` and `origin vX.Y.Z`.

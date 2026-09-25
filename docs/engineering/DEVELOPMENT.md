@@ -75,11 +75,11 @@ Run a specific test file:
 flutter test test/screens/dashboard_screen_test.dart
 ```
 
-### Pre-Commit Hooks
-Pre-commit hook validates formatting, static analysis, secrets, tests, and coverage before committing:
+### Git Quality Hooks
+Repository invariants are enforced via git hooks: `pre-commit` performs fast local verification (secrets, formatting, static analysis, script compilation), while `pre-push` executes the automated test suite and verifies code coverage (≥60%):
 ```bash
 git config core.hooksPath .githooks
-chmod +x .githooks/pre-commit
+chmod +x .githooks/pre-commit .githooks/pre-push
 ```
 
 ---
