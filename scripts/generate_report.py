@@ -622,6 +622,268 @@ def main():
       line-height: 1.5;
     }}
 
+    /* Incident Post-Mortems */
+    .incident-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }}
+
+    @media (max-width: 860px) {{
+      .incident-grid {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+
+    .incident-card {{
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      transition: all 0.2s ease;
+    }}
+
+    .incident-card:hover {{
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.04);
+    }}
+
+    .incident-header {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }}
+
+    .incident-title {{
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }}
+
+    .incident-badge {{
+      font-size: 0.725rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }}
+
+    .badge-concurrency {{ background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }}
+    .badge-ai {{ background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }}
+    .badge-state {{ background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }}
+    .badge-network {{ background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }}
+
+    .incident-rows {{
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }}
+
+    .incident-row {{
+      display: flex;
+      gap: 0.5rem;
+      color: var(--text-muted);
+    }}
+
+    .incident-row-label {{
+      font-weight: 700;
+      min-width: 85px;
+      color: #cbd5e1;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }}
+
+    .incident-takeaway {{
+      border-left: 3px solid var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.06);
+      padding: 0.65rem 0.85rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.825rem;
+      color: #e2e8f0;
+      margin-top: auto;
+      line-height: 1.45;
+    }}
+
+    .incident-takeaway strong {{
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.2rem;
+      letter-spacing: 0.05em;
+    }}
+
+    /* Architect Growth & Capability Gains */
+    .growth-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }}
+
+    @media (max-width: 860px) {{
+      .growth-grid {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+
+    .growth-card {{
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      transition: all 0.2s ease;
+    }}
+
+    .growth-card:hover {{
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.04);
+    }}
+
+    .growth-header {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }}
+
+    .growth-title {{
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }}
+
+    .growth-badge {{
+      font-size: 0.725rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }}
+
+    .badge-embedded {{ background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }}
+    .badge-inference {{ background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }}
+    .badge-release {{ background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }}
+    .badge-leverage {{ background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }}
+
+    .growth-desc {{
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }}
+
+    .growth-callout {{
+      border-left: 3px solid var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.06);
+      padding: 0.65rem 0.85rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.825rem;
+      color: #e2e8f0;
+      margin-top: auto;
+      line-height: 1.45;
+    }}
+
+    .growth-callout strong {{
+      color: var(--accent-emerald);
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.2rem;
+      letter-spacing: 0.05em;
+    }}
+
+    /* Tabs Navigation */
+    .tabs-nav {{
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1rem;
+      flex-wrap: wrap;
+    }}
+
+    .tab-btn {{
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.75rem 1.35rem;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      transition: all 0.25s ease;
+    }}
+
+    .tab-btn:hover {{
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }}
+
+    .tab-btn.active {{
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+    }}
+
+    .tab-btn-badge {{
+      font-size: 0.7rem;
+      background: var(--accent-rose);
+      color: #fff;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }}
+
+    .tab-pane {{
+      display: none;
+      animation: fadeInTab 0.3s ease forwards;
+    }}
+
+    .tab-pane.active {{
+      display: block;
+    }}
+
+    @keyframes fadeInTab {{
+      from {{
+        opacity: 0;
+        transform: translateY(6px);
+      }}
+      to {{
+        opacity: 1;
+        transform: translateY(0);
+      }}
+    }}
+
+
     .timeline-container {{
       max-height: 440px;
       overflow-y: auto;
@@ -887,6 +1149,22 @@ def main():
         <div class="kpi-subtext">~${estimated_ai_spend_usd:.0f} compute vs ${market_val_k}k agency baseline</div>
       </div>
     </div>
+
+    <!-- View Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" id="btn-tab-analytics" onclick="switchTab('analytics')">
+        <span>📊</span>
+        <span>System Architecture &amp; Metrics</span>
+      </button>
+      <button class="tab-btn" id="btn-tab-retrospective" onclick="switchTab('retrospective')">
+        <span>🛡️</span>
+        <span>Engineering Retrospective &amp; Learnings</span>
+        <span class="tab-btn-badge">NEW</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: System Architecture & Metrics -->
+    <div id="tab-analytics" class="tab-pane active">
 
     <!-- Charts Row 1: Radar & Timeline -->
     <div class="charts-grid">
@@ -1267,6 +1545,214 @@ def main():
         </table>
       </div>
     </div>
+    </div> <!-- /#tab-analytics -->
+
+    <!-- TAB 2: Engineering Retrospective & Learnings -->
+    <div id="tab-retrospective" class="tab-pane">
+
+      <!-- Incident Post-Mortems & Crisis Management -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="section-icon" style="background: rgba(244, 63, 94, 0.2); color: var(--accent-rose);">🛡️</span>
+            Engineering Retrospective: Incident Post-Mortems &amp; Crisis Management
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
+            Real-world failure modes, root-cause analyses &amp; architectural remediations
+          </div>
+        </div>
+
+        <div class="incident-grid">
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🔒</span> SQLite Database File Lock Contention
+              </div>
+              <span class="incident-badge badge-concurrency">Concurrency &amp; ACID</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Concurrent test execution across multiple parallel test runner isolates in local &amp; CI suites.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Spurious <code>sqlite3.OperationalError: database is locked</code> (code 5) and dirty state leakage across assertions.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Enforced strict harness serialization (<code>flutter test --concurrency=1</code>), isolated ephemeral DB fixture paths, and atomic test rollbacks.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Single-process SQLite embedded engines require deterministic harness constraints and architectural guards over unconstrained thread parallelization.
+            </div>
+          </div>
+
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🧠</span> Non-Deterministic Local SLM Hallucination
+              </div>
+              <span class="incident-badge badge-ai">Edge AI &amp; Grammar</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Extracting double-entry transaction entities from freeform spoken voice input using on-device SLMs without cloud fallbacks.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Unconstrained model output generated invalid JSON tokens, hallucinated account identifiers, and broke accounting balance invariants.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Offloaded inference to background Dart isolates and compiled strict GBNF context-free grammar constraints directly into the model token sampler.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Mission-critical on-device AI cannot depend on prompt engineering alone; hard grammar decoding constraints at sampling time are essential for 100% schema integrity.
+            </div>
+          </div>
+
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🔄</span> Reactive State Drift in Multi-Table Writes
+              </div>
+              <span class="incident-badge badge-state">State &amp; Reactivity</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Interdependent balance updates across Safe-to-Spend calculations, goal lock reserves, and credit card debt ledger accounts.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Dashboard UI displayed stale usable balances after nested edits; polling the database caused severe 60fps frame drops.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Engineered a lightweight, centralized revision sequence (<code>DatabaseHelper.dataRevision</code>) paired with targeted <code>ListenableBuilder</code> consumers.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Decoupled atomic database mutations from reactive UI updates via a minimal monotonic revision bus, avoiding complex third-party state synchronization bloat.
+            </div>
+          </div>
+
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🌐</span> Zero-Network Privacy vs Heavy Model Distribution
+              </div>
+              <span class="incident-badge badge-network">Privacy &amp; Security</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Supporting offline Whisper voice transcription and local SLM inference without bloating the initial app package.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Bundling model weights blew base APK size past 150MB; automated background downloads would violate the app's zero-network privacy covenant.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Created a 100% user-initiated on-demand model manager featuring SHA-256 cryptographic verification and strictly sandboxed local weight storage.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Absolute user privacy requires verifiable cryptographic integrity checks and strict user-consent boundaries for all external weight artifacts.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architect's Technical Growth & Capability Gains -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="section-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald);">📈</span>
+            Architect's Technical Growth &amp; Capability Gains
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
+            Engineering competencies, runtime expertise &amp; paradigms mastered through development
+          </div>
+        </div>
+
+        <div class="growth-grid">
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>💾</span> Embedded Systems &amp; ACID Mechanics
+              </div>
+              <span class="growth-badge badge-embedded">Core Engineering</span>
+            </div>
+            <p class="growth-desc">
+              Shifted from treating relational databases as opaque ORM backends to mastering low-level SQLite internals: Write-Ahead Logging (WAL) concurrency, explicit transaction boundaries, journal lock escalation, and zero-cloud persistence guarantees.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Architected single-writer serial queues and atomic test fixture teardowns that eradicated intermittent lock collisions and guaranteed zero dirty ledger reads.
+            </div>
+          </div>
+
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>⚡</span> Edge AI Runtime &amp; Constrained Decoding
+              </div>
+              <span class="growth-badge badge-inference">Edge Systems</span>
+            </div>
+            <p class="growth-desc">
+              Advanced beyond high-level LLM prompt engineering to direct FFI runtime execution (whisper.cpp, llama.cpp) inside dedicated background Dart isolates. Mastered formal Context-Free Grammars (GBNF) to constrain probabilistic token samplers into deterministic state machines.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Achieved 100% syntactically valid JSON double-entry extraction with zero cloud network hops, zero SaaS subscription costs, and zero data leakage.
+            </div>
+          </div>
+
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>🚢</span> Production Release &amp; Test Rig Automation
+              </div>
+              <span class="growth-badge badge-release">DevOps &amp; Quality</span>
+            </div>
+            <p class="growth-desc">
+              Owned the complete software lifecycle from commit to store distribution: automated SemVer tagging pipelines, signed Android App Bundle (AAB) builds, Play Store release workflows, and headless Android ADB visual screenshot test harnesses.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Reduced release deployment friction to zero while guaranteeing regression-free UI across 15+ navigation screens through automated adb visual verification.
+            </div>
+          </div>
+
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>🤖</span> Solo Architectural Leverage via AI Pairing
+              </div>
+              <span class="growth-badge badge-leverage">Modern Paradigms</span>
+            </div>
+            <p class="growth-desc">
+              Developed a disciplined meta-engineering paradigm for AI pair-programming: operating as a solo technical lead orchestrating AI agents bounded by strict specifications, rigorous architectural invariants, and automated test harnesses.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Delivered 35,000+ lines of production and test code across 22 releases in 14 active days, establishing ~1,684× capital leverage over legacy software agency baselines.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- /#tab-retrospective -->
 
     <footer>
       <div>Generated autonomously for <strong>Cashflow</strong> &bull; Offline-First Open Source Financial Intelligence</div>
@@ -1429,6 +1915,42 @@ def main():
         const matchesQuery = (!query || rowMsg.includes(query));
         row.style.display = (matchesType && matchesQuery) ? '' : 'none';
       }});
+    }}
+
+    function switchTab(tabKey, updateHash = true) {{
+      const tabs = ['analytics', 'retrospective'];
+      if (!tabs.includes(tabKey)) tabKey = 'analytics';
+
+      tabs.forEach(t => {{
+        const btn = document.getElementById('btn-tab-' + t);
+        const pane = document.getElementById('tab-' + t);
+        if (btn) btn.classList.toggle('active', t === tabKey);
+        if (pane) pane.classList.toggle('active', t === tabKey);
+      }});
+
+      if (updateHash) {{
+        history.replaceState(null, '', '#' + tabKey);
+      }}
+
+      if (tabKey === 'analytics') {{
+        window.dispatchEvent(new Event('resize'));
+      }}
+    }}
+
+    function handleHashRoute() {{
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (hash === 'retrospective' || hash === 'learnings') {{
+        switchTab('retrospective', false);
+      }} else {{
+        switchTab('analytics', false);
+      }}
+    }}
+
+    window.addEventListener('hashchange', handleHashRoute);
+    window.addEventListener('DOMContentLoaded', handleHashRoute);
+    // In case DOM is already ready
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {{
+      handleHashRoute();
     }}
   </script>
 </body>

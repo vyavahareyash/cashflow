@@ -438,6 +438,268 @@
       line-height: 1.5;
     }
 
+    /* Incident Post-Mortems */
+    .incident-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 860px) {
+      .incident-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .incident-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .incident-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .incident-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .incident-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .incident-badge {
+      font-size: 0.725rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-concurrency { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .badge-ai { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-state { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-network { background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }
+
+    .incident-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .incident-row {
+      display: flex;
+      gap: 0.5rem;
+      color: var(--text-muted);
+    }
+
+    .incident-row-label {
+      font-weight: 700;
+      min-width: 85px;
+      color: #cbd5e1;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .incident-takeaway {
+      border-left: 3px solid var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.06);
+      padding: 0.65rem 0.85rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.825rem;
+      color: #e2e8f0;
+      margin-top: auto;
+      line-height: 1.45;
+    }
+
+    .incident-takeaway strong {
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.2rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Architect Growth & Capability Gains */
+    .growth-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 860px) {
+      .growth-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .growth-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .growth-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .growth-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .growth-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .growth-badge {
+      font-size: 0.725rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-embedded { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-inference { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-release { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-leverage { background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }
+
+    .growth-desc {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .growth-callout {
+      border-left: 3px solid var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.06);
+      padding: 0.65rem 0.85rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.825rem;
+      color: #e2e8f0;
+      margin-top: auto;
+      line-height: 1.45;
+    }
+
+    .growth-callout strong {
+      color: var(--accent-emerald);
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.2rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Tabs Navigation */
+    .tabs-nav {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.75rem 1.35rem;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      transition: all 0.25s ease;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .tab-btn.active {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+    }
+
+    .tab-btn-badge {
+      font-size: 0.7rem;
+      background: var(--accent-rose);
+      color: #fff;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeInTab 0.3s ease forwards;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    @keyframes fadeInTab {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+
     .timeline-container {
       max-height: 440px;
       overflow-y: auto;
@@ -669,14 +931,14 @@
     <div class="kpi-grid">
       <div class="kpi-card" style="--accent-color: var(--accent-cyan);">
         <div class="kpi-label">Total Dart LOC</div>
-        <div class="kpi-value">40,078</div>
-        <div class="kpi-subtext">26,318 lib / 13,760 test</div>
+        <div class="kpi-value">41,083</div>
+        <div class="kpi-subtext">26,961 lib / 14,122 test</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-emerald);">
         <div class="kpi-label">Automated Tests</div>
-        <div class="kpi-value">326</div>
-        <div class="kpi-subtext">52.3% test-to-production code ratio</div>
+        <div class="kpi-value">338</div>
+        <div class="kpi-subtext">52.4% test-to-production code ratio</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-purple);">
@@ -688,21 +950,37 @@
       <div class="kpi-card" style="--accent-color: var(--accent-amber);">
         <div class="kpi-label">Active Sprint Days</div>
         <div class="kpi-value">15 <span style="font-size: 1.1rem; color: var(--text-muted);">/ 40d</span></div>
-        <div class="kpi-subtext">Average ~8.7 commits/active day</div>
+        <div class="kpi-subtext">Average ~8.9 commits/active day</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-purple);">
         <div class="kpi-label">AI Tokens &amp; Compute</div>
-        <div class="kpi-value">~23.6M</div>
-        <div class="kpi-subtext">~$82.60 total token API credits spend</div>
+        <div class="kpi-value">~24.1M</div>
+        <div class="kpi-subtext">~$84.35 total token API credits spend</div>
       </div>
 
       <div class="kpi-card" style="--accent-color: var(--accent-rose);">
         <div class="kpi-label">AI Capital Leverage</div>
-        <div class="kpi-value">~1,576&times;</div>
-        <div class="kpi-subtext">~$83 compute vs $130k agency baseline</div>
+        <div class="kpi-value">~1,582&times;</div>
+        <div class="kpi-subtext">~$84 compute vs $133k agency baseline</div>
       </div>
     </div>
+
+    <!-- View Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" id="btn-tab-analytics" onclick="switchTab('analytics')">
+        <span>📊</span>
+        <span>System Architecture &amp; Metrics</span>
+      </button>
+      <button class="tab-btn" id="btn-tab-retrospective" onclick="switchTab('retrospective')">
+        <span>🛡️</span>
+        <span>Engineering Retrospective &amp; Learnings</span>
+        <span class="tab-btn-badge">NEW</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: System Architecture & Metrics -->
+    <div id="tab-analytics" class="tab-pane active">
 
     <!-- Charts Row 1: Radar & Timeline -->
     <div class="charts-grid">
@@ -756,7 +1034,7 @@
         <div class="callout-box">
           <div class="callout-title">Primary Deep-Work Window</div>
           <div class="callout-val">20:00 &ndash; 23:00 IST</div>
-          <div class="callout-sub">50 commits (38.2% of total development activity)</div>
+          <div class="callout-sub">50 commits (37.3% of total development activity)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Peak Midweek Velocity</div>
@@ -765,12 +1043,12 @@
         </div>
         <div class="callout-box">
           <div class="callout-title">Weekend Sprint Ratio</div>
-          <div class="callout-val">36 Commits (27.5%)</div>
+          <div class="callout-val">36 Commits (26.9%)</div>
           <div class="callout-sub">Dedicated solo focus across Sat (16) &amp; Sun (20)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Night-Owl Engineering</div>
-          <div class="callout-val">64.9% After 18:00 IST</div>
+          <div class="callout-val">63.4% After 18:00 IST</div>
           <div class="callout-sub">85 commits shipped during evening &amp; late-night focus hours</div>
         </div>
       </div>
@@ -816,9 +1094,9 @@
           <ul>
             <li><span>Equivalent Engineering Team</span> <span class="val">1 Senior Mobile, 1 ML, 1 QA</span></li>
             <li><span>Industry Delivery Velocity</span> <span class="val">~25 LOC / Dev Day</span></li>
-            <li><span>Estimated Commercial Hours</span> <span class="val">~1,042 Dev Hours</span></li>
-            <li><span>Nominal Delivery Horizon</span> <span class="val">~46.3 Months</span></li>
-            <li><span>Standard Agency Billing</span> <span class="val">~$130,250 USD ($125/hr)</span></li>
+            <li><span>Estimated Commercial Hours</span> <span class="val">~1,068 Dev Hours</span></li>
+            <li><span>Nominal Delivery Horizon</span> <span class="val">~47.5 Months</span></li>
+            <li><span>Standard Agency Billing</span> <span class="val">~$133,500 USD ($125/hr)</span></li>
             <li><span>Infrastructure Maintenance</span> <span class="val">Recurring Cloud & Server Bills</span></li>
           </ul>
         </div>
@@ -827,11 +1105,11 @@
           <h4>AI Disruption & Token Economics</h4>
           <ul>
             <li><span>Development Augmentation</span> <span class="val">Agentic AI & LLM Pair Programming</span></li>
-            <li><span>Estimated LLM Context Volume</span> <span class="val">~23.6M Tokens</span></li>
-            <li><span>Estimated Compute Spend</span> <span class="val">~$82.6 USD in Token Credits</span></li>
-            <li><span>Hallucination Verification</span> <span class="val">326 tests + 44 visual markers</span></li>
-            <li><span>Capital Efficiency Multiplier</span> <span class="val">~1,576&times; vs Agency Spend</span></li>
-            <li><span>Net Human Hours Saved</span> <span class="val">~862 Hours</span></li>
+            <li><span>Estimated LLM Context Volume</span> <span class="val">~24.1M Tokens</span></li>
+            <li><span>Estimated Compute Spend</span> <span class="val">~$84.35 USD in Token Credits</span></li>
+            <li><span>Hallucination Verification</span> <span class="val">338 tests + 44 visual markers</span></li>
+            <li><span>Capital Efficiency Multiplier</span> <span class="val">~1,582&times; vs Agency Spend</span></li>
+            <li><span>Net Human Hours Saved</span> <span class="val">~888 Hours</span></li>
           </ul>
         </div>
 
@@ -840,7 +1118,7 @@
           <ul>
             <li><span>Lead Architect</span> <span class="val">Yash Vyavahare</span></li>
             <li><span>Active High-Focus Days</span> <span class="val">15 Days (40 calendar span)</span></li>
-            <li><span>Net Production Velocity</span> <span class="val">~2,671 LOC + Tests / Active Day</span></li>
+            <li><span>Net Production Velocity</span> <span class="val">~2,738 LOC + Tests / Active Day</span></li>
             <li><span>Release Cadence</span> <span class="val">1 SemVer Release / 2.2 Days</span></li>
             <li><span>End-User Cloud OpEx</span> <span class="val">$0.00 / Month (100% On-Device SLM)</span></li>
             <li><span>Software License</span> <span class="val">GNU GPLv3 Copyleft</span></li>
@@ -867,23 +1145,23 @@
       <div class="heatmap-callouts" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 0; margin-bottom: 1.5rem;">
         <div class="callout-box">
           <div class="callout-title">Total Context Throughput</div>
-          <div class="callout-val">~23.6M Tokens</div>
-          <div class="callout-sub">16.5M Prompt / 7.1M Completion (~180k tokens/commit)</div>
+          <div class="callout-val">~24.1M Tokens</div>
+          <div class="callout-sub">16.9M Prompt / 7.2M Completion (~180k tokens/commit)</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Total AI Compute Spend</div>
-          <div class="callout-val">~$82.60 USD</div>
+          <div class="callout-val">~$84.35 USD</div>
           <div class="callout-sub">Blended ~$3.50/M tokens across planning, generation &amp; refactoring</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Unit Development Cost</div>
           <div class="callout-val">$0.63 / Commit</div>
-          <div class="callout-sub">$2.06 per 1,000 lines of production &amp; test code</div>
+          <div class="callout-sub">$2.05 per 1,000 lines of production &amp; test code</div>
         </div>
         <div class="callout-box">
           <div class="callout-title">Hallucination Verification</div>
           <div class="callout-val">0% Unverified Code</div>
-          <div class="callout-sub">326 automated tests + 44 visual UI screenshot markers</div>
+          <div class="callout-sub">338 automated tests + 44 visual UI screenshot markers</div>
         </div>
       </div>
 
@@ -912,21 +1190,21 @@
             </tr>
             <tr>
               <td>Engineering Dev Hours</td>
-              <td>~1,042 Billable Hours</td>
+              <td>~1,068 Billable Hours</td>
               <td style="color: var(--accent-cyan); font-weight: 600;">~180 Focused Human Hours</td>
-              <td style="color: var(--accent-emerald); font-weight: 700;">862 Hours Saved</td>
+              <td style="color: var(--accent-emerald); font-weight: 700;">888 Hours Saved</td>
             </tr>
             <tr>
               <td>AI Compute &amp; Token Credits</td>
               <td>$0.00 (All Manual Labor)</td>
-              <td style="color: var(--accent-cyan); font-weight: 600;">~$82.60 USD</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~$84.35 USD</td>
               <td style="color: var(--accent-emerald); font-weight: 700;">Negligible Tooling Spend</td>
             </tr>
             <tr>
               <td>Total Capital Expenditure</td>
-              <td>~$130,250 USD</td>
-              <td style="color: var(--accent-cyan); font-weight: 600;">~$82.60 USD</td>
-              <td style="color: var(--accent-emerald); font-weight: 800; font-size: 1rem;">~1,576&times; Capital Efficiency</td>
+              <td>~$133,500 USD</td>
+              <td style="color: var(--accent-cyan); font-weight: 600;">~$84.35 USD</td>
+              <td style="color: var(--accent-emerald); font-weight: 800; font-size: 1rem;">~1,582&times; Capital Efficiency</td>
             </tr>
             <tr>
               <td>End-User Runtime OpEx</td>
@@ -977,7 +1255,7 @@
           <span class="value-card-icon">🧪</span>
           <h4>Exhaustive Automated Test Bed</h4>
           <p>
-            Over 326 automated unit, widget, and visual integration tests with sequential SQLite locking guardrails and 44 visual screenshot markers automated via adb workflows.
+            Over 338 automated unit, widget, and visual integration tests with sequential SQLite locking guardrails and 44 visual screenshot markers automated via adb workflows.
           </p>
         </div>
 
@@ -1230,9 +1508,9 @@
         <button class="filter-btn" onclick="filterType('Feature')">Features (51)</button>
         <button class="filter-btn" onclick="filterType('Refactoring')">Refactoring (8)</button>
         <button class="filter-btn" onclick="filterType('Chore & Release')">Releases & Chores (20)</button>
-        <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (7)</button>
+        <button class="filter-btn" onclick="filterType('Bug Fix')">Bug Fixes (9)</button>
         <button class="filter-btn" onclick="filterType('CI / CD')">CI / CD (6)</button>
-        <button class="filter-btn" onclick="filterType('Documentation')">Docs (16)</button>
+        <button class="filter-btn" onclick="filterType('Documentation')">Docs (17)</button>
         <input type="text" id="commitSearch" class="search-input" placeholder="Search commit message..." onkeyup="filterCommits()">
       </div>
 
@@ -1247,6 +1525,27 @@
             </tr>
           </thead>
           <tbody>
+
+            <tr data-type="Bug Fix" data-msg="fix(ui): replace overlapping fab with header pills and add accounts tabs (#117) (#118)">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/e859dde" target="_blank" class="commit-hash">e859dde &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-25</td>
+              <td><span class="pill pill-BugFix">Bug Fix</span></td>
+              <td>fix(ui): replace overlapping FAB with header pills and add accounts tabs (#117) (#118)</td>
+            </tr>
+
+            <tr data-type="Bug Fix" data-msg="fix(voice): prevent model download cancellation on page change or backgrounding (#115) (#116)">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/35880a2" target="_blank" class="commit-hash">35880a2 &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-25</td>
+              <td><span class="pill pill-BugFix">Bug Fix</span></td>
+              <td>fix(voice): prevent model download cancellation on page change or backgrounding (#115) (#116)</td>
+            </tr>
+
+            <tr data-type="Documentation" data-msg="docs(report): synchronize analytics metrics, add weekend/night-owl telemetry, and update-report skill (#114)">
+              <td><a href="https://github.com/vyavahareyash/cashflow/commit/56ceb8c" target="_blank" class="commit-hash">56ceb8c &nearr;</a></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-25</td>
+              <td><span class="pill pill-Documentation">Documentation</span></td>
+              <td>docs(report): synchronize analytics metrics, add weekend/night-owl telemetry, and update-report skill (#114)</td>
+            </tr>
 
             <tr data-type="Chore & Release" data-msg="chore(release): bump version to 4.4.0+18">
               <td><a href="https://github.com/vyavahareyash/cashflow/commit/084ec07" target="_blank" class="commit-hash">084ec07 &nearr;</a></td>
@@ -1577,31 +1876,218 @@
               <td>docs: add offline voice journaling spec, ADR-0005, and vision (#79)</td>
             </tr>
 
-            <tr data-type="Other" data-msg="updates for release (#77)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/725b3f3" target="_blank" class="commit-hash">725b3f3 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-21</td>
-              <td><span class="pill pill-Other">Other</span></td>
-              <td>updates for release (#77)</td>
-            </tr>
-
-            <tr data-type="Feature" data-msg="feat(release): configure google play store publication & ci automation (#76)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/7266fb2" target="_blank" class="commit-hash">7266fb2 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-19</td>
-              <td><span class="pill pill-Feature">Feature</span></td>
-              <td>feat(release): configure Google Play Store publication & CI automation (#76)</td>
-            </tr>
-
-            <tr data-type="Documentation" data-msg="docs: standardize documentation structure and architecture records (#75)">
-              <td><a href="https://github.com/vyavahareyash/cashflow/commit/35faf31" target="_blank" class="commit-hash">35faf31 &nearr;</a></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">2026-09-17</td>
-              <td><span class="pill pill-Documentation">Documentation</span></td>
-              <td>docs: standardize documentation structure and architecture records (#75)</td>
-            </tr>
-
           </tbody>
         </table>
       </div>
     </div>
+    </div> <!-- /#tab-analytics -->
+
+    <!-- TAB 2: Engineering Retrospective & Learnings -->
+    <div id="tab-retrospective" class="tab-pane">
+
+      <!-- Incident Post-Mortems & Crisis Management -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="section-icon" style="background: rgba(244, 63, 94, 0.2); color: var(--accent-rose);">🛡️</span>
+            Engineering Retrospective: Incident Post-Mortems &amp; Crisis Management
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
+            Real-world failure modes, root-cause analyses &amp; architectural remediations
+          </div>
+        </div>
+
+        <div class="incident-grid">
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🔒</span> SQLite Database File Lock Contention
+              </div>
+              <span class="incident-badge badge-concurrency">Concurrency &amp; ACID</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Concurrent test execution across multiple parallel test runner isolates in local &amp; CI suites.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Spurious <code>sqlite3.OperationalError: database is locked</code> (code 5) and dirty state leakage across assertions.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Enforced strict harness serialization (<code>flutter test --concurrency=1</code>), isolated ephemeral DB fixture paths, and atomic test rollbacks.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Single-process SQLite embedded engines require deterministic harness constraints and architectural guards over unconstrained thread parallelization.
+            </div>
+          </div>
+
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🧠</span> Non-Deterministic Local SLM Hallucination
+              </div>
+              <span class="incident-badge badge-ai">Edge AI &amp; Grammar</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Extracting double-entry transaction entities from freeform spoken voice input using on-device SLMs without cloud fallbacks.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Unconstrained model output generated invalid JSON tokens, hallucinated account identifiers, and broke accounting balance invariants.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Offloaded inference to background Dart isolates and compiled strict GBNF context-free grammar constraints directly into the model token sampler.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Mission-critical on-device AI cannot depend on prompt engineering alone; hard grammar decoding constraints at sampling time are essential for 100% schema integrity.
+            </div>
+          </div>
+
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🔄</span> Reactive State Drift in Multi-Table Writes
+              </div>
+              <span class="incident-badge badge-state">State &amp; Reactivity</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Interdependent balance updates across Safe-to-Spend calculations, goal lock reserves, and credit card debt ledger accounts.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Dashboard UI displayed stale usable balances after nested edits; polling the database caused severe 60fps frame drops.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Engineered a lightweight, centralized revision sequence (<code>DatabaseHelper.dataRevision</code>) paired with targeted <code>ListenableBuilder</code> consumers.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Decoupled atomic database mutations from reactive UI updates via a minimal monotonic revision bus, avoiding complex third-party state synchronization bloat.
+            </div>
+          </div>
+
+          <div class="incident-card">
+            <div class="incident-header">
+              <div class="incident-title">
+                <span>🌐</span> Zero-Network Privacy vs Heavy Model Distribution
+              </div>
+              <span class="incident-badge badge-network">Privacy &amp; Security</span>
+            </div>
+            <div class="incident-rows">
+              <div class="incident-row">
+                <span class="incident-row-label">Trigger:</span>
+                <span>Supporting offline Whisper voice transcription and local SLM inference without bloating the initial app package.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Failure:</span>
+                <span>Bundling model weights blew base APK size past 150MB; automated background downloads would violate the app's zero-network privacy covenant.</span>
+              </div>
+              <div class="incident-row">
+                <span class="incident-row-label">Remedy:</span>
+                <span>Created a 100% user-initiated on-demand model manager featuring SHA-256 cryptographic verification and strictly sandboxed local weight storage.</span>
+              </div>
+            </div>
+            <div class="incident-takeaway">
+              <strong>Key Engineering Takeaway</strong>
+              Absolute user privacy requires verifiable cryptographic integrity checks and strict user-consent boundaries for all external weight artifacts.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architect's Technical Growth & Capability Gains -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="section-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald);">📈</span>
+            Architect's Technical Growth &amp; Capability Gains
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">
+            Engineering competencies, runtime expertise &amp; paradigms mastered through development
+          </div>
+        </div>
+
+        <div class="growth-grid">
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>💾</span> Embedded Systems &amp; ACID Mechanics
+              </div>
+              <span class="growth-badge badge-embedded">Core Engineering</span>
+            </div>
+            <p class="growth-desc">
+              Shifted from treating relational databases as opaque ORM backends to mastering low-level SQLite internals: Write-Ahead Logging (WAL) concurrency, explicit transaction boundaries, journal lock escalation, and zero-cloud persistence guarantees.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Architected single-writer serial queues and atomic test fixture teardowns that eradicated intermittent lock collisions and guaranteed zero dirty ledger reads.
+            </div>
+          </div>
+
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>⚡</span> Edge AI Runtime &amp; Constrained Decoding
+              </div>
+              <span class="growth-badge badge-inference">Edge Systems</span>
+            </div>
+            <p class="growth-desc">
+              Advanced beyond high-level LLM prompt engineering to direct FFI runtime execution (whisper.cpp, llama.cpp) inside dedicated background Dart isolates. Mastered formal Context-Free Grammars (GBNF) to constrain probabilistic token samplers into deterministic state machines.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Achieved 100% syntactically valid JSON double-entry extraction with zero cloud network hops, zero SaaS subscription costs, and zero data leakage.
+            </div>
+          </div>
+
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>🚢</span> Production Release &amp; Test Rig Automation
+              </div>
+              <span class="growth-badge badge-release">DevOps &amp; Quality</span>
+            </div>
+            <p class="growth-desc">
+              Owned the complete software lifecycle from commit to store distribution: automated SemVer tagging pipelines, signed Android App Bundle (AAB) builds, Play Store release workflows, and headless Android ADB visual screenshot test harnesses.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Reduced release deployment friction to zero while guaranteeing regression-free UI across 15+ navigation screens through automated adb visual verification.
+            </div>
+          </div>
+
+          <div class="growth-card">
+            <div class="growth-header">
+              <div class="growth-title">
+                <span>🤖</span> Solo Architectural Leverage via AI Pairing
+              </div>
+              <span class="growth-badge badge-leverage">Modern Paradigms</span>
+            </div>
+            <p class="growth-desc">
+              Developed a disciplined meta-engineering paradigm for AI pair-programming: operating as a solo technical lead orchestrating AI agents bounded by strict specifications, rigorous architectural invariants, and automated test harnesses.
+            </p>
+            <div class="growth-callout">
+              <strong>Direct Practical Gain</strong>
+              Delivered 35,000+ lines of production and test code across 22 releases in 14 active days, establishing ~1,684× capital leverage over legacy software agency baselines.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- /#tab-retrospective -->
 
     <footer>
       <div>Generated autonomously for <strong>Cashflow</strong> &bull; Offline-First Open Source Financial Intelligence</div>
@@ -1620,7 +2106,7 @@
         labels: ["ACID & Data Integrity", "Automated Testing & QA", "Edge AI & Local SLM", "CI/CD & Release Ops", "Clean Architecture", "Product & UX Design"],
         datasets: [{
           label: 'Engineering Quality Index',
-          data: [98, 95, 94, 94, 96, 95],
+          data: [98, 96, 94, 94, 96, 95],
           backgroundColor: 'rgba(6, 182, 212, 0.25)',
           borderColor: '#06b6d4',
           pointBackgroundColor: '#10b981',
@@ -1650,7 +2136,7 @@
         labels: ["2026-08-15", "2026-08-16", "2026-09-05", "2026-09-08", "2026-09-09", "2026-09-13", "2026-09-14", "2026-09-15", "2026-09-17", "2026-09-19", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25"],
         datasets: [{
           label: 'Commits Per Active Day',
-          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 22, 5],
+          data: [9, 9, 6, 20, 2, 11, 17, 6, 2, 1, 3, 6, 12, 22, 8],
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           fill: true,
@@ -1671,7 +2157,7 @@
       }
     });
 
-    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 4, 9], "Fri": [2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
+    const heatmapData = {"Mon": [2, 5, 3, 0, 0, 0, 0, 0, 1, 2, 0, 2, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0], "Tue": [0, 2, 3, 1, 0, 0, 0, 0, 2, 2, 3, 0, 0, 0, 0, 0, 2, 3, 1, 3, 4, 2, 1, 3], "Wed": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 4], "Thu": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 2, 4, 9], "Fri": [2, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Sat": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 5, 2, 5], "Sun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 4, 1, 4, 0, 5, 2, 2, 0, 0, 0]};
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const gridEl = document.getElementById('heatmapGrid');
 
@@ -1702,7 +2188,7 @@
         labels: ['Production Lib', 'Automated Tests', 'Documentation (MD)'],
         datasets: [{
           label: 'Lines of Code',
-          data: [26318, 13760, 8735],
+          data: [26961, 14122, 8877],
           backgroundColor: ['#06b6d4', '#10b981', '#8b5cf6'],
           borderRadius: 8
         }]
@@ -1725,7 +2211,7 @@
         labels: ['Agency Baseline Hours', 'AI-Augmented Solo Hours', 'Net Hours Saved via AI'],
         datasets: [{
           label: 'Engineering Hours',
-          data: [1042, 180, 862],
+          data: [1068, 180, 888],
           backgroundColor: ['#f59e0b', '#06b6d4', '#10b981'],
           borderRadius: 8
         }]
@@ -1764,6 +2250,42 @@
         const matchesQuery = (!query || rowMsg.includes(query));
         row.style.display = (matchesType && matchesQuery) ? '' : 'none';
       });
+    }
+
+    function switchTab(tabKey, updateHash = true) {
+      const tabs = ['analytics', 'retrospective'];
+      if (!tabs.includes(tabKey)) tabKey = 'analytics';
+
+      tabs.forEach(t => {
+        const btn = document.getElementById('btn-tab-' + t);
+        const pane = document.getElementById('tab-' + t);
+        if (btn) btn.classList.toggle('active', t === tabKey);
+        if (pane) pane.classList.toggle('active', t === tabKey);
+      });
+
+      if (updateHash) {
+        history.replaceState(null, '', '#' + tabKey);
+      }
+
+      if (tabKey === 'analytics') {
+        window.dispatchEvent(new Event('resize'));
+      }
+    }
+
+    function handleHashRoute() {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (hash === 'retrospective' || hash === 'learnings') {
+        switchTab('retrospective', false);
+      } else {
+        switchTab('analytics', false);
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashRoute);
+    window.addEventListener('DOMContentLoaded', handleHashRoute);
+    // In case DOM is already ready
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      handleHashRoute();
     }
   </script>
 </body>
