@@ -426,7 +426,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           const SizedBox(width: AppSpacing.xs),
         ],
       ),
-      body: IndexedStack(index: _selectedIndex, children: screens),
+      body: AnimatedBuilder(
+        animation: ModelManagementService.instance,
+        builder: (context, child) {
+          final modelService = ModelManagementService.instance;
+          final isDownloading = modelService.isDownloading ||
+              modelService.status == ModelPackStatus.verifying;
+
+          return Column(
+            children: [
+              if (isDownloading)
+                _buildGlobalDownloadBanner(context, modelService, isDark),
+              Expanded(child: child!),
+            ],
+          );
+        },
+        child: IndexedStack(index: _selectedIndex, children: screens),
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
@@ -504,6 +520,90 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlobalDownloadBanner(
+    BuildContext context,
+    ModelManagementService modelService,
+    bool isDark,
+  ) {
+    final pct = (modelService.progress * 100).toStringAsFixed(0);
+    final isVerifying = modelService.status == ModelPackStatus.verifying;
+
+    return Material(
+      color: isDark ? AppColors.darkSurfaceElevated : AppColors.emerald50,
+      elevation: 2,
+      child: InkWell(
+        key: const Key('global_model_download_banner'),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const BackupRestoreScreen(
+                scrollToVoiceModels: true,
+              ),
+            ),
+          );
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs + 2,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isVerifying
+                        ? Icons.security_rounded
+                        : Icons.downloading_rounded,
+                    color: AppColors.emerald600,
+                    size: 18,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      isVerifying
+                          ? 'Verifying AI Model Pack...'
+                          : 'Downloading AI Model Pack ($pct%)',
+                      style: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.darkText : AppColors.gray900,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'View in Settings',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.emerald600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: AppColors.emerald600,
+                  ),
+                ],
+              ),
+            ),
+            LinearProgressIndicator(
+              value: isVerifying ? null : modelService.progress,
+              backgroundColor:
+                  isDark ? AppColors.darkBorder : AppColors.emerald100,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.emerald600),
+              minHeight: 2.5,
+            ),
+          ],
         ),
       ),
     );

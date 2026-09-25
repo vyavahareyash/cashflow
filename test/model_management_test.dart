@@ -38,6 +38,8 @@ class FakeModelDownloadClient implements ModelDownloadClient {
   final Map<String, List<int>> fileData;
   final bool failChecksum;
   final bool simulateSlowDownload;
+  final int failTimes;
+  int callCount = 0;
   final Map<String, int> startBytesRequested = {};
   bool isAborted = false;
   bool isClosed = false;
@@ -47,6 +49,7 @@ class FakeModelDownloadClient implements ModelDownloadClient {
     required this.fileData,
     this.failChecksum = false,
     this.simulateSlowDownload = false,
+    this.failTimes = 0,
   });
 
   @override
@@ -55,6 +58,11 @@ class FakeModelDownloadClient implements ModelDownloadClient {
     int startByte = 0,
     Map<String, String>? headers,
   }) async {
+    callCount++;
+    if (callCount <= failTimes) {
+      throw const SocketException('Connection reset by peer');
+    }
+
     final filename = p.basename(uri.path);
     startBytesRequested[filename] = startByte;
     final rawData = fileData[filename] ?? [1, 2, 3, 4, 5];
@@ -360,6 +368,87 @@ void main() {
 
       expect(success, isFalse);
       expect(service.status, ModelPackStatus.notInstalled);
+    });
+
+    test('checkInstalledStatus and isModelPackInstalled do not reset status while downloading', () async {
+      final fakeClient = FakeModelDownloadClient(
+        fileData: sampleBytes,
+        simulateSlowDownload: true,
+      );
+      final service = ModelManagementService(
+        manifest: testManifest,
+        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+        downloadClient: fakeClient,
+      );
+
+      final future = service.downloadModelPack();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(service.status, ModelPackStatus.downloading);
+
+      // Calling checkInstalledStatus while downloading must retain downloading status
+      final status = await service.checkInstalledStatus();
+      expect(status, ModelPackStatus.downloading);
+      expect(service.status, ModelPackStatus.downloading);
+
+      // Calling isModelPackInstalled while downloading returns false without clobbering
+      final installed = await service.isModelPackInstalled();
+      expect(installed, isFalse);
+      expect(service.status, ModelPackStatus.downloading);
+
+      service.cancelDownload();
+      await future;
+    });
+
+    test('concurrent downloadModelPack calls share the active download future', () async {
+      final fakeClient = FakeModelDownloadClient(
+        fileData: sampleBytes,
+        simulateSlowDownload: true,
+      );
+      final service = ModelManagementService(
+        manifest: testManifest,
+        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+        downloadClient: fakeClient,
+      );
+
+      final f1 = service.downloadModelPack();
+      final f2 = service.downloadModelPack();
+
+      expect(identical(f1, f2), isTrue);
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.cancelDownload();
+      await f1;
+    });
+
+    test('transient network drop triggers retry and successfully completes', () async {
+      final fakeClient = FakeModelDownloadClient(
+        fileData: sampleBytes,
+        failTimes: 1, // fails once with SocketException then succeeds
+      );
+      final service = ModelManagementService(
+        manifest: testManifest,
+        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+        downloadClient: fakeClient,
+      );
+
+      final success = await service.downloadModelPack();
+      expect(success, isTrue);
+      expect(service.isInstalled, isTrue);
+      expect(fakeClient.callCount, greaterThan(1));
+    });
+
+    test('app lifecycle transitions track background state and resume cleanly', () async {
+      final service = ModelManagementService(
+        manifest: testManifest,
+        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+      );
+
+      service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      service.didChangeAppLifecycleState(AppLifecycleState.resumed);
     });
   });
 
