@@ -14,12 +14,16 @@ import 'package:cashflow/components/voice_recording_modal.dart';
 import 'package:cashflow/services/model_management_service.dart';
 import 'package:cashflow/services/voice_pipeline_coordinator.dart';
 import 'package:cashflow/services/platform_security_service.dart';
+import 'package:cashflow/components/walkthrough/walkthrough_controller.dart';
+import 'package:cashflow/components/walkthrough/walkthrough_spotlight_overlay.dart';
+import 'package:cashflow/components/walkthrough/walkthrough_keys.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configurePlatformDatabase();
 
   final dbHelper = DatabaseHelper.instance;
+  await dbHelper.recoverWalkthroughDemoModeIfNeeded();
   await dbHelper.initStartupPrivacyMode();
   // Seed categories if DB is empty
   final cats = await dbHelper.readAllCategories();
@@ -338,6 +342,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   int _accountsSubTabIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    WalkthroughController.instance.registerNavigationCallback(_onItemTapped);
+    _checkFirstInstallWalkthrough();
+  }
+
+  Future<void> _checkFirstInstallWalkthrough() async {
+    final completed = await DatabaseHelper.instance.getWalkthroughCompleted();
+    if (!completed && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await WalkthroughController.instance.startFullWalkthrough(context);
+      });
+    }
+  }
+
   void _onItemTapped(int index, {int? subTabIndex}) {
     setState(() {
       if (index == 3 && _selectedIndex == 3 && subTabIndex == null) {
@@ -378,7 +399,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               : 'My Accounts',
     ];
 
-    return Scaffold(
+    final scaffold = Scaffold(
       extendBody: true,
       appBar: AppBar(
         title: Row(
@@ -540,6 +561,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
+
+    return ListenableBuilder(
+      listenable: WalkthroughController.instance,
+      builder: (context, _) {
+        final isTourActive = WalkthroughController.instance.isTourActive;
+        final currentStep = WalkthroughController.instance.currentStepIndex;
+
+        return Stack(
+          children: [
+            scaffold,
+            if (isTourActive)
+              Positioned.fill(
+                child: WalkthroughSpotlightOverlay(
+                  currentStepIndex: currentStep,
+                  onNext: WalkthroughController.instance.nextStep,
+                  onPrevious: WalkthroughController.instance.previousStep,
+                  onExit: () => WalkthroughController.instance.exitTour(context),
+                  onFinish: () => WalkthroughController.instance.finishTour(context),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildGlobalDownloadBanner(
@@ -630,8 +675,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Expanded(
       child: Tooltip(
         message: 'AI Voice Transaction Journaling',
-        child: InkWell(
-          key: const Key('dashboard_voice_entry_fab'),
+        child: Container(
+          key: WalkthroughKeys.voiceFabKey,
+          child: InkWell(
+            key: const Key('dashboard_voice_entry_fab'),
           onTap: () async {
             final isInstalled =
                 await ModelManagementService.instance.isModelPackInstalled();
@@ -728,8 +775,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildNavItem({
     required int index,

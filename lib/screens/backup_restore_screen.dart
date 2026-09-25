@@ -10,6 +10,7 @@ import '../components/export_backup_dialog.dart';
 import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
+import '../components/walkthrough/walkthrough_controller.dart';
 import '../config/app_config.dart';
 import '../services/billing_service.dart';
 
@@ -757,9 +758,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 ],
               ),
             ),
+            // 5. APP WALKTHROUGH & CONCEPTS
+            _buildSectionHeader('App Walkthrough & Concepts', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildWalkthroughCard(isDark),
             const SizedBox(height: AppSpacing.xl),
 
-            // 5. DEMO DATA GENERATOR
+            // 6. DEMO DATA GENERATOR
             _buildSectionHeader('Demo & Testing', isDark),
             const SizedBox(height: AppSpacing.xs),
             _buildDemoDataCard(isDark),
@@ -1676,6 +1681,62 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           horizontal: AppSpacing.md,
           vertical: 4,
         ),
+      ),
+    );
+  }
+
+  // --- APP WALKTHROUGH & CONCEPTS CARD ---
+  Widget _buildWalkthroughCard(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.white,
+        borderRadius: AppBorderRadius.xlargeBorder,
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.gray200,
+          width: 1,
+        ),
+        boxShadow: isDark ? [] : [AppShadows.level1],
+      ),
+      child: Column(
+        children: [
+          _buildSettingsTile(
+            key: const Key('settings_full_walkthrough_tile'),
+            icon: Icons.auto_stories_outlined,
+            iconColor: AppColors.emerald700,
+            title: 'Start Full Walkthrough',
+            subtitle: 'Concepts overview followed by live interactive screen tour',
+            onTap: () {
+              Navigator.pop(context);
+              WalkthroughController.instance.startFullWalkthrough(context);
+            },
+            isDark: isDark,
+          ),
+          const Divider(height: 1),
+          _buildSettingsTile(
+            key: const Key('settings_review_concepts_tile'),
+            icon: Icons.lightbulb_outline_rounded,
+            iconColor: AppColors.warning,
+            title: 'Review Core Concepts',
+            subtitle: 'Safe-to-Spend, Virtual Goal Locks & Payday Cycle Pacing',
+            onTap: () {
+              WalkthroughController.instance.startConceptReview(context);
+            },
+            isDark: isDark,
+          ),
+          const Divider(height: 1),
+          _buildSettingsTile(
+            key: const Key('settings_screen_tour_tile'),
+            icon: Icons.explore_outlined,
+            iconColor: AppColors.info,
+            title: 'Interactive Screen Tour',
+            subtitle: 'Spotlight tour across screens with temporary demo data',
+            onTap: () {
+              Navigator.pop(context);
+              WalkthroughController.instance.startScreenTour(context);
+            },
+            isDark: isDark,
+          ),
+        ],
       ),
     );
   }

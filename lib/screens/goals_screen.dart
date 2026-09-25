@@ -9,6 +9,7 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 import '../components/app_dialogs.dart';
+import '../components/walkthrough/walkthrough_keys.dart';
 
 class GoalsScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -2676,6 +2677,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Widget _buildHeaderCard(bool isDark, double totalProgress) {
     return Container(
+      key: WalkthroughKeys.goalsSummaryKey,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.white,
         borderRadius: AppBorderRadius.xlargeBorder,

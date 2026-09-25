@@ -13,6 +13,7 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/category_badge.dart';
 import '../components/app_dialogs.dart';
+import '../components/walkthrough/walkthrough_keys.dart';
 import 'accounts_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -232,6 +233,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   // --- HERO USABLE BALANCE CARD ---
   Widget _buildHeroBalanceCard(bool isDark) {
     return Container(
+      key: WalkthroughKeys.balanceCardKey,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -289,6 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                 ],
               ),
               IconButton(
+                key: WalkthroughKeys.privacyToggleKey,
                 icon: Icon(
                   _isPrivate
                       ? Icons.visibility_off_rounded

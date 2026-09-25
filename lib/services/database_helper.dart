@@ -29,7 +29,17 @@ class DatabaseHelper {
   /// Global notifier that broadcasts whenever any financial data or database state changes
   static final ValueNotifier<int> dataRevision = ValueNotifier<int>(0);
 
+  /// Notifier that broadcasts whether the app is running in walkthrough demo mode
+  static final ValueNotifier<bool> walkthroughDemoModeNotifier = ValueNotifier<bool>(false);
+
+  bool _isWalkthroughDemoMode = false;
+  bool get isWalkthroughDemoMode => _isWalkthroughDemoMode;
+  String? _walkthroughSnapshot;
+
+  static bool _suppressNotifications = false;
+
   static void notifyDataChanged() {
+    if (_suppressNotifications) return;
     dataRevision.value++;
   }
 
@@ -42,22 +52,26 @@ class DatabaseHelper {
     return _database!;
   }
 
+  Future<void> clearAllTables() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('locked_allocations');
+      await txn.delete('transactions');
+      await txn.delete('goals');
+      await txn.delete('credit_cards');
+      await txn.delete('categories');
+      await txn.delete('accounts');
+      await txn.execute(
+        'CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+      );
+      await txn.delete('app_settings');
+    });
+    notifyDataChanged();
+  }
+
   Future<void> resetDatabase() async {
     if (kIsWeb) {
-      final db = await database;
-      await db.transaction((txn) async {
-        await txn.delete('locked_allocations');
-        await txn.delete('transactions');
-        await txn.delete('goals');
-        await txn.delete('credit_cards');
-        await txn.delete('categories');
-        await txn.delete('accounts');
-        await txn.execute(
-          'CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
-        );
-        await txn.delete('app_settings');
-      });
-      notifyDataChanged();
+      await clearAllTables();
       return;
     }
 
@@ -1877,34 +1891,39 @@ class DatabaseHelper {
 
   // SEED DATA: Call this once to add default categories
   Future<void> seedDatabase() async {
-    final categories = [
-      Category(name: 'Groceries', monthlyBudget: 15000, type: 'expense'),
-      Category(name: 'Dining Out', monthlyBudget: 8000, type: 'expense'),
-      Category(name: 'Transport', monthlyBudget: 5000, type: 'expense'),
-      Category(name: 'Entertainment', monthlyBudget: 4000, type: 'expense'),
-      Category(name: 'Utilities & Bills', monthlyBudget: 10000, type: 'expense'),
-      Category(name: 'Shopping', monthlyBudget: 6000, type: 'expense'),
-      Category(name: 'Salary', type: 'income'),
-      Category(name: 'Freelance', type: 'income'),
-      Category(name: 'Investments', type: 'income'),
-      Category(name: 'Rental', type: 'income'),
-      Category(name: 'Gifts', type: 'income'),
-      Category(name: 'Other Income', type: 'income'),
-    ];
-    for (var cat in categories) {
-      await createCategory(cat);
+    _suppressNotifications = true;
+    try {
+      final categories = [
+        Category(name: 'Groceries', monthlyBudget: 15000, type: 'expense'),
+        Category(name: 'Dining Out', monthlyBudget: 8000, type: 'expense'),
+        Category(name: 'Transport', monthlyBudget: 5000, type: 'expense'),
+        Category(name: 'Entertainment', monthlyBudget: 4000, type: 'expense'),
+        Category(name: 'Utilities & Bills', monthlyBudget: 10000, type: 'expense'),
+        Category(name: 'Shopping', monthlyBudget: 6000, type: 'expense'),
+        Category(name: 'Salary', type: 'income'),
+        Category(name: 'Freelance', type: 'income'),
+        Category(name: 'Investments', type: 'income'),
+        Category(name: 'Rental', type: 'income'),
+        Category(name: 'Gifts', type: 'income'),
+        Category(name: 'Other Income', type: 'income'),
+      ];
+      for (var cat in categories) {
+        await createCategory(cat);
+      }
+    } finally {
+      _suppressNotifications = false;
+      notifyDataChanged();
     }
-    notifyDataChanged();
   }
 
   /// Populates comprehensive sample data (Accounts, Goals, Categories, Transactions) for demo & testing
   Future<void> seedSampleData() async {
-    await resetDatabase();
-
-    // 1. Accounts
-    final salaryAccId = await createAccount(
-      Account(name: 'Salary Account (HDFC)', balance: 125000.0, type: 'Bank'),
-    );
+    _suppressNotifications = true;
+    try {
+      await clearAllTables();
+      final salaryAccId = await createAccount(
+        Account(name: 'Salary Account (HDFC)', balance: 125000.0, type: 'Bank'),
+      );
     final savingsAccId = await createAccount(
       Account(
         name: 'Emergency Savings (SBI)',
@@ -2339,8 +2358,10 @@ class DatabaseHelper {
       date: currentCycleDate(3, 16, 0).toIso8601String(),
       note: 'Pay advance appliance installation invoice',
     );
-
-    notifyDataChanged();
+    } finally {
+      _suppressNotifications = false;
+      notifyDataChanged();
+    }
   }
 
   // --- GOAL OPERATIONS ---
@@ -2937,13 +2958,20 @@ class DatabaseHelper {
     }
   }
 
-  /// Imports database from a JSON file.
-  Future<bool> importDatabaseFromJSON() async {
+  /// Imports database from a JSON file or in-memory string.
+  Future<bool> importDatabaseFromJSON({
+    List<int>? bytesForTesting,
+    String? jsonContentForTesting,
+  }) async {
     try {
-      final bytes = await pickBackupBytes();
-      if (bytes == null) return false;
-
-      final jsonString = utf8.decode(bytes);
+      final String jsonString;
+      if (jsonContentForTesting != null) {
+        jsonString = jsonContentForTesting;
+      } else {
+        final bytes = bytesForTesting ?? await pickBackupBytes();
+        if (bytes == null) return false;
+        jsonString = utf8.decode(bytes);
+      }
       final data = BackupCodec.decode(jsonString);
       final db = await instance.database;
 
@@ -3408,5 +3436,123 @@ class DatabaseHelper {
   Future<void> setVoiceModelsWifiOnly(bool wifiOnly) async {
     await setSetting('voice_models_wifi_only', wifiOnly ? 'true' : 'false');
     notifyDataChanged();
+  }
+
+  // --- WALKTHROUGH & DEMO MODE ---
+
+  /// Checks if the user has completed or skipped the first-install walkthrough.
+  Future<bool> getWalkthroughCompleted() async {
+    final val = await getSetting('walkthrough_completed', defaultValue: 'false');
+    return val == 'true';
+  }
+
+  /// Records completion or dismissal of the app walkthrough.
+  Future<void> setWalkthroughCompleted({bool completed = true}) async {
+    await setSetting('walkthrough_completed', completed ? 'true' : 'false');
+  }
+
+  /// Exports all core database tables to a JSON backup string without writing to a file.
+  Future<String> exportDatabaseToJSONString() async {
+    final db = await database;
+    final accounts = await db.query('accounts');
+    final categories = await db.query('categories');
+    final transactions = await db.query('transactions');
+    final goals = await db.query('goals');
+    final lockedAllocations = await db.query('locked_allocations');
+    final creditCards = await db.query('credit_cards');
+
+    return BackupCodec.encode(
+      accounts: accounts.map(Map<String, dynamic>.from).toList(),
+      categories: categories.map(Map<String, dynamic>.from).toList(),
+      transactions: transactions.map(Map<String, dynamic>.from).toList(),
+      goals: goals.map(Map<String, dynamic>.from).toList(),
+      lockedAllocations: lockedAllocations
+          .map(Map<String, dynamic>.from)
+          .toList(),
+      creditCards: creditCards
+          .map(Map<String, dynamic>.from)
+          .toList(),
+    );
+  }
+
+  /// Enters walkthrough demo mode by snapshotting current user database
+  /// and loading full sample data for interactive tour guidance.
+  Future<void> enterWalkthroughDemoMode() async {
+    if (_isWalkthroughDemoMode) return;
+
+    final jsonSnapshot = await exportDatabaseToJSONString();
+    if (!kIsWeb) {
+      try {
+        final dbPath = await getDatabasesPath();
+        final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
+        snapshotFile.writeAsStringSync(jsonSnapshot, flush: true);
+      } catch (_) {}
+    }
+    _walkthroughSnapshot = jsonSnapshot;
+
+    _isWalkthroughDemoMode = true;
+    walkthroughDemoModeNotifier.value = true;
+    await seedSampleData();
+    notifyDataChanged();
+  }
+
+  /// Exits walkthrough demo mode by safely restoring the user's snapshot database.
+  Future<void> exitWalkthroughDemoMode() async {
+    if (!_isWalkthroughDemoMode) return;
+
+    try {
+      String? jsonToRestore = _walkthroughSnapshot;
+      if (jsonToRestore == null && !kIsWeb) {
+        try {
+          final dbPath = await getDatabasesPath();
+          final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
+          if (snapshotFile.existsSync()) {
+            jsonToRestore = snapshotFile.readAsStringSync();
+          }
+        } catch (_) {}
+      }
+
+      if (jsonToRestore != null) {
+        await importDatabaseFromJSON(jsonContentForTesting: jsonToRestore);
+      } else {
+        await clearAllTables();
+        await seedDatabase();
+      }
+
+      if (!kIsWeb) {
+        try {
+          final dbPath = await getDatabasesPath();
+          final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
+          if (snapshotFile.existsSync()) {
+            snapshotFile.deleteSync();
+          }
+        } catch (_) {}
+      }
+    } finally {
+      _walkthroughSnapshot = null;
+      _isWalkthroughDemoMode = false;
+      walkthroughDemoModeNotifier.value = false;
+      notifyDataChanged();
+    }
+  }
+
+  /// Automatically recovers from an interrupted demo mode (e.g. app killed mid-tour).
+  Future<void> recoverWalkthroughDemoModeIfNeeded() async {
+    if (kIsWeb) return;
+    try {
+      final dbPath = await getDatabasesPath();
+      final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
+      if (snapshotFile.existsSync()) {
+        final json = snapshotFile.readAsStringSync();
+        await importDatabaseFromJSON(jsonContentForTesting: json);
+        try {
+          snapshotFile.deleteSync();
+        } catch (_) {}
+        _walkthroughSnapshot = null;
+        _isWalkthroughDemoMode = false;
+        walkthroughDemoModeNotifier.value = false;
+        notifyDataChanged();
+      }
+    } catch (_) {}
   }
 }
