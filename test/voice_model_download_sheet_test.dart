@@ -1,5 +1,6 @@
 import 'package:cashflow/components/voice_model_download_sheet.dart';
 import 'package:cashflow/screens/backup_restore_screen.dart';
+import 'package:cashflow/services/model_management_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -82,5 +83,51 @@ void main() {
 
       handle.dispose();
     });
+
+    testWidgets('5. Displays active progress and cancel button when downloading', (tester) async {
+      final mockService = _MockDownloadingModelService();
+      ModelManagementService.setMockInstance(mockService);
+      addTearDown(() => ModelManagementService.resetInstance());
+
+      await tester.pumpWidget(buildTestApp());
+      await tester.tap(find.byKey(const Key('open_sheet_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Downloading AI Model Pack'), findsOneWidget);
+      expect(find.text('Cancel Download'), findsOneWidget);
+      expect(find.text('View in Settings'), findsOneWidget);
+      expect(find.text('45%'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('voice_model_download_cancel_button')));
+      await tester.pumpAndSettle();
+      expect(mockService.cancelCalled, isTrue);
+    });
   });
+}
+
+class _MockDownloadingModelService extends ModelManagementService {
+  bool cancelCalled = false;
+
+  @override
+  ModelPackStatus get status => ModelPackStatus.downloading;
+
+  @override
+  bool get isDownloading => true;
+
+  @override
+  double get progress => 0.45;
+
+  @override
+  int get bytesDownloaded => 120 * 1024 * 1024;
+
+  @override
+  int get totalBytes => 270 * 1024 * 1024;
+
+  @override
+  String get statusDetail => 'Downloading SmolLM2...';
+
+  @override
+  void cancelDownload() {
+    cancelCalled = true;
+  }
 }

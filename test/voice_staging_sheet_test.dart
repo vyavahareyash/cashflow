@@ -746,5 +746,58 @@ void main() {
         if (find.byType(VoiceRecordingModal).evaluate().isEmpty) break;
       }
     });
+
+    testWidgets(
+        '14. MainNavigationScreen shows global download banner during active download',
+        (tester) async {
+      DashboardScreen.resetStartupPrivacyFlag();
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockService = _MockDownloadingModelService();
+      ModelManagementService.setMockInstance(mockService);
+      addTearDown(() => ModelManagementService.resetInstance());
+
+      await tester.runAsync(() async {
+        final db = DatabaseHelper.instance;
+        await db.seedDatabase();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MainNavigationScreen(onThemeToggle: () {}),
+        ),
+      );
+      await tester.pump();
+      for (int i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
+      }
+
+      expect(find.byKey(const Key('global_model_download_banner')), findsOneWidget);
+      expect(find.textContaining('Downloading AI Model Pack (45%)'), findsOneWidget);
+    });
   });
+}
+
+class _MockDownloadingModelService extends ModelManagementService {
+  @override
+  ModelPackStatus get status => ModelPackStatus.downloading;
+
+  @override
+  bool get isDownloading => true;
+
+  @override
+  double get progress => 0.45;
+
+  @override
+  int get bytesDownloaded => 120 * 1024 * 1024;
+
+  @override
+  int get totalBytes => 270 * 1024 * 1024;
+
+  @override
+  String get statusDetail => 'Downloading SmolLM2...';
 }

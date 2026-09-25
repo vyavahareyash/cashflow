@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -181,26 +182,47 @@ class DefaultModelDownloadClient implements ModelDownloadClient {
     int startByte = 0,
     Map<String, String>? headers,
   }) async {
-    _client = HttpClient();
-    _activeRequest = await _client!.getUrl(uri);
+    _client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 30)
+      ..idleTimeout = const Duration(seconds: 30);
 
-    if (startByte > 0) {
-      _activeRequest!.headers.set(HttpHeaders.rangeHeader, 'bytes=$startByte-');
+    Uri currentUri = uri;
+    int redirects = 0;
+    const maxRedirects = 5;
+
+    while (true) {
+      _activeRequest = await _client!.getUrl(currentUri);
+      _activeRequest!.followRedirects = false;
+
+      if (startByte > 0) {
+        _activeRequest!.headers.set(HttpHeaders.rangeHeader, 'bytes=$startByte-');
+      }
+
+      if (headers != null) {
+        headers.forEach((k, v) => _activeRequest!.headers.set(k, v));
+      }
+
+      final response = await _activeRequest!.close();
+
+      if (response.isRedirect && redirects < maxRedirects) {
+        final location = response.headers.value(HttpHeaders.locationHeader);
+        if (location != null) {
+          redirects++;
+          currentUri = Uri.parse(location);
+          await response.drain<void>();
+          continue;
+        }
+      }
+
+      final isPartial = response.statusCode == HttpStatus.partialContent;
+
+      return DownloadStreamResponse(
+        stream: response,
+        statusCode: response.statusCode,
+        contentLength: response.contentLength,
+        isPartial: isPartial,
+      );
     }
-
-    if (headers != null) {
-      headers.forEach((k, v) => _activeRequest!.headers.set(k, v));
-    }
-
-    final response = await _activeRequest!.close();
-    final isPartial = response.statusCode == HttpStatus.partialContent;
-
-    return DownloadStreamResponse(
-      stream: response,
-      statusCode: response.statusCode,
-      contentLength: response.contentLength,
-      isPartial: isPartial,
-    );
   }
 
   @override
@@ -220,7 +242,7 @@ class DefaultModelDownloadClient implements ModelDownloadClient {
 
 /// Manages the download, cryptographic verification, disk storage, and RAM lifecycle
 /// of on-device AI model weights for offline voice journaling.
-class ModelManagementService extends ChangeNotifier {
+class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver {
   static ModelManagementService? _instance;
   static ModelManagementService get instance =>
       _instance ??= ModelManagementService();
@@ -232,7 +254,11 @@ class ModelManagementService extends ChangeNotifier {
 
   @visibleForTesting
   static void resetInstance() {
-    _instance = null;
+    if (_instance != null) {
+      _instance!.cancelDownload();
+      _instance!.dispose();
+      _instance = null;
+    }
   }
 
   final AiModelPackManifest manifest;
@@ -250,6 +276,11 @@ class ModelManagementService extends ChangeNotifier {
   double _progress = 0.0;
   bool _isCancelled = false;
   ModelDownloadClient? _activeClient;
+  Future<bool>? _activeDownloadFuture;
+
+  bool _isObserverRegistered = false;
+  bool _isAppInBackground = false;
+  Completer<void>? _foregroundResumeCompleter;
 
   final List<Future<void> Function()> _onLoadHooks = [];
   final List<Future<void> Function()> _onUnloadHooks = [];
@@ -263,7 +294,43 @@ class ModelManagementService extends ChangeNotifier {
     this.downloadClient,
     DatabaseHelper? databaseHelper,
   })  : _overrideBaseDirectory = baseDirectory,
-        _dbHelper = databaseHelper;
+        _dbHelper = databaseHelper {
+    _initLifecycleObserver();
+  }
+
+  void _initLifecycleObserver() {
+    if (!_isObserverRegistered) {
+      try {
+        WidgetsBinding.instance.addObserver(this);
+        _isObserverRegistered = true;
+      } catch (_) {}
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _isAppInBackground = true;
+    } else if (state == AppLifecycleState.resumed) {
+      _isAppInBackground = false;
+      if (_foregroundResumeCompleter != null &&
+          !_foregroundResumeCompleter!.isCompleted) {
+        _foregroundResumeCompleter!.complete();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_isObserverRegistered) {
+      try {
+        WidgetsBinding.instance.removeObserver(this);
+      } catch (_) {}
+      _isObserverRegistered = false;
+    }
+    super.dispose();
+  }
 
   // --- GETTERS ---
 
@@ -324,6 +391,12 @@ class ModelManagementService extends ChangeNotifier {
 
   /// Checks if all model files in the manifest are present and valid on disk.
   Future<ModelPackStatus> checkInstalledStatus({bool verifyChecksums = false}) async {
+    // Retain downloading or verifying status so page changes don't clobber active downloads
+    if (_status == ModelPackStatus.downloading ||
+        _status == ModelPackStatus.verifying) {
+      return _status;
+    }
+
     try {
       final dir = await getModelDirectory();
       if (!await dir.exists()) {
@@ -370,6 +443,10 @@ class ModelManagementService extends ChangeNotifier {
 
   /// Checks whether the model pack is fully installed on disk.
   Future<bool> isModelPackInstalled({bool verifyChecksums = false}) async {
+    if (_status == ModelPackStatus.downloading ||
+        _status == ModelPackStatus.verifying) {
+      return false;
+    }
     final status = await checkInstalledStatus(verifyChecksums: verifyChecksums);
     return status == ModelPackStatus.installed;
   }
@@ -388,8 +465,33 @@ class ModelManagementService extends ChangeNotifier {
   Future<bool> downloadModelPack({
     bool allowCellular = false,
     DatabaseHelper? dbHelper,
+  }) {
+    if (_activeDownloadFuture != null) {
+      return _activeDownloadFuture!;
+    }
+    final completer = Completer<bool>();
+    _activeDownloadFuture = completer.future;
+
+    _executeDownload(
+      allowCellular: allowCellular,
+      dbHelper: dbHelper,
+    ).then((result) {
+      if (!completer.isCompleted) completer.complete(result);
+    }, onError: (Object error, StackTrace stack) {
+      if (!completer.isCompleted) completer.completeError(error, stack);
+    }).whenComplete(() {
+      _activeDownloadFuture = null;
+    });
+
+    return _activeDownloadFuture!;
+  }
+
+  Future<bool> _executeDownload({
+    bool allowCellular = false,
+    DatabaseHelper? dbHelper,
   }) async {
-    if (_status == ModelPackStatus.downloading) {
+    if (_status == ModelPackStatus.downloading ||
+        _status == ModelPackStatus.verifying) {
       return false;
     }
 
@@ -425,6 +527,7 @@ class ModelManagementService extends ChangeNotifier {
     notifyListeners();
 
     final dir = await getModelDirectory();
+    int completedFilesBytes = 0;
 
     try {
       for (int i = 0; i < effectiveManifest.files.length; i++) {
@@ -449,62 +552,128 @@ class ModelManagementService extends ChangeNotifier {
         if (await targetFile.exists()) {
           final len = await targetFile.length();
           if (len == fileDef.expectedSizeBytes) {
-            _bytesDownloaded += len;
+            completedFilesBytes += len;
+            _bytesDownloaded = completedFilesBytes;
             _progress = (_bytesDownloaded / _totalBytes).clamp(0.0, 1.0);
             notifyListeners();
             continue;
           }
         }
 
-        // Check existing .part file length for HTTP resume
-        int existingBytes = 0;
-        if (await partFile.exists()) {
-          existingBytes = await partFile.length();
-          if (existingBytes > fileDef.expectedSizeBytes) {
-            await partFile.delete();
-            existingBytes = 0;
+        // Resilient streaming loop with auto-resume on network drop / app background
+        int retryCount = 0;
+        const int maxRetries = 15;
+        bool fileComplete = false;
+
+        while (!fileComplete && !_isCancelled) {
+          int existingBytes = 0;
+          if (await partFile.exists()) {
+            existingBytes = await partFile.length();
+            if (existingBytes > fileDef.expectedSizeBytes) {
+              await partFile.delete();
+              existingBytes = 0;
+            }
           }
-        }
 
-        _statusDetail = 'Downloading ${fileDef.filename} (${i + 1}/${effectiveManifest.files.length})...';
-        notifyListeners();
+          _status = ModelPackStatus.downloading;
+          _statusDetail =
+              'Downloading ${fileDef.filename} (${i + 1}/${effectiveManifest.files.length})...';
+          notifyListeners();
 
-        final client = downloadClient ?? DefaultModelDownloadClient();
-        _activeClient = client;
+          final client = downloadClient ?? DefaultModelDownloadClient();
+          _activeClient = client;
 
-        final response = await client.openStream(
-          Uri.parse(fileDef.downloadUrl),
-          startByte: existingBytes,
-        );
+          IOSink? sink;
+          try {
+            final response = await client.openStream(
+              Uri.parse(fileDef.downloadUrl),
+              startByte: existingBytes,
+            );
 
-        if (response.statusCode != HttpStatus.ok &&
-            response.statusCode != HttpStatus.partialContent) {
-          throw HttpException(
-            'Failed to download ${fileDef.filename}: HTTP ${response.statusCode}',
-          );
-        }
+            if (response.statusCode != HttpStatus.ok &&
+                response.statusCode != HttpStatus.partialContent) {
+              throw HttpException(
+                'Failed to download ${fileDef.filename}: HTTP ${response.statusCode}',
+              );
+            }
 
-        final sink = partFile.openWrite(
-          mode: response.isPartial ? FileMode.append : FileMode.write,
-        );
+            final isPartial = response.isPartial;
+            if (!isPartial && existingBytes > 0) {
+              existingBytes = 0;
+            }
 
-        try {
-          await for (final chunk in response.stream) {
+            _bytesDownloaded = completedFilesBytes + existingBytes;
+            _progress = (_bytesDownloaded / _totalBytes).clamp(0.0, 1.0);
+            notifyListeners();
+
+            sink = partFile.openWrite(
+              mode: isPartial ? FileMode.append : FileMode.write,
+            );
+
+            await for (final chunk in response.stream) {
+              if (_isCancelled) {
+                await sink.flush();
+                await sink.close();
+                _cleanCancelState();
+                return false;
+              }
+
+              sink.add(chunk);
+              _bytesDownloaded += chunk.length;
+              _progress = (_bytesDownloaded / _totalBytes).clamp(0.0, 1.0);
+              notifyListeners();
+            }
+
+            await sink.flush();
+            await sink.close();
+            sink = null;
+
             if (_isCancelled) {
-              await sink.flush();
-              await sink.close();
               _cleanCancelState();
               return false;
             }
 
-            sink.add(chunk);
-            _bytesDownloaded += chunk.length;
-            _progress = (_bytesDownloaded / _totalBytes).clamp(0.0, 1.0);
-            notifyListeners();
+            fileComplete = true;
+          } catch (e) {
+            if (sink != null) {
+              try {
+                await sink.flush();
+                await sink.close();
+              } catch (_) {}
+              sink = null;
+            }
+
+            if (_isCancelled) {
+              _cleanCancelState();
+              return false;
+            }
+
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              rethrow;
+            }
+
+            if (_isAppInBackground) {
+              _statusDetail =
+                  'Download paused in background. Will resume in foreground...';
+              notifyListeners();
+
+              _foregroundResumeCompleter = Completer<void>();
+              await Future.any([
+                _foregroundResumeCompleter!.future,
+                Future<void>.delayed(const Duration(seconds: 10)),
+              ]);
+            } else {
+              final backoffSeconds = (retryCount * 2).clamp(1, 8);
+              _statusDetail =
+                  'Reconnecting... (attempt $retryCount/$maxRetries)';
+              notifyListeners();
+              await Future<void>.delayed(Duration(seconds: backoffSeconds));
+            }
+          } finally {
+            _activeClient?.close();
+            _activeClient = null;
           }
-          await sink.flush();
-        } finally {
-          await sink.close();
         }
 
         if (_isCancelled) {
@@ -533,8 +702,10 @@ class ModelManagementService extends ChangeNotifier {
           await targetFile.delete();
         }
         await partFile.rename(targetPath);
-
-        _status = ModelPackStatus.downloading;
+        completedFilesBytes += fileDef.expectedSizeBytes;
+        _bytesDownloaded = completedFilesBytes;
+        _progress = (_bytesDownloaded / _totalBytes).clamp(0.0, 1.0);
+        notifyListeners();
       }
 
       _status = ModelPackStatus.installed;
@@ -564,6 +735,10 @@ class ModelManagementService extends ChangeNotifier {
     if (_status == ModelPackStatus.downloading ||
         _status == ModelPackStatus.verifying) {
       _isCancelled = true;
+      if (_foregroundResumeCompleter != null &&
+          !_foregroundResumeCompleter!.isCompleted) {
+        _foregroundResumeCompleter!.complete();
+      }
       _activeClient?.abort();
       _activeClient = null;
       _cleanCancelState();
