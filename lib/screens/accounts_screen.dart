@@ -521,23 +521,26 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 width: double.infinity,
                 child: SegmentedButton<int>(
                   key: const Key('accounts_page_segmented_tabs'),
+                  showSelectedIcon: false,
                   style: SegmentedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
+                    textStyle: AppTypography.labelMedium,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                   ),
                   segments: const [
                     ButtonSegment<int>(
                       value: 0,
-                      label: Text('Accounts'),
+                      label: Text('Accounts', maxLines: 1, softWrap: false),
                       icon: Icon(Icons.account_balance_rounded, size: 18),
                     ),
                     ButtonSegment<int>(
                       value: 1,
-                      label: Text('Budgets'),
+                      label: Text('Budgets', maxLines: 1, softWrap: false),
                       icon: Icon(Icons.pie_chart_rounded, size: 18),
                     ),
                     ButtonSegment<int>(
                       value: 2,
-                      label: Text('Goals'),
+                      label: Text('Goals', maxLines: 1, softWrap: false),
                       icon: Icon(Icons.savings_rounded, size: 18),
                     ),
                   ],
