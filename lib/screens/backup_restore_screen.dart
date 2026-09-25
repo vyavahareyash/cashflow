@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
@@ -51,13 +53,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    unawaited(_loadStats());
     ModelManagementService.instance.addListener(_onModelManagementChanged);
-    _initModelManagement();
+    unawaited(_initModelManagement());
 
     if (AppConfig.enablePlayStoreTips) {
       BillingService.instance.onPurchaseCompleted = _onTipCompleted;
-      BillingService.instance.initialize();
+      unawaited(BillingService.instance.initialize());
     }
 
     if (widget.scrollToVoiceModels) {
@@ -86,7 +88,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   void _onModelManagementChanged() {
     if (mounted) {
-      _refreshModelDiskUsage();
+      unawaited(_refreshModelDiskUsage());
       setState(() {});
     }
   }
@@ -352,7 +354,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         isError: path == null,
       );
     }
-    _loadStats();
+    unawaited(_loadStats());
   }
 
   Future<void> _showImportDialog(bool isDark) async {
@@ -386,7 +388,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 isDark: isDark,
                 onTap: () {
                   Navigator.of(dialogCtx).pop();
-                  _handleImport();
+                  unawaited(_handleImport());
                 },
               ),
               const Divider(height: 1),
@@ -399,7 +401,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               isDark: isDark,
               onTap: () {
                 Navigator.of(dialogCtx).pop();
-                _handleImportJSON();
+                unawaited(_handleImportJSON());
               },
             ),
           ],
@@ -508,7 +510,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         isError: !success,
       );
     }
-    _loadStats();
+    unawaited(_loadStats());
   }
 
   Future<void> _handleImportJSON() async {
@@ -557,7 +559,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         isError: !success,
       );
     }
-    _loadStats();
+    unawaited(_loadStats());
   }
 
   Future<void> _handleSeedDemoData() async {
@@ -600,7 +602,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           });
           _showFeedback('Sample finances populated successfully!');
         }
-        _loadStats();
+        unawaited(_loadStats());
       } catch (e) {
         if (mounted) {
           setState(() {
@@ -617,8 +619,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(
               Icons.warning_amber_rounded,
               color: AppColors.danger,
@@ -664,7 +666,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           });
           _showFeedback('Database reset successfully!');
         }
-        _loadStats();
+        unawaited(_loadStats());
       } catch (e) {
         if (mounted) {
           setState(() {
@@ -822,14 +824,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   // --- 1. PRIVACY HERO CARD ---
   Widget _buildPrivacyHeroCard(bool isDark) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           colors: [Color(0xFF064E3B), Color(0xFF047857)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: AppBorderRadius.largeBorder,
-        boxShadow: const [AppShadows.level1],
+        boxShadow: [AppShadows.level1],
       ),
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
@@ -901,7 +903,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Start in Privacy Mode',
                       style: AppTypography.titleMedium,
                     ),
@@ -919,7 +921,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 key: const Key('start_in_privacy_mode_switch'),
                 value: _startInPrivacyMode,
                 activeTrackColor: AppColors.emerald600,
-                onChanged: (val) => _updateStartInPrivacyMode(val),
+                onChanged: _updateStartInPrivacyMode,
               ),
             ],
           ),
@@ -953,7 +955,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('App Lock', style: AppTypography.titleMedium),
+                    const Text('App Lock', style: AppTypography.titleMedium),
                     const SizedBox(height: 2),
                     Text(
                       'Require Biometric or Device PIN when opening or resuming Cashflow',
@@ -968,7 +970,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 key: const Key('app_lock_switch'),
                 value: _appLockEnabled,
                 activeTrackColor: AppColors.emerald600,
-                onChanged: (val) => _updateAppLock(val),
+                onChanged: _updateAppLock,
               ),
             ],
           ),
@@ -1004,7 +1006,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Salary & Payday Preferences',
                       style: AppTypography.titleMedium,
                     ),
@@ -1259,169 +1261,174 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   void _showDayPickerBottomSheet(BuildContext context, bool isDark) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.gray700 : AppColors.gray300,
-                      borderRadius: AppBorderRadius.pillBorder,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Select Monthly Payday',
-                      style: AppTypography.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
+    unawaited(
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.gray700 : AppColors.gray300,
+                        borderRadius: AppBorderRadius.pillBorder,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20),
-                      onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Monthly Payday',
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.pop(sheetContext),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Choose the day of the month when your salary or primary income arrives.',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray400 : AppColors.gray600,
                     ),
-                  ],
-                ),
-                Text(
-                  'Choose the day of the month when your salary or primary income arrives.',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.lg),
 
-                // 7-column grid of days 1 to 31
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 31,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.0,
-                  ),
-                  itemBuilder: (ctx, index) {
-                    final day = index + 1;
-                    final isSelected = day == _salaryDay;
+                  // 7-column grid of days 1 to 31
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 31,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: 1.0,
+                        ),
+                    itemBuilder: (ctx, index) {
+                      final day = index + 1;
+                      final isSelected = day == _salaryDay;
 
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        key: Key('payday_grid_day_$day'),
-                        onTap: () {
-                          _updateSalaryDay(day);
-                          Navigator.pop(sheetContext);
-                        },
-                        borderRadius: AppBorderRadius.mediumBorder,
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.emerald600
-                                : (isDark
-                                      ? AppColors.darkSurfaceElevated
-                                      : AppColors.gray100),
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            border: Border.all(
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          key: Key('payday_grid_day_$day'),
+                          onTap: () {
+                            unawaited(_updateSalaryDay(day));
+                            Navigator.pop(sheetContext);
+                          },
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          child: Ink(
+                            decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColors.emerald600
                                   : (isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.gray200),
-                              width: isSelected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$day',
-                              style: AppTypography.labelLarge.copyWith(
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
+                                        ? AppColors.darkSurfaceElevated
+                                        : AppColors.gray100),
+                              borderRadius: AppBorderRadius.mediumBorder,
+                              border: Border.all(
                                 color: isSelected
-                                    ? Colors.white
+                                    ? AppColors.emerald600
                                     : (isDark
-                                          ? AppColors.gray200
-                                          : AppColors.gray800),
+                                          ? AppColors.darkBorder
+                                          : AppColors.gray200),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$day',
+                                style: AppTypography.labelLarge.copyWith(
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isDark
+                                            ? AppColors.gray200
+                                            : AppColors.gray800),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
 
-                // Info note
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurfaceElevated
-                        : AppColors.gray50,
-                    borderRadius: AppBorderRadius.mediumBorder,
-                    border: Border.all(
-                      color: isDark ? AppColors.darkBorder : AppColors.gray200,
-                      width: 0.5,
+                  // Info note
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        size: 16,
-                        color: AppColors.emerald600,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.darkSurfaceElevated
+                          : AppColors.gray50,
+                      borderRadius: AppBorderRadius.mediumBorder,
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.darkBorder
+                            : AppColors.gray200,
+                        width: 0.5,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'Days 29–31 automatically clamp to the last day of shorter months (e.g. Feb 28/29, Apr 30).',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: isDark
-                                ? AppColors.gray400
-                                : AppColors.gray600,
-                            fontSize: 11,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: AppColors.emerald600,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Days 29–31 automatically clamp to the last day of shorter months (e.g. Feb 28/29, Apr 30).',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -1706,10 +1713,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             icon: Icons.auto_stories_outlined,
             iconColor: AppColors.emerald700,
             title: 'Start Full Walkthrough',
-            subtitle: 'Concepts overview followed by live interactive screen tour',
+            subtitle:
+                'Concepts overview followed by live interactive screen tour',
             onTap: () {
               Navigator.pop(context);
-              WalkthroughController.instance.startFullWalkthrough(context);
+              unawaited(
+                WalkthroughController.instance.startFullWalkthrough(context),
+              );
             },
             isDark: isDark,
           ),
@@ -1721,7 +1731,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             title: 'Review Core Concepts',
             subtitle: 'Safe-to-Spend, Virtual Goal Locks & Payday Cycle Pacing',
             onTap: () {
-              WalkthroughController.instance.startConceptReview(context);
+              unawaited(
+                WalkthroughController.instance.startConceptReview(context),
+              );
             },
             isDark: isDark,
           ),
@@ -1734,7 +1746,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             subtitle: 'Spotlight tour across screens with temporary demo data',
             onTap: () {
               Navigator.pop(context);
-              WalkthroughController.instance.startScreenTour(context);
+              unawaited(
+                WalkthroughController.instance.startScreenTour(context),
+              );
             },
             isDark: isDark,
           ),
@@ -1896,7 +1910,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 backgroundColor: AppColors.danger,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(
+                shape: const RoundedRectangleBorder(
                   borderRadius: AppBorderRadius.mediumBorder,
                 ),
               ),
@@ -1934,24 +1948,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   void _onTipCompleted() {
     if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppBorderRadius.largeBorder,
-        ),
-        title: const Row(
-          children: [Text('☕'), SizedBox(width: 8), Text('Thank You!')],
-        ),
-        content: const Text(
-          'Thank you so much for supporting Cashflow! Your contribution directly fuels open-source, private, and offline development.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: const RoundedRectangleBorder(
+            borderRadius: AppBorderRadius.largeBorder,
           ),
-        ],
+          title: const Row(
+            children: [Text('☕'), SizedBox(width: 8), Text('Thank You!')],
+          ),
+          content: const Text(
+            'Thank you so much for supporting Cashflow! Your contribution directly fuels open-source, private, and offline development.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2155,248 +2171,255 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   void _showPlayStoreCoffeeBottomSheet(BuildContext context, bool isDark) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return ListenableBuilder(
-          listenable: BillingService.instance,
-          builder: (context, _) {
-            final billing = BillingService.instance;
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.gray700 : AppColors.gray300,
-                          borderRadius: AppBorderRadius.pillBorder,
+    unawaited(
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) {
+          return ListenableBuilder(
+            listenable: BillingService.instance,
+            builder: (context, _) {
+              final billing = BillingService.instance;
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.gray700
+                                : AppColors.gray300,
+                            borderRadius: AppBorderRadius.pillBorder,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: bmcYellow,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: bmcYellow.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Image.asset(
-                            'assets/icon/bmc_cup_icon.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Buy Me a Coffee',
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: isDark
-                                      ? AppColors.darkText
-                                      : AppColors.gray900,
-                                  fontWeight: FontWeight.bold,
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: bmcYellow,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: bmcYellow.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Support ongoing development via Google Play',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: isDark
-                                      ? AppColors.gray400
-                                      : AppColors.gray600,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/icon/bmc_cup_icon.png',
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          tooltip: 'Close',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    ...billing.products.map((product) {
-                      final isDouble = product.id.contains('double');
-                      final isPot = product.id.contains('pot');
-                      final assetImage = BillingService.productIconAsset(
-                        product.id,
-                      );
-                      final title = isPot
-                          ? 'Coffee Pot'
-                          : (isDouble ? '2 Coffees' : '1 Coffee');
-                      final tagline = BillingService.productTagline(product.id);
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Buy Me a Coffee',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    color: isDark
+                                        ? AppColors.darkText
+                                        : AppColors.gray900,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Support ongoing development via Google Play',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            tooltip: 'Close',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      ...billing.products.map((product) {
+                        final isDouble = product.id.contains('double');
+                        final isPot = product.id.contains('pot');
+                        final assetImage = BillingService.productIconAsset(
+                          product.id,
+                        );
+                        final title = isPot
+                            ? 'Coffee Pot'
+                            : (isDouble ? '2 Coffees' : '1 Coffee');
+                        final tagline = BillingService.productTagline(
+                          product.id,
+                        );
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: Material(
-                          key: Key('tip_button_${product.id}'),
-                          color: isDark
-                              ? AppColors.darkSurfaceElevated
-                              : AppColors.gray50,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Material(
+                            key: Key('tip_button_${product.id}'),
+                            color: isDark
+                                ? AppColors.darkSurfaceElevated
+                                : AppColors.gray50,
                             borderRadius: BorderRadius.circular(16),
-                            onTap: billing.purchasePending
-                                ? null
-                                : () => billing.buyProduct(product),
-                            child: Container(
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray200,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: billing.purchasePending
+                                  ? null
+                                  : () => billing.buyProduct(product),
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray200,
+                                  ),
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white,
-                                      border: Border.all(
-                                        color: isDark
-                                            ? AppColors.darkBorder
-                                            : AppColors.gray200,
-                                        width: 1.5,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: isDark ? 0.3 : 0.08,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white,
+                                        border: Border.all(
+                                          color: isDark
+                                              ? AppColors.darkBorder
+                                              : AppColors.gray200,
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: isDark ? 0.3 : 0.08,
+                                            ),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
                                           ),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
+                                        ],
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          assetImage,
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                          excludeFromSemantics: true,
                                         ),
-                                      ],
-                                    ),
-                                    child: ClipOval(
-                                      child: Image.asset(
-                                        assetImage,
-                                        width: 48,
-                                        height: 48,
-                                        fit: BoxFit.cover,
-                                        excludeFromSemantics: true,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          title,
-                                          style: AppTypography.titleMedium
-                                              .copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark
-                                                    ? AppColors.darkText
-                                                    : AppColors.gray900,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          tagline,
-                                          style: AppTypography.bodySmall
-                                              .copyWith(
-                                                color: isDark
-                                                    ? AppColors.gray400
-                                                    : AppColors.gray600,
-                                                height: 1.25,
-                                              ),
-                                        ),
-                                      ],
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            title,
+                                            style: AppTypography.titleMedium
+                                                .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDark
+                                                      ? AppColors.darkText
+                                                      : AppColors.gray900,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            tagline,
+                                            style: AppTypography.bodySmall
+                                                .copyWith(
+                                                  color: isDark
+                                                      ? AppColors.gray400
+                                                      : AppColors.gray600,
+                                                  height: 1.25,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? AppColors.emerald900.withValues(
-                                              alpha: 0.4,
-                                            )
-                                          : AppColors.emerald50,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
                                         color: isDark
-                                            ? AppColors.emerald700
-                                            : AppColors.emerald600,
+                                            ? AppColors.emerald900.withValues(
+                                                alpha: 0.4,
+                                              )
+                                            : AppColors.emerald50,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? AppColors.emerald700
+                                              : AppColors.emerald600,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        product.price,
+                                        style: AppTypography.labelMedium
+                                            .copyWith(
+                                              color: isDark
+                                                  ? AppColors.emerald400
+                                                  : AppColors.emerald700,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ),
-                                    child: Text(
-                                      product.price,
-                                      style: AppTypography.labelMedium.copyWith(
-                                        color: isDark
-                                            ? AppColors.emerald400
-                                            : AppColors.emerald700,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
+                        );
+                      }),
+                      if (billing.purchasePending) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                         ),
-                      );
-                    }),
-                    if (billing.purchasePending) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      const Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -2811,7 +2834,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Voice AI Model Pack',
                       style: AppTypography.titleMedium,
                     ),
@@ -3020,14 +3043,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 key: const Key('voice_model_cancel_button'),
-                onPressed: () => modelService.cancelDownload(),
+                onPressed: modelService.cancelDownload,
                 icon: const Icon(Icons.close_rounded, size: 18),
                 label: const Text('Cancel Download'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.danger,
                   side: const BorderSide(color: AppColors.danger),
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: AppBorderRadius.mediumBorder,
                   ),
                 ),
@@ -3047,7 +3070,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     color: AppColors.danger.withValues(alpha: 0.5),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: AppBorderRadius.mediumBorder,
                   ),
                 ),
@@ -3065,7 +3088,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   backgroundColor: AppColors.emerald700,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: AppBorderRadius.mediumBorder,
                   ),
                 ),
@@ -3090,8 +3113,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           key: const Key('cellular_warning_dialog'),
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.network_cell_rounded, color: Colors.orange, size: 22),
               SizedBox(width: 8),
               Expanded(child: Text('Cellular Data Warning')),
@@ -3133,7 +3156,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
     if (success && mounted) {
       _showFeedback('Voice AI Model Pack installed successfully!');
-      _refreshModelDiskUsage();
+      unawaited(_refreshModelDiskUsage());
     }
   }
 
@@ -3142,8 +3165,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         key: const Key('delete_models_dialog'),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(
               Icons.delete_outline_rounded,
               color: AppColors.danger,
@@ -3180,7 +3203,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       await ModelManagementService.instance.deleteModels();
       if (mounted) {
         _showFeedback('Voice AI Models deleted to free disk space.');
-        _refreshModelDiskUsage();
+        unawaited(_refreshModelDiskUsage());
       }
     }
   }

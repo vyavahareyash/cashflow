@@ -44,11 +44,7 @@ class CategoryBadge extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Icon(
-          badgeIcon,
-          size: s * 0.5,
-          color: badgeColor,
-        ),
+        child: Icon(badgeIcon, size: s * 0.5, color: badgeColor),
       );
     }
 

@@ -8,7 +8,9 @@ import 'package:record/record.dart';
 /// Thrown when microphone hardware permission is denied by the user or OS.
 class AudioCapturePermissionException implements Exception {
   final String message;
-  const AudioCapturePermissionException([this.message = 'Microphone permission not granted.']);
+  const AudioCapturePermissionException([
+    this.message = 'Microphone permission not granted.',
+  ]);
 
   @override
   String toString() => 'AudioCapturePermissionException: $message';
@@ -40,7 +42,7 @@ class RecordAudioRecorderClient implements AudioRecorderClient {
   final AudioRecorder _recorder;
 
   RecordAudioRecorderClient([AudioRecorder? recorder])
-      : _recorder = recorder ?? AudioRecorder();
+    : _recorder = recorder ?? AudioRecorder();
 
   @override
   Future<bool> hasPermission() => _recorder.hasPermission();
@@ -90,8 +92,8 @@ class AudioCaptureService {
   AudioCaptureService({
     AudioRecorderClient? recorderClient,
     Directory? tempDirectory,
-  })  : _recorderClient = recorderClient ?? RecordAudioRecorderClient(),
-        _overrideTempDirectory = tempDirectory;
+  }) : _recorderClient = recorderClient ?? RecordAudioRecorderClient(),
+       _overrideTempDirectory = tempDirectory;
 
   bool get isRecording => _isRecording;
   String? get activeRecordingPath => _activeRecordingPath;
@@ -157,7 +159,9 @@ class AudioCaptureService {
   Future<Directory> getAudioDirectory() async {
     final Directory baseDir =
         _overrideTempDirectory ?? await getTemporaryDirectory();
-    final Directory audioDir = Directory(p.join(baseDir.path, 'voice_recordings'));
+    final Directory audioDir = Directory(
+      p.join(baseDir.path, 'voice_recordings'),
+    );
     if (!await audioDir.exists()) {
       await audioDir.create(recursive: true);
     }
@@ -167,7 +171,9 @@ class AudioCaptureService {
   /// Begins recording 16kHz mono WAV audio to an ephemeral cache path.
   Future<String> startRecording() async {
     if (_isRecording) {
-      throw const AudioCaptureException('A recording session is already active.');
+      throw const AudioCaptureException(
+        'A recording session is already active.',
+      );
     }
 
     final hasPerm = await hasPermission();
@@ -241,8 +247,10 @@ class AudioCaptureService {
     try {
       final audioDir = await getAudioDirectory();
       if (await audioDir.exists()) {
-        await for (final entity
-            in audioDir.list(recursive: false, followLinks: false)) {
+        await for (final entity in audioDir.list(
+          recursive: false,
+          followLinks: false,
+        )) {
           if (entity is File && entity.path.toLowerCase().endsWith('.wav')) {
             try {
               await entity.delete();

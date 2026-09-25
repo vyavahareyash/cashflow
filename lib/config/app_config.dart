@@ -12,8 +12,9 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   AppConfig._();
 
-  static const bool _hasEnvDonations =
-      bool.hasEnvironment('ENABLE_EXTERNAL_DONATIONS');
+  static const bool _hasEnvDonations = bool.hasEnvironment(
+    'ENABLE_EXTERNAL_DONATIONS',
+  );
   static const bool _envEnableDonations = bool.fromEnvironment(
     'ENABLE_EXTERNAL_DONATIONS',
     defaultValue: false,
@@ -24,8 +25,9 @@ class AppConfig {
     defaultValue: 'https://buymeacoffee.com/vyavahareyash',
   );
 
-  static const bool _hasEnvPlayStoreTips =
-      bool.hasEnvironment('ENABLE_PLAY_STORE_TIPS');
+  static const bool _hasEnvPlayStoreTips = bool.hasEnvironment(
+    'ENABLE_PLAY_STORE_TIPS',
+  );
   static const bool _envEnablePlayStoreTips = bool.fromEnvironment(
     'ENABLE_PLAY_STORE_TIPS',
     defaultValue: true,

@@ -65,9 +65,9 @@ flutter analyze
 ```
 
 ### Running Automated Tests
-Run all unit and widget tests sequentially ([ADR-0004](../adr/0004-single-concurrency-sqlite-testing.md)):
+Run all unit and widget tests (runs in parallel via in-memory SQLite):
 ```bash
-flutter test --concurrency=1
+flutter test
 ```
 
 Run a specific test file:
@@ -171,8 +171,7 @@ Screenshots are saved directly to `screenshots/`.
 
 Follow these rules to prevent test deadlocks or flaky failures:
 
-1. **Single concurrency mandatory (`--concurrency=1`)**:
-   Tests run `sqflite_common_ffi` on local test database files. Concurrency $>1$ causes SQLite file lock errors (`OS error 5 / database is locked`).
+1. **In-Memory SQLite testing**: Tests run `sqflite_common_ffi` using `inMemoryDatabasePath` so they can run concurrently without file lock errors.
 2. **No async database I/O in `testWidgets`**:
    `testWidgets` runs inside a `fakeAsync` zone. Performing SQLite file operations inside `testWidgets` deadlocks. Place database logic and queries inside standard `test(...)` blocks, and test UI rendering using in-memory model instances and `await tester.pump()`.
 3. **Avoid unbounded `pumpAndSettle()`**:

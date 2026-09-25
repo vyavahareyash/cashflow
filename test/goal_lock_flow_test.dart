@@ -8,6 +8,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker.db';
 
   setUp(() async {

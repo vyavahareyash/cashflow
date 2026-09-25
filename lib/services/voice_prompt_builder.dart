@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:intl/intl.dart';
 
 import '../models/account_model.dart';
@@ -44,19 +45,11 @@ class VoicePromptBuilder {
     final anchorStr = formatAnchorDate(anchorDate);
 
     final accountsPayload = accounts.map((a) {
-      return {
-        'id': a.id,
-        'name': _sanitizeChatMl(a.name),
-        'type': a.type,
-      };
+      return {'id': a.id, 'name': _sanitizeChatMl(a.name), 'type': a.type};
     }).toList();
 
     final categoriesPayload = categories.map((c) {
-      return {
-        'id': c.id,
-        'name': _sanitizeChatMl(c.name),
-        'type': c.type,
-      };
+      return {'id': c.id, 'name': _sanitizeChatMl(c.name), 'type': c.type};
     }).toList();
 
     final accountsJson = jsonEncode(accountsPayload);

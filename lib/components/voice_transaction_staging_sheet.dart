@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -83,7 +85,7 @@ class _VoiceTransactionStagingSheetState
   void initState() {
     super.initState();
     _drafts = List<DraftTransaction>.from(widget.drafts);
-    _initializeData();
+    unawaited(_initializeData());
   }
 
   Future<void> _initializeData() async {
@@ -136,7 +138,7 @@ class _VoiceTransactionStagingSheetState
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             autofocus: true,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               labelText: 'Amount',
               prefixText: '₹ ',
               border: OutlineInputBorder(
@@ -196,7 +198,9 @@ class _VoiceTransactionStagingSheetState
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Text(
-                  isDestination ? 'Select Destination Account' : 'Select Account',
+                  isDestination
+                      ? 'Select Destination Account'
+                      : 'Select Account',
                   style: AppTypography.titleLarge,
                 ),
               ),
@@ -216,7 +220,10 @@ class _VoiceTransactionStagingSheetState
                       ),
                       title: Text(acc.name, style: AppTypography.bodyMedium),
                       subtitle: Text(
-                        AppFormatters.currency(acc.balance, isPrivate: _isPrivate),
+                        AppFormatters.currency(
+                          acc.balance,
+                          isPrivate: _isPrivate,
+                        ),
                         style: AppTypography.labelSmall,
                       ),
                       onTap: () => Navigator.of(sheetCtx).pop(acc),
@@ -350,7 +357,10 @@ class _VoiceTransactionStagingSheetState
             children: [
               const Padding(
                 padding: EdgeInsets.all(AppSpacing.lg),
-                child: Text('Select Transaction Type', style: AppTypography.titleLarge),
+                child: Text(
+                  'Select Transaction Type',
+                  style: AppTypography.titleLarge,
+                ),
               ),
               const Divider(height: 1),
               ...types.map((t) {
@@ -361,8 +371,8 @@ class _VoiceTransactionStagingSheetState
                 final icon = t == 'income'
                     ? Icons.arrow_downward_rounded
                     : (t == 'transfer'
-                        ? Icons.swap_horiz_rounded
-                        : Icons.arrow_upward_rounded);
+                          ? Icons.swap_horiz_rounded
+                          : Icons.arrow_upward_rounded);
                 return ListTile(
                   leading: CircleAvatar(
                     radius: 16,
@@ -406,7 +416,7 @@ class _VoiceTransactionStagingSheetState
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               labelText: 'Note',
               border: OutlineInputBorder(
                 borderRadius: AppBorderRadius.mediumBorder,
@@ -423,7 +433,8 @@ class _VoiceTransactionStagingSheetState
                 backgroundColor: AppColors.emerald700,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () => Navigator.of(dialogCtx).pop(controller.text.trim()),
+              onPressed: () =>
+                  Navigator.of(dialogCtx).pop(controller.text.trim()),
               child: const Text('Save'),
             ),
           ],
@@ -559,7 +570,9 @@ class _VoiceTransactionStagingSheetState
                         _isPrivate
                             ? Icons.visibility_off_rounded
                             : Icons.visibility_rounded,
-                        color: _isPrivate ? AppColors.warning : AppColors.gray500,
+                        color: _isPrivate
+                            ? AppColors.warning
+                            : AppColors.gray500,
                         size: 20,
                       ),
                       tooltip: _isPrivate ? 'Show Amounts' : 'Hide Amounts',
@@ -667,7 +680,8 @@ class _VoiceTransactionStagingSheetState
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: _drafts.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (ctx, i) {
                     final draft = _drafts[i];
                     return Dismissible(
@@ -675,21 +689,31 @@ class _VoiceTransactionStagingSheetState
                       direction: DismissDirection.horizontal,
                       background: Container(
                         alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                        decoration: BoxDecoration(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        decoration: const BoxDecoration(
                           color: AppColors.danger,
                           borderRadius: AppBorderRadius.largeBorder,
                         ),
-                        child: const Icon(Icons.delete_rounded, color: Colors.white),
+                        child: const Icon(
+                          Icons.delete_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                       secondaryBackground: Container(
                         alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                        decoration: BoxDecoration(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        decoration: const BoxDecoration(
                           color: AppColors.danger,
                           borderRadius: AppBorderRadius.largeBorder,
                         ),
-                        child: const Icon(Icons.delete_rounded, color: Colors.white),
+                        child: const Icon(
+                          Icons.delete_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                       onDismissed: (_) => _dismissDraft(i),
                       child: _buildDraftCard(draft, i, isDark),
@@ -709,8 +733,10 @@ class _VoiceTransactionStagingSheetState
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                        shape: RoundedRectangleBorder(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.md,
+                        ),
+                        shape: const RoundedRectangleBorder(
                           borderRadius: AppBorderRadius.mediumBorder,
                         ),
                       ),
@@ -731,7 +757,7 @@ class _VoiceTransactionStagingSheetState
                           padding: const EdgeInsets.symmetric(
                             vertical: AppSpacing.md,
                           ),
-                          shape: RoundedRectangleBorder(
+                          shape: const RoundedRectangleBorder(
                             borderRadius: AppBorderRadius.mediumBorder,
                           ),
                         ),
@@ -755,11 +781,14 @@ class _VoiceTransactionStagingSheetState
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            allValid ? AppColors.emerald700 : AppColors.gray400,
+                        backgroundColor: allValid
+                            ? AppColors.emerald700
+                            : AppColors.gray400,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                        shape: RoundedRectangleBorder(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.md,
+                        ),
+                        shape: const RoundedRectangleBorder(
                           borderRadius: AppBorderRadius.mediumBorder,
                         ),
                       ),
@@ -807,7 +836,9 @@ class _VoiceTransactionStagingSheetState
     }
 
     final hasWarnings =
-        draft.hasUnassignedAccount || draft.hasUnassignedCategory || !draft.isValid;
+        draft.hasUnassignedAccount ||
+        draft.hasUnassignedCategory ||
+        !draft.isValid;
 
     Color typeColor;
     if (draft.isIncome) {
@@ -899,11 +930,7 @@ class _VoiceTransactionStagingSheetState
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(
-                        Icons.edit_outlined,
-                        size: 12,
-                        color: typeColor,
-                      ),
+                      Icon(Icons.edit_outlined, size: 12, color: typeColor),
                     ],
                   ),
                 ),
@@ -932,14 +959,15 @@ class _VoiceTransactionStagingSheetState
           ],
           if (draft.hasUnassignedCategory) ...[
             const SizedBox(height: AppSpacing.xs),
-            _buildWarningBadge(
-              'Unassigned Category: Tap to Pick',
-              isDark,
-            ),
+            _buildWarningBadge('Unassigned Category: Tap to Pick', isDark),
           ],
           if (draft.amount <= 0) ...[
             const SizedBox(height: AppSpacing.xs),
-            _buildWarningBadge('Missing or invalid amount', isDark, isError: true),
+            _buildWarningBadge(
+              'Missing or invalid amount',
+              isDark,
+              isError: true,
+            ),
           ],
           if (draft.isTransfer && draft.destinationAccountId == null) ...[
             const SizedBox(height: AppSpacing.xs),
@@ -973,7 +1001,8 @@ class _VoiceTransactionStagingSheetState
                   isWarning: destinationAccount == null,
                   accentColor: AppColors.info,
                   isDark: isDark,
-                  onTap: () => _selectAccount(index, draft, isDestination: true),
+                  onTap: () =>
+                      _selectAccount(index, draft, isDestination: true),
                 )
               else
                 _buildGridTile(
@@ -1008,8 +1037,8 @@ class _VoiceTransactionStagingSheetState
                 icon: draft.isIncome
                     ? Icons.arrow_downward_rounded
                     : (draft.isTransfer
-                        ? Icons.swap_horiz_rounded
-                        : Icons.arrow_upward_rounded),
+                          ? Icons.swap_horiz_rounded
+                          : Icons.arrow_upward_rounded),
                 accentColor: typeColor,
                 isDark: isDark,
                 onTap: () => _selectType(index, draft),
@@ -1021,7 +1050,11 @@ class _VoiceTransactionStagingSheetState
     );
   }
 
-  Widget _buildWarningBadge(String message, bool isDark, {bool isError = false}) {
+  Widget _buildWarningBadge(
+    String message,
+    bool isDark, {
+    bool isError = false,
+  }) {
     final color = isError ? AppColors.danger : AppColors.warning;
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -1100,7 +1133,9 @@ class _VoiceTransactionStagingSheetState
                       color: isWarning
                           ? AppColors.warning
                           : (accentColor ??
-                              (isDark ? AppColors.gray400 : AppColors.gray500)),
+                                (isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray500)),
                     ),
                     const SizedBox(width: 4),
                     Expanded(
@@ -1111,7 +1146,9 @@ class _VoiceTransactionStagingSheetState
                           fontWeight: FontWeight.w700,
                           color: isWarning
                               ? AppColors.warning
-                              : (isDark ? AppColors.gray400 : AppColors.gray500),
+                              : (isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray500),
                           letterSpacing: 0.5,
                         ),
                         maxLines: 1,

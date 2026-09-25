@@ -90,8 +90,8 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                     child: Text(
                       isActive
                           ? (isVerifying
-                              ? 'Verifying AI Model Pack...'
-                              : 'Downloading AI Model Pack')
+                                ? 'Verifying AI Model Pack...'
+                                : 'Downloading AI Model Pack')
                           : 'Offline AI Models Required',
                       style: AppTypography.headlineMedium.copyWith(
                         color: isDark ? AppColors.darkText : AppColors.gray900,
@@ -106,8 +106,8 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                   Text(
                     isActive
                         ? (modelService.statusDetail.isNotEmpty
-                            ? modelService.statusDetail
-                            : 'Downloading neural weights for on-device voice journaling...')
+                              ? modelService.statusDetail
+                              : 'Downloading neural weights for on-device voice journaling...')
                         : 'To protect your financial privacy, speech recognition and transaction extraction run 100% on your device with zero cloud servers.',
                     style: AppTypography.bodyMedium.copyWith(
                       color: isDark
@@ -167,15 +167,16 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: LinearProgressIndicator(
-                                  value:
-                                      isVerifying ? null : modelService.progress,
+                                  value: isVerifying
+                                      ? null
+                                      : modelService.progress,
                                   backgroundColor: isDark
                                       ? AppColors.darkBorder
                                       : AppColors.gray200,
                                   valueColor:
                                       const AlwaysStoppedAnimation<Color>(
-                                    AppColors.emerald600,
-                                  ),
+                                        AppColors.emerald600,
+                                      ),
                                   minHeight: 8,
                                 ),
                               ),
@@ -196,24 +197,21 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                               _buildFeatureRow(
                                 icon: Icons.wifi_off_rounded,
                                 title: '100% Offline & Private',
-                                subtitle:
-                                    'Audio and transactions never leave your phone.',
+                                subtitle: 'Audio and transactions never leave your phone.',
                                 isDark: isDark,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               _buildFeatureRow(
                                 icon: Icons.storage_rounded,
                                 title: 'One-Time Download (~230 MB)',
-                                subtitle:
-                                    'SmolLM2 SLM neural model for extraction. Speech recognition requires zero download.',
+                                subtitle: 'SmolLM2 SLM neural model for extraction. Speech recognition requires zero download.',
                                 isDark: isDark,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               _buildFeatureRow(
                                 icon: Icons.memory_rounded,
                                 title: 'On-Demand Memory',
-                                subtitle:
-                                    'Models load into RAM only while journaling and free automatically when done.',
+                                subtitle: 'Models load into RAM only while journaling and free automatically when done.',
                                 isDark: isDark,
                               ),
                             ],
@@ -292,8 +290,8 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                             color: isActive
                                 ? AppColors.danger
                                 : (isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.gray600),
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.gray600),
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
@@ -319,11 +317,7 @@ class VoiceModelDownloadSheet extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 22,
-          color: AppColors.emerald500,
-        ),
+        Icon(icon, size: 22, color: AppColors.emerald500),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(

@@ -5,11 +5,7 @@ import 'package:path/path.dart' as p;
 import '../services/backup_platform.dart';
 import '../theme/theme_constants.dart';
 
-enum ExportFormat {
-  sqlite,
-  json,
-  csv,
-}
+enum ExportFormat { sqlite, json, csv }
 
 typedef ExportDialogResult = ({
   ExportFormat format,
@@ -87,7 +83,10 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
     return AlertDialog(
       backgroundColor: widget.isDark ? AppColors.darkSurface : AppColors.white,
       title: Text(
-        widget.title ?? (widget.fixedFormat ? 'Export Transactions CSV' : 'Export Data & Backups'),
+        widget.title ??
+            (widget.fixedFormat
+                ? 'Export Transactions CSV'
+                : 'Export Data & Backups'),
         style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
       ),
       content: SingleChildScrollView(
@@ -115,7 +114,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                   onTap: () {
                     setState(() {
                       _selectedFormat = ExportFormat.sqlite;
-                      _fileNameController.text = _getDefaultName(ExportFormat.sqlite);
+                      _fileNameController.text = _getDefaultName(
+                        ExportFormat.sqlite,
+                      );
                     });
                   },
                 ),
@@ -131,7 +132,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                 onTap: () {
                   setState(() {
                     _selectedFormat = ExportFormat.json;
-                    _fileNameController.text = _getDefaultName(ExportFormat.json);
+                    _fileNameController.text = _getDefaultName(
+                      ExportFormat.json,
+                    );
                   });
                 },
               ),
@@ -146,7 +149,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                 onTap: () {
                   setState(() {
                     _selectedFormat = ExportFormat.csv;
-                    _fileNameController.text = _getDefaultName(ExportFormat.csv);
+                    _fileNameController.text = _getDefaultName(
+                      ExportFormat.csv,
+                    );
                   });
                 },
               ),
@@ -169,7 +174,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                       : AppColors.gray100,
                   borderRadius: AppBorderRadius.smallBorder,
                   border: Border.all(
-                    color: widget.isDark ? AppColors.gray700 : AppColors.gray300,
+                    color: widget.isDark
+                        ? AppColors.gray700
+                        : AppColors.gray300,
                   ),
                 ),
                 child: Row(
@@ -194,7 +201,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                         final picked = await pickBackupDirectory(
                           initialDirectory: _selectedDirectory,
                         );
-                        if (picked != null && picked.trim().isNotEmpty && mounted) {
+                        if (picked != null &&
+                            picked.trim().isNotEmpty &&
+                            mounted) {
                           setState(() {
                             _selectedDirectory = picked.trim();
                           });
@@ -230,9 +239,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
               controller: _fileNameController,
               key: const Key('export_filename_input'),
               onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
+                contentPadding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.sm,
                 ),
@@ -263,7 +272,9 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                 previewPath,
                 key: const Key('export_full_path_preview'),
                 style: AppTypography.labelSmall.copyWith(
-                  color: widget.isDark ? AppColors.emerald400 : AppColors.emerald800,
+                  color: widget.isDark
+                      ? AppColors.emerald400
+                      : AppColors.emerald800,
                   fontFamily: 'monospace',
                 ),
               ),
@@ -287,9 +298,7 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
               fileName: name.isEmpty ? _getDefaultName(_selectedFormat) : name,
             ));
           },
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.emerald600,
-          ),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.emerald600),
           child: const Text('Confirm & Save'),
         ),
       ],
@@ -314,8 +323,8 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
-                  ? AppColors.emerald700.withValues(alpha: 0.25)
-                  : AppColors.emerald50)
+                    ? AppColors.emerald700.withValues(alpha: 0.25)
+                    : AppColors.emerald50)
               : (isDark ? AppColors.darkSurfaceElevated : AppColors.gray100),
           borderRadius: AppBorderRadius.mediumBorder,
           border: Border.all(

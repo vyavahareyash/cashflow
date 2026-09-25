@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
+
 class AnalyticsScreen extends StatefulWidget {
   final int? initialIndex;
 
@@ -29,7 +32,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final today = DateTime.now();
     _startDate = DateTime(today.year, today.month, 1);
     _endDate = today;
-    _loadAllData();
+    unawaited(_loadAllData());
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
 
@@ -41,7 +44,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   void _onDataChanged() {
     if (mounted) {
-      _loadAllData();
+      unawaited(_loadAllData());
     }
   }
 
@@ -207,7 +210,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           _isYtd = false;
                           _isLoading = true;
                         });
-                        _loadAllData();
+                        unawaited(_loadAllData());
                       }
                     },
                     child: Container(
@@ -227,10 +230,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           color: !_isYtd
                               ? Colors.white
                               : (isDark
-                                  ? AppColors.gray300
-                                  : AppColors.gray700),
-                          fontWeight:
-                              !_isYtd ? FontWeight.bold : FontWeight.w500,
+                                    ? AppColors.gray300
+                                    : AppColors.gray700),
+                          fontWeight: !_isYtd
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -245,7 +249,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           _isYtd = true;
                           _isLoading = true;
                         });
-                        _loadAllData();
+                        unawaited(_loadAllData());
                       }
                     },
                     child: Container(
@@ -265,10 +269,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           color: _isYtd
                               ? Colors.white
                               : (isDark
-                                  ? AppColors.gray300
-                                  : AppColors.gray700),
-                          fontWeight:
-                              _isYtd ? FontWeight.bold : FontWeight.w500,
+                                    ? AppColors.gray300
+                                    : AppColors.gray700),
+                          fontWeight: _isYtd
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -381,12 +386,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   vertical: AppSpacing.xxs,
                 ),
                 decoration: BoxDecoration(
-                  color: (savingsRate >= 20
-                          ? AppColors.emerald600
-                          : (savingsRate >= 0
-                              ? AppColors.orange
-                              : AppColors.danger))
-                      .withValues(alpha: 0.12),
+                  color:
+                      (savingsRate >= 20
+                              ? AppColors.emerald600
+                              : (savingsRate >= 0
+                                    ? AppColors.orange
+                                    : AppColors.danger))
+                          .withValues(alpha: 0.12),
                   borderRadius: AppBorderRadius.pillBorder,
                 ),
                 child: Text(
@@ -395,8 +401,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     color: savingsRate >= 20
                         ? AppColors.emerald600
                         : (savingsRate >= 0
-                            ? AppColors.orange
-                            : AppColors.danger),
+                              ? AppColors.orange
+                              : AppColors.danger),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -479,7 +485,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       AppColors.purple,
       AppColors.pink,
       AppColors.warning,
-      Color(0xFF0284C7),
+      const Color(0xFF0284C7),
     ];
 
     double total = 0.0;

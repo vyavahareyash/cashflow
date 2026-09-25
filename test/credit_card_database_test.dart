@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
 
   const databaseFileName = 'money_tracker.db';
 
@@ -30,28 +31,26 @@ void main() {
     final dbHelper = DatabaseHelper.instance;
 
     // 1. Create a bank account with 50,000 balance
-    final bankAccountId = await dbHelper.createAccount(Account(
-      name: 'Salary Checking',
-      balance: 50000.0,
-      type: 'Bank',
-    ));
+    final bankAccountId = await dbHelper.createAccount(
+      Account(name: 'Salary Checking', balance: 50000.0, type: 'Bank'),
+    );
 
     // 2. Create a credit card account with 0 balance (liability)
-    final ccAccountId = await dbHelper.createAccount(Account(
-      name: 'Infinia CC',
-      balance: 0.0,
-      type: 'Credit Card',
-    ));
+    final ccAccountId = await dbHelper.createAccount(
+      Account(name: 'Infinia CC', balance: 0.0, type: 'Credit Card'),
+    );
 
     // 3. Create credit card metadata
-    final ccId = await dbHelper.createCreditCard(CreditCard(
-      accountId: ccAccountId,
-      creditLimit: 200000.0,
-      statementDay: 1,
-      dueDay: 20,
-      defaultLockAccountId: bankAccountId,
-      autoLock: true,
-    ));
+    final ccId = await dbHelper.createCreditCard(
+      CreditCard(
+        accountId: ccAccountId,
+        creditLimit: 200000.0,
+        statementDay: 1,
+        dueDay: 20,
+        defaultLockAccountId: bankAccountId,
+        autoLock: true,
+      ),
+    );
 
     final fetchedCc = await dbHelper.getCreditCardByAccountId(ccAccountId);
     expect(fetchedCc, isNotNull);
@@ -113,7 +112,9 @@ void main() {
     // Verify balances after bill payment:
     final postPayAccounts = await dbHelper.readAllAccounts();
     final postPayCc = postPayAccounts.firstWhere((a) => a.id == ccAccountId);
-    final postPayBank = postPayAccounts.firstWhere((a) => a.id == bankAccountId);
+    final postPayBank = postPayAccounts.firstWhere(
+      (a) => a.id == bankAccountId,
+    );
 
     expect(postPayCc.balance, 0.0); // Liability cleared
     expect(postPayBank.balance, 45000.0); // Physical bank reduced by 5,000

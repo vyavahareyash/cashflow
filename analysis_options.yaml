@@ -5,8 +5,6 @@
 # IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
 # invoked from the command line by running `flutter analyze`.
 
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
@@ -18,21 +16,37 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+  errors:
+    # Treat unawaited futures as errors — prevents silent async bugs
+    unawaited_futures: error
+    # Treat discarded futures as errors
+    discarded_futures: error
 
 linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # ── Correctness ────────────────────────────────────────────────────────
+    avoid_print: true               # Use a proper logger instead
+    unawaited_futures: true         # Must await or explicitly unawaited()
+    discarded_futures: true         # Discard must be explicit
+    cancel_subscriptions: true      # StreamSubscription must be cancelled
+    close_sinks: true               # Sinks must be closed
 
-# Additional information about this file can be found at
+    # ── Style & consistency ────────────────────────────────────────────────
+    prefer_single_quotes: true      # Uniform quote style
+    always_declare_return_types: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_locals: true       # Immutable-first locals
+    unnecessary_lambdas: true       # Prefer tear-offs where possible
+
+    # ── Null safety ────────────────────────────────────────────────────────
+    # (avoid_null_checks_in_equality_operators is deprecated in Dart 3)
+
+
+    # ── Flutter specifics ─────────────────────────────────────────────────
+    use_key_in_widget_constructors: true
+    sized_box_for_whitespace: true  # Prefer SizedBox over Container for spacing
+    avoid_unnecessary_containers: true
+
+# Additional information:
 # https://dart.dev/guides/language/analysis-options

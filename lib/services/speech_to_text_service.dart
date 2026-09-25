@@ -11,7 +11,9 @@ import 'model_management_service.dart';
 /// Thrown when microphone permission has been denied.
 class SttPermissionDeniedException implements Exception {
   final String message;
-  const SttPermissionDeniedException([this.message = 'Microphone permission denied.']);
+  const SttPermissionDeniedException([
+    this.message = 'Microphone permission denied.',
+  ]);
 
   @override
   String toString() => 'SttPermissionDeniedException: $message';
@@ -21,8 +23,7 @@ class SttPermissionDeniedException implements Exception {
 class SttModelNotInstalledException implements Exception {
   final String message;
   const SttModelNotInstalledException([
-    this.message =
-        'Speech recognition service is not available or required models are missing.',
+    this.message = 'Speech recognition service is not available or required models are missing.',
   ]);
 
   @override
@@ -32,7 +33,9 @@ class SttModelNotInstalledException implements Exception {
 /// Thrown when an audio clip is silent, empty, or contains no decipherable speech.
 class SttSilentAudioException implements Exception {
   final String message;
-  const SttSilentAudioException([this.message = 'Audio contains only silence.']);
+  const SttSilentAudioException([
+    this.message = 'Audio contains only silence.',
+  ]);
 
   @override
   String toString() => 'SttSilentAudioException: $message';
@@ -45,8 +48,9 @@ class SttEngineException implements Exception {
   const SttEngineException(this.message, [this.cause]);
 
   @override
-  String toString() =>
-      cause != null ? 'SttEngineException: $message (Cause: $cause)' : 'SttEngineException: $message';
+  String toString() => cause != null
+      ? 'SttEngineException: $message (Cause: $cause)'
+      : 'SttEngineException: $message';
 }
 
 /// Abstract contract for speech-to-text inference engines (ADR-0006).
@@ -80,7 +84,10 @@ abstract class SttEngine {
 
   /// Fallback / file-based transcription methods for headless test fixtures:
   Future<String> transcribeFile(String wavFilePath);
-  Future<String> transcribeSamples(Float32List samples, {int sampleRate = 16000});
+  Future<String> transcribeSamples(
+    Float32List samples, {
+    int sampleRate = 16000,
+  });
 
   Future<void> dispose();
 }
@@ -106,7 +113,7 @@ class NativePlatformSttEngine implements SttEngine {
   String? _currentLocaleId;
 
   NativePlatformSttEngine({stt.SpeechToText? speech})
-      : _speech = speech ?? stt.SpeechToText();
+    : _speech = speech ?? stt.SpeechToText();
 
   @override
   bool get isInitialized => _initialized && _speech.isAvailable;
@@ -149,18 +156,25 @@ class NativePlatformSttEngine implements SttEngine {
     try {
       _initialized = await _speech.initialize(
         onError: (SpeechRecognitionError error) {
-          debugPrint('Native STT error: ${error.errorMsg} (permanent: ${error.permanent})');
+          debugPrint(
+            'Native STT error: ${error.errorMsg} (permanent: ${error.permanent})',
+          );
           _isListening = false;
           _onListeningStateChangedCallback?.call(false);
           _onErrorCallback?.call(error.errorMsg);
         },
         onStatus: (String status) {
-          if (status == 'notListening' || status == 'done' || status == 'doneNoResult') {
+          if (status == 'notListening' ||
+              status == 'done' ||
+              status == 'doneNoResult') {
             _isListening = false;
 
             // Commit any active turn words that haven't been committed yet
             if (_currentTurnWords.isNotEmpty) {
-              _committedText = _combineTranscripts(_committedText, _currentTurnWords);
+              _committedText = _combineTranscripts(
+                _committedText,
+                _currentTurnWords,
+              );
               _currentTurnWords = '';
               _lastRecognizedWords = _committedText;
             }
@@ -169,8 +183,13 @@ class NativePlatformSttEngine implements SttEngine {
             _onListeningStateChangedCallback?.call(false);
 
             if (!_sessionActive) {
-              final finalTranscript = (_committedText.isNotEmpty ? _committedText : _lastRecognizedWords).trim();
-              if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+              final finalTranscript =
+                  (_committedText.isNotEmpty
+                          ? _committedText
+                          : _lastRecognizedWords)
+                      .trim();
+              if (_transcriptionCompleter != null &&
+                  !_transcriptionCompleter!.isCompleted) {
                 _transcriptionCompleter!.complete(finalTranscript);
               }
             }
@@ -183,7 +202,10 @@ class NativePlatformSttEngine implements SttEngine {
       );
     } catch (e) {
       _initialized = false;
-      throw SttEngineException('Failed to initialize native speech recognizer: $e', e);
+      throw SttEngineException(
+        'Failed to initialize native speech recognizer: $e',
+        e,
+      );
     }
   }
 
@@ -218,7 +240,9 @@ class NativePlatformSttEngine implements SttEngine {
     }
 
     if (!_speech.isAvailable) {
-      throw const SttEngineException('Native speech recognition is not available on this device.');
+      throw const SttEngineException(
+        'Native speech recognition is not available on this device.',
+      );
     }
 
     _isListening = true;
@@ -246,7 +270,10 @@ class NativePlatformSttEngine implements SttEngine {
           // This allows native STT to correct earlier words ("50" -> "250") naturally
           // without heuristic string matching or duplication.
           _currentTurnWords = incoming;
-          final combined = _combineTranscripts(_committedText, _currentTurnWords);
+          final combined = _combineTranscripts(
+            _committedText,
+            _currentTurnWords,
+          );
 
           _lastRecognizedWords = combined;
           _onResultCallback?.call(combined, result.finalResult);
@@ -313,8 +340,11 @@ class NativePlatformSttEngine implements SttEngine {
     await _speech.stop();
     _onListeningStateChangedCallback?.call(false);
 
-    final finalTranscript = (_committedText.isNotEmpty ? _committedText : _lastRecognizedWords).trim();
-    if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+    final finalTranscript =
+        (_committedText.isNotEmpty ? _committedText : _lastRecognizedWords)
+            .trim();
+    if (_transcriptionCompleter != null &&
+        !_transcriptionCompleter!.isCompleted) {
       _transcriptionCompleter!.complete(finalTranscript);
     }
     return finalTranscript;
@@ -328,7 +358,8 @@ class NativePlatformSttEngine implements SttEngine {
     _committedText = '';
     _currentTurnWords = '';
     _lastRecognizedWords = '';
-    if (_transcriptionCompleter != null && !_transcriptionCompleter!.isCompleted) {
+    if (_transcriptionCompleter != null &&
+        !_transcriptionCompleter!.isCompleted) {
       _transcriptionCompleter!.complete('');
     }
     await _speech.cancel();
@@ -343,7 +374,10 @@ class NativePlatformSttEngine implements SttEngine {
   }
 
   @override
-  Future<String> transcribeSamples(Float32List samples, {int sampleRate = 16000}) async {
+  Future<String> transcribeSamples(
+    Float32List samples, {
+    int sampleRate = 16000,
+  }) async {
     throw UnsupportedError(
       'NativePlatformSttEngine does not support sample-based decoding; use streaming speech recognition or MockSttEngine.',
     );
@@ -557,11 +591,9 @@ class SpeechToTextService {
   final SttEngine _engine;
   final ModelManagementService _modelManager;
 
-  SpeechToTextService({
-    SttEngine? engine,
-    ModelManagementService? modelManager,
-  })  : _engine = engine ?? NativePlatformSttEngine(),
-        _modelManager = modelManager ?? ModelManagementService.instance {
+  SpeechToTextService({SttEngine? engine, ModelManagementService? modelManager})
+    : _engine = engine ?? NativePlatformSttEngine(),
+      _modelManager = modelManager ?? ModelManagementService.instance {
     // Register RAM lifecycle hooks for on-demand weight loading and deallocation (US 16)
     _modelManager.registerLifecycleHooks(
       onLoad: initializeEngine,

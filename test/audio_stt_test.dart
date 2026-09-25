@@ -141,8 +141,10 @@ class FakeAudioRecorderClient implements AudioRecorderClient {
 
 class FakeSpeechToText extends Fake implements stt.SpeechToText {
   bool available = true;
+  @override
   void Function(String status)? statusListener;
   void Function(SpeechRecognitionResult result)? resultListener;
+  @override
   bool isListening = false;
 
   @override
@@ -259,7 +261,7 @@ void main() {
         );
 
         expect(
-          () => service.startRecording(),
+          service.startRecording,
           throwsA(isA<AudioCapturePermissionException>()),
         );
         expect(service.isRecording, isFalse);
@@ -432,7 +434,7 @@ void main() {
 
       bool? listeningState;
       await engine.startListening(
-        onResult: (_, __) {},
+        onResult: (_, _) {},
         onListeningStateChanged: (active) {
           listeningState = active;
         },
@@ -591,7 +593,7 @@ void main() {
 
         // Stop and transcribe fails
         await expectLater(
-          () => pipeline.stopAndTranscribe(),
+          pipeline.stopAndTranscribe,
           throwsA(isA<SttEngineException>()),
         );
 
@@ -625,7 +627,7 @@ void main() {
       expect(await File(wavPath).exists(), isTrue);
 
       await expectLater(
-        () => pipeline.stopAndTranscribe(),
+        pipeline.stopAndTranscribe,
         throwsA(isA<SttSilentAudioException>()),
       );
 

@@ -11,6 +11,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
 
   const databaseFileName = 'money_tracker.db';
 
@@ -28,97 +29,103 @@ void main() {
     await deleteDatabase(path);
   });
 
-  group('P0 Issue #68: Segregate fund locking logic for goals and credit cards', () {
-    test('getTotalGoalLockedAmount and getTotalCreditCardLockedAmount segregate allocations', () async {
-      final db = DatabaseHelper.instance;
+  group(
+    'P0 Issue #68: Segregate fund locking logic for goals and credit cards',
+    () {
+      test('getTotalGoalLockedAmount and getTotalCreditCardLockedAmount segregate allocations', () async {
+        final db = DatabaseHelper.instance;
 
-      // 1. Create a bank account
-      final bankId = await db.createAccount(
-        Account(name: 'Main Checking', balance: 100000.0, type: 'Bank'),
+        // 1. Create a bank account
+        final bankId = await db.createAccount(
+          Account(name: 'Main Checking', balance: 100000.0, type: 'Bank'),
+        );
+
+        // 2. Create a credit card account
+        final ccAccountId = await db.createAccount(
+          Account(name: 'Platinum CC', balance: 0.0, type: 'Credit Card'),
+        );
+        await db.createCreditCard(
+          CreditCard(
+            accountId: ccAccountId,
+            creditLimit: 200000.0,
+            statementDay: 1,
+            dueDay: 20,
+            defaultLockAccountId: bankId,
+            autoLock: true,
+          ),
+        );
+
+        // 3. Create a category
+        final catId = await db.createCategory(
+          Category(name: 'Shopping', monthlyBudget: 20000.0),
+        );
+
+        // 4. Create a Goal
+        final goalId = await db.createGoal(
+          Goal(
+            name: 'Vacation',
+            totalTarget: 50000.0,
+            targetDate: '2026-12-31',
+            currentSaved: 0.0,
+          ),
+        );
+
+        // 5. Lock funds for Goal (20,000)
+        await db.createGoalLockTransaction(
+          goalId: goalId,
+          accountId: bankId,
+          amount: 20000.0,
+          date: DateTime.now().toIso8601String(),
+          note: 'Saved for Vacation',
+        );
+
+        // 6. Spend on CC with auto-lock (15,000)
+        await db.createCreditCardExpenseTransaction(
+          ccAccountId: ccAccountId,
+          categoryId: catId,
+          amount: 15000.0,
+          date: DateTime.now().toIso8601String(),
+          note: 'Flight tickets',
+          lockBankAccountId: bankId,
+        );
+
+        // Verify segregated lock metrics
+        final totalLockedAll = await db.getTotalLockedAmount();
+        final goalLocked = await db.getTotalGoalLockedAmount();
+        final ccLocked = await db.getTotalCreditCardLockedAmount();
+        final availToLock = await db.getAccountAvailableToLock(bankId);
+        final usableBalance = await db.calculateUsableBalance();
+
+        // Total locked across all accounts: 20k (goal) + 15k (cc) = 35k
+        expect(totalLockedAll, 35000.0);
+        // Segregated goal locked: strictly 20k
+        expect(goalLocked, 20000.0);
+        // Segregated cc locked: strictly 15k
+        expect(ccLocked, 15000.0);
+        // Available to lock in bank: 100k - 35k = 65k
+        expect(availToLock, 65000.0);
+        // Usable cash balance: 100k - 35k = 65k
+        expect(usableBalance, 65000.0);
+
+        // Goal object saved amount remains 20k
+        final goals = await db.readAllGoals();
+        expect(goals.first.currentSaved, 20000.0);
+      });
+
+      test(
+        'getAccountAvailableToLock returns 0 for credit card accounts',
+        () async {
+          final db = DatabaseHelper.instance;
+          final ccAccountId = await db.createAccount(
+            Account(name: 'Travel Card', balance: 5000.0, type: 'Credit Card'),
+          );
+
+          final avail = await db.getAccountAvailableToLock(ccAccountId);
+          expect(avail, 0.0);
+        },
       );
-
-      // 2. Create a credit card account
-      final ccAccountId = await db.createAccount(
-        Account(name: 'Platinum CC', balance: 0.0, type: 'Credit Card'),
-      );
-      await db.createCreditCard(
-        CreditCard(
-          accountId: ccAccountId,
-          creditLimit: 200000.0,
-          statementDay: 1,
-          dueDay: 20,
-          defaultLockAccountId: bankId,
-          autoLock: true,
-        ),
-      );
-
-      // 3. Create a category
-      final catId = await db.createCategory(
-        Category(name: 'Shopping', monthlyBudget: 20000.0),
-      );
-
-      // 4. Create a Goal
-      final goalId = await db.createGoal(
-        Goal(
-          name: 'Vacation',
-          totalTarget: 50000.0,
-          targetDate: '2026-12-31',
-          currentSaved: 0.0,
-        ),
-      );
-
-      // 5. Lock funds for Goal (20,000)
-      await db.createGoalLockTransaction(
-        goalId: goalId,
-        accountId: bankId,
-        amount: 20000.0,
-        date: DateTime.now().toIso8601String(),
-        note: 'Saved for Vacation',
-      );
-
-      // 6. Spend on CC with auto-lock (15,000)
-      await db.createCreditCardExpenseTransaction(
-        ccAccountId: ccAccountId,
-        categoryId: catId,
-        amount: 15000.0,
-        date: DateTime.now().toIso8601String(),
-        note: 'Flight tickets',
-        lockBankAccountId: bankId,
-      );
-
-      // Verify segregated lock metrics
-      final totalLockedAll = await db.getTotalLockedAmount();
-      final goalLocked = await db.getTotalGoalLockedAmount();
-      final ccLocked = await db.getTotalCreditCardLockedAmount();
-      final availToLock = await db.getAccountAvailableToLock(bankId);
-      final usableBalance = await db.calculateUsableBalance();
-
-      // Total locked across all accounts: 20k (goal) + 15k (cc) = 35k
-      expect(totalLockedAll, 35000.0);
-      // Segregated goal locked: strictly 20k
-      expect(goalLocked, 20000.0);
-      // Segregated cc locked: strictly 15k
-      expect(ccLocked, 15000.0);
-      // Available to lock in bank: 100k - 35k = 65k
-      expect(availToLock, 65000.0);
-      // Usable cash balance: 100k - 35k = 65k
-      expect(usableBalance, 65000.0);
-
-      // Goal object saved amount remains 20k
-      final goals = await db.readAllGoals();
-      expect(goals.first.currentSaved, 20000.0);
-    });
-
-    test('getAccountAvailableToLock returns 0 for credit card accounts', () async {
-      final db = DatabaseHelper.instance;
-      final ccAccountId = await db.createAccount(
-        Account(name: 'Travel Card', balance: 5000.0, type: 'Credit Card'),
-      );
-
-      final avail = await db.getAccountAvailableToLock(ccAccountId);
-      expect(avail, 0.0);
-    });
-  });
+    },
+  );
 
   group('P0 Issue #69: Categories without budgets should not be calculated in monthly budget progress', () {
     test('unbudgeted category spends are excluded from budgeted progress calculations', () async {
@@ -193,7 +200,10 @@ void main() {
       final progress = totalBudgetedSpent / totalBudgetLimit;
       expect(progress, 0.3); // 30% progress, NOT 100%
 
-      final remainingBudget = (totalBudgetLimit - totalBudgetedSpent).clamp(0.0, double.infinity);
+      final remainingBudget = (totalBudgetLimit - totalBudgetedSpent).clamp(
+        0.0,
+        double.infinity,
+      );
       expect(remainingBudget, 7000.0); // 7,000 remaining, NOT 0.0
     });
   });

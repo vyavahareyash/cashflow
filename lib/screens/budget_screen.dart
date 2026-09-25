@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/database_helper.dart';
@@ -30,7 +32,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   void initState() {
     super.initState();
-    _loadBudgets();
+    unawaited(_loadBudgets());
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
 
@@ -42,7 +44,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   void _onDataChanged() {
     if (mounted) {
-      _loadBudgets();
+      unawaited(_loadBudgets());
     }
   }
 
@@ -53,13 +55,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final categories = await DatabaseHelper.instance.readAllCategories();
     final salaryDay = await DatabaseHelper.instance.getSalaryDay();
     final cycle = SalaryCycle.resolve(salaryDay: salaryDay);
-    final monthlySpending =
-        await DatabaseHelper.instance.getMonthlySpendingByCategoryId(cycle: cycle);
-    final monthlyIncome =
-        await DatabaseHelper.instance.getMonthlyIncomeByCategoryId(cycle: cycle);
+    final monthlySpending = await DatabaseHelper.instance
+        .getMonthlySpendingByCategoryId(cycle: cycle);
+    final monthlyIncome = await DatabaseHelper.instance
+        .getMonthlyIncomeByCategoryId(cycle: cycle);
     double totalBudgetLimit = 0;
     double totalSpent = 0;
-    Map<int, double> spendingMap = {};
+    final Map<int, double> spendingMap = {};
 
     for (var cat in categories.where((c) => c.isExpense)) {
       final budget = cat.monthlyBudget;
@@ -110,180 +112,190 @@ class _BudgetScreenState extends State<BudgetScreen> {
     String type = isEditing ? category.type : _selectedTab;
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            final isExpense = type == 'expense';
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (dialogCtx) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final isExpense = type == 'expense';
 
-            return AlertDialog(
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: AppBorderRadius.xlargeBorder,
-              ),
-              title: Text(
-                isEditing
-                    ? (isExpense ? 'Edit Expense Budget' : 'Edit Income Category')
-                    : (isExpense ? 'Add Expense Budget' : 'Add Income Category'),
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.bold,
+              return AlertDialog(
+                backgroundColor: isDark
+                    ? AppColors.darkSurface
+                    : AppColors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppBorderRadius.xlargeBorder,
                 ),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!isEditing) ...[
-                        Text(
-                          'Category Type',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark ? AppColors.gray300 : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
+                title: Text(
+                  isEditing
+                      ? (isExpense
+                            ? 'Edit Expense Budget'
+                            : 'Edit Income Category')
+                      : (isExpense
+                            ? 'Add Expense Budget'
+                            : 'Add Income Category'),
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!isEditing) ...[
+                          Text(
+                            'Category Type',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: isDark
+                                  ? AppColors.gray300
+                                  : AppColors.gray700,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        DropdownButtonFormField<String>(
-                          initialValue: type,
-                          isExpanded: true,
-                          dropdownColor: isDark
-                              ? AppColors.darkSurfaceElevated
-                              : AppColors.white,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.gray50,
-                            border: OutlineInputBorder(
-                              borderRadius: AppBorderRadius.mediumBorder,
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : AppColors.gray300,
+                          const SizedBox(height: AppSpacing.xs),
+                          DropdownButtonFormField<String>(
+                            initialValue: type,
+                            isExpanded: true,
+                            dropdownColor: isDark
+                                ? AppColors.darkSurfaceElevated
+                                : AppColors.white,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: isDark
+                                  ? AppColors.darkSurface
+                                  : AppColors.gray50,
+                              border: OutlineInputBorder(
+                                borderRadius: AppBorderRadius.mediumBorder,
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.gray300,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.md,
                               ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md,
-                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'expense',
+                                child: Text('Expense Budget'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'income',
+                                child: Text('Income Category'),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => type = val);
+                              }
+                            },
                           ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'expense',
-                              child: Text('Expense Budget'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'income',
-                              child: Text('Income Category'),
-                            ),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() => type = val);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      CustomInputField(
-                        controller: nameController,
-                        label: 'Category Name',
-                        hint: isExpense
-                            ? 'e.g. Groceries, Entertainment'
-                            : 'e.g. Salary, Freelance, Rental',
-                        prefixIcon: Icons.category_rounded,
-                        validator: (value) =>
-                            (value == null || value.trim().isEmpty)
-                            ? 'Please enter a category name'
-                            : null,
-                      ),
-                      if (isExpense) ...[
-                        const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
                         CustomInputField(
-                          controller: budgetController,
-                          label: 'Monthly Budget Target',
-                          hint: 'Optional, e.g. 5000',
-                          prefixText: '₹ ',
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: (value) {
-                            if (value != null &&
-                                value.trim().isNotEmpty &&
-                                double.tryParse(value.trim()) == null) {
-                              return 'Please enter a valid number';
-                            }
-                            return null;
-                          },
+                          controller: nameController,
+                          label: 'Category Name',
+                          hint: isExpense
+                              ? 'e.g. Groceries, Entertainment'
+                              : 'e.g. Salary, Freelance, Rental',
+                          prefixIcon: Icons.category_rounded,
+                          validator: (value) =>
+                              (value == null || value.trim().isEmpty)
+                              ? 'Please enter a category name'
+                              : null,
                         ),
+                        if (isExpense) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          CustomInputField(
+                            controller: budgetController,
+                            label: 'Monthly Budget Target',
+                            hint: 'Optional, e.g. 5000',
+                            prefixText: '₹ ',
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            validator: (value) {
+                              if (value != null &&
+                                  value.trim().isNotEmpty &&
+                                  double.tryParse(value.trim()) == null) {
+                                return 'Please enter a valid number';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                if (isEditing)
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(dialogCtx);
-                      _deleteCategory(category.id!);
-                    },
-                    child: const Text(
-                      'Delete',
-                      style: TextStyle(
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
                   ),
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('Cancel'),
                 ),
-                CustomButton(
-                  label: isEditing ? 'Update' : 'Add',
-                  width: 100,
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      final name = nameController.text.trim();
-                      final budgetText = budgetController.text.trim();
-                      final budget = (isExpense && budgetText.isNotEmpty)
-                          ? double.tryParse(budgetText)
-                          : null;
+                actions: [
+                  if (isEditing)
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(dialogCtx);
+                        unawaited(_deleteCategory(category.id!));
+                      },
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    child: const Text('Cancel'),
+                  ),
+                  CustomButton(
+                    label: isEditing ? 'Update' : 'Add',
+                    width: 100,
+                    onPressed: () async {
+                      if (formKey.currentState!.validate()) {
+                        final name = nameController.text.trim();
+                        final budgetText = budgetController.text.trim();
+                        final budget = (isExpense && budgetText.isNotEmpty)
+                            ? double.tryParse(budgetText)
+                            : null;
 
-                      if (isEditing) {
-                        await DatabaseHelper.instance.updateCategory(
-                          Category(
-                            id: category.id,
-                            name: name,
-                            type: type,
-                            monthlyBudget: budget,
-                          ),
-                        );
-                      } else {
-                        await DatabaseHelper.instance.createCategory(
-                          Category(
-                            name: name,
-                            type: type,
-                            monthlyBudget: budget,
-                          ),
-                        );
+                        if (isEditing) {
+                          await DatabaseHelper.instance.updateCategory(
+                            Category(
+                              id: category.id,
+                              name: name,
+                              type: type,
+                              monthlyBudget: budget,
+                            ),
+                          );
+                        } else {
+                          await DatabaseHelper.instance.createCategory(
+                            Category(
+                              name: name,
+                              type: type,
+                              monthlyBudget: budget,
+                            ),
+                          );
+                        }
+                        if (!mounted || !dialogCtx.mounted) return;
+                        Navigator.pop(dialogCtx);
+                        unawaited(_loadBudgets());
                       }
-                      if (!mounted || !dialogCtx.mounted) return;
-                      Navigator.pop(dialogCtx);
-                      _loadBudgets();
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -316,7 +328,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteCategory(id);
-      _loadBudgets();
+      unawaited(_loadBudgets());
     }
   }
 
@@ -342,9 +354,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
               title: const Text('Monthly Budgets'),
               actions: [
                 IconButton(
-                  tooltip: _selectedTab == 'expense' ? 'Add Budget' : 'Add Category',
+                  tooltip: _selectedTab == 'expense'
+                      ? 'Add Budget'
+                      : 'Add Category',
                   icon: const Icon(Icons.add_rounded),
-                  onPressed: () => _showCategoryDialog(),
+                  onPressed: _showCategoryDialog,
                 ),
               ],
             )
@@ -416,20 +430,28 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             Text(
                               '${expenseCategories.length} Categories',
                               style: AppTypography.labelSmall.copyWith(
-                                color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
                               ),
                             ),
                           ],
                         ),
                         FilledButton.icon(
                           key: const Key('budget_add_pill_btn'),
-                          onPressed: () => _showCategoryDialog(),
+                          onPressed: _showCategoryDialog,
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Add Budget', style: AppTypography.labelMedium),
+                          label: const Text(
+                            'Add Budget',
+                            style: AppTypography.labelMedium,
+                          ),
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.emerald700,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             visualDensity: VisualDensity.compact,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
@@ -474,7 +496,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 FilledButton.icon(
-                                  onPressed: () => _showCategoryDialog(),
+                                  onPressed: _showCategoryDialog,
                                   icon: const Icon(Icons.add_rounded, size: 18),
                                   label: const Text('Add Budget'),
                                   style: FilledButton.styleFrom(
@@ -513,20 +535,28 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             Text(
                               '${incomeCategories.length} Categories',
                               style: AppTypography.labelSmall.copyWith(
-                                color: isDark ? AppColors.gray400 : AppColors.gray600,
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
                               ),
                             ),
                           ],
                         ),
                         FilledButton.icon(
                           key: const Key('income_add_pill_btn'),
-                          onPressed: () => _showCategoryDialog(),
+                          onPressed: _showCategoryDialog,
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Add Category', style: AppTypography.labelMedium),
+                          label: const Text(
+                            'Add Category',
+                            style: AppTypography.labelMedium,
+                          ),
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.emerald700,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             visualDensity: VisualDensity.compact,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
@@ -571,7 +601,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 FilledButton.icon(
-                                  onPressed: () => _showCategoryDialog(),
+                                  onPressed: _showCategoryDialog,
                                   icon: const Icon(Icons.add_rounded, size: 18),
                                   label: const Text('Add Category'),
                                   style: FilledButton.styleFrom(
@@ -708,9 +738,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ),
           Text(
-            income > 0
-                ? '+${AppFormatters.currency(income)}'
-                : '₹0 earned',
+            income > 0 ? '+${AppFormatters.currency(income)}' : '₹0 earned',
             style: AppTypography.titleMedium.copyWith(
               fontWeight: FontWeight.bold,
               color: income > 0
@@ -1063,16 +1091,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                     duration: const Duration(milliseconds: 350),
                     curve: Curves.easeOutCubic,
-                    builder: (context, animatedVal, _) => LinearProgressIndicator(
-                      value: animatedVal,
-                      minHeight: 8,
-                      backgroundColor: isDark
-                          ? AppColors.darkBorder
-                          : AppColors.gray200,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isOver ? AppColors.danger : style.color,
-                      ),
-                    ),
+                    builder: (context, animatedVal, _) =>
+                        LinearProgressIndicator(
+                          value: animatedVal,
+                          minHeight: 8,
+                          backgroundColor: isDark
+                              ? AppColors.darkBorder
+                              : AppColors.gray200,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isOver ? AppColors.danger : style.color,
+                          ),
+                        ),
                   ),
                 ),
               ),

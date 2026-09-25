@@ -59,7 +59,11 @@ Uint8List createTestWavBytes({
   b.setUint16(20, 1, Endian.little);
   b.setUint16(22, numChannels, Endian.little);
   b.setUint32(24, sampleRate, Endian.little);
-  b.setUint32(28, sampleRate * numChannels * (bitsPerSample ~/ 8), Endian.little);
+  b.setUint32(
+    28,
+    sampleRate * numChannels * (bitsPerSample ~/ 8),
+    Endian.little,
+  );
   b.setUint16(32, numChannels * (bitsPerSample ~/ 8), Endian.little);
   b.setUint16(34, bitsPerSample, Endian.little);
   b.setUint8(36, 0x64);
@@ -140,6 +144,7 @@ class FakeAudioRecorderClient implements AudioRecorderClient {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker_coordinator_test.db';
 
   late Directory tempDir;
@@ -230,34 +235,44 @@ void main() {
       );
     });
 
-    test('2. prepareSession loads models into memory when installed (US 16)', () async {
-      // Create mock model files
-      for (final file in AiModelPackManifest.defaultPack.files) {
-        final f = File(join(modelDir.path, file.relativeFilePath));
-        await f.parent.create(recursive: true);
-        await f.writeAsString('mock_content');
-      }
+    test(
+      '2. prepareSession loads models into memory when installed (US 16)',
+      () async {
+        // Create mock model files
+        for (final file in AiModelPackManifest.defaultPack.files) {
+          final f = File(join(modelDir.path, file.relativeFilePath));
+          await f.parent.create(recursive: true);
+          await f.writeAsString('mock_content');
+        }
 
-      await coordinator.prepareSession();
-      expect(modelManager.isModelLoadedInMemory, isTrue);
-    });
+        await coordinator.prepareSession();
+        expect(modelManager.isModelLoadedInMemory, isTrue);
+      },
+    );
 
-    test('3. startRecording and isRecording reflect active capture state', () async {
-      expect(coordinator.isRecording, isFalse);
-      final wavPath = await coordinator.startRecording();
-      expect(coordinator.isRecording, isTrue);
-      expect(File(wavPath).existsSync(), isTrue);
+    test(
+      '3. startRecording and isRecording reflect active capture state',
+      () async {
+        expect(coordinator.isRecording, isFalse);
+        final wavPath = await coordinator.startRecording();
+        expect(coordinator.isRecording, isTrue);
+        expect(File(wavPath).existsSync(), isTrue);
 
-      await coordinator.cancelRecording();
-      expect(coordinator.isRecording, isFalse);
-      expect(File(wavPath).existsSync(), isFalse); // US 13: Zero audio persistence
-    });
+        await coordinator.cancelRecording();
+        expect(coordinator.isRecording, isFalse);
+        expect(
+          File(wavPath).existsSync(),
+          isFalse,
+        ); // US 13: Zero audio persistence
+      },
+    );
 
     test('4. stopAndProcess end-to-end happy path with SLM GBNF output (US 1, 4, 5, 6, 17)', () async {
-      mockSttEngine.initialize(modelDirPath: modelDir.path);
-      mockSttEngine.defaultTranscript = 'Spent 14 dollars on lunch from Chase yesterday';
+      await mockSttEngine.initialize(modelDirPath: modelDir.path);
+      mockSttEngine.defaultTranscript =
+          'Spent 14 dollars on lunch from Chase yesterday';
 
-      mockSlmEngine.initialize(modelPath: 'dummy');
+      await mockSlmEngine.initialize(modelPath: 'dummy');
       mockSlmEngine.onGenerate = (prompt) {
         // Assert prompt includes grounded accounts and categories
         expect(prompt, contains('Chase Checking'));
@@ -298,10 +313,10 @@ void main() {
     });
 
     test('5. stopAndProcess falls back gracefully to deterministic heuristic parser if SLM fails (US 1)', () async {
-      mockSttEngine.initialize(modelDirPath: modelDir.path);
+      await mockSttEngine.initialize(modelDirPath: modelDir.path);
       mockSttEngine.defaultTranscript = 'Coffee 5 dollars at Starbucks';
 
-      mockSlmEngine.initialize(modelPath: 'dummy');
+      await mockSlmEngine.initialize(modelPath: 'dummy');
       mockSlmEngine.shouldThrowError = true; // Simulate SLM engine failure
 
       await coordinator.startRecording();
@@ -316,45 +331,52 @@ void main() {
       expect(drafts.first.note.toLowerCase(), contains('coffee'));
     });
 
-    test('6. stopAndProcess throws SttSilentAudioException on empty transcription', () async {
-      mockSttEngine.initialize(modelDirPath: modelDir.path);
-      mockSttEngine.defaultTranscript = '   '; // Whitespace only
+    test(
+      '6. stopAndProcess throws SttSilentAudioException on empty transcription',
+      () async {
+        await mockSttEngine.initialize(modelDirPath: modelDir.path);
+        mockSttEngine.defaultTranscript = '   '; // Whitespace only
 
-      await coordinator.startRecording();
-      expect(
-        () => coordinator.stopAndProcess(),
-        throwsA(isA<SttSilentAudioException>()),
-      );
+        await coordinator.startRecording();
+        expect(
+          () => coordinator.stopAndProcess(),
+          throwsA(isA<SttSilentAudioException>()),
+        );
 
-      // US 13: WAV file purged even on silence error
-      final lingering = await captureService.purgeTemporaryWavs();
-      expect(lingering, 0);
-    });
+        // US 13: WAV file purged even on silence error
+        final lingering = await captureService.purgeTemporaryWavs();
+        expect(lingering, 0);
+      },
+    );
 
-    test('7. endSession unloads models and clears lingering cache (US 13, US 16)', () async {
-      for (final file in AiModelPackManifest.defaultPack.files) {
-        final f = File(join(modelDir.path, file.relativeFilePath));
-        await f.parent.create(recursive: true);
-        await f.writeAsString('dummy');
-      }
-      await coordinator.prepareSession();
-      expect(modelManager.isModelLoadedInMemory, isTrue);
+    test(
+      '7. endSession unloads models and clears lingering cache (US 13, US 16)',
+      () async {
+        for (final file in AiModelPackManifest.defaultPack.files) {
+          final f = File(join(modelDir.path, file.relativeFilePath));
+          await f.parent.create(recursive: true);
+          await f.writeAsString('dummy');
+        }
+        await coordinator.prepareSession();
+        expect(modelManager.isModelLoadedInMemory, isTrue);
 
-      await coordinator.endSession();
-      expect(modelManager.isModelLoadedInMemory, isFalse);
-    });
+        await coordinator.endSession();
+        expect(modelManager.isModelLoadedInMemory, isFalse);
+      },
+    );
 
     test('8. readActiveRecordingSamples reads float32 PCM samples during recording', () async {
       await coordinator.startRecording();
-      final samples = await coordinator.audioPipeline.readActiveRecordingSamples();
+      final samples = await coordinator.audioPipeline
+          .readActiveRecordingSamples();
       expect(samples, isNotNull);
       expect(samples!.isNotEmpty, isTrue);
       await coordinator.cancelRecording();
     });
 
     test('9. stopAndProcess falls back to currentLiveTranscript when file transcribe throws SttSilentAudioException', () async {
-      mockSttEngine.initialize(modelDirPath: modelDir.path);
-      mockSlmEngine.initialize(modelPath: 'dummy');
+      await mockSttEngine.initialize(modelDirPath: modelDir.path);
+      await mockSlmEngine.initialize(modelPath: 'dummy');
 
       await coordinator.startRecording();
       // Simulate live transcript having captured words
@@ -389,31 +411,46 @@ void main() {
     test('11. NativePlatformSttEngine.combineTranscripts prevents duplicate appended transcripts', () {
       // 1. Identical repeated transcript (e.g. from trailing stop callback)
       expect(
-        NativePlatformSttEngine.combineTranscripts('Chai 20 rupees', 'Chai 20 rupees'),
+        NativePlatformSttEngine.combineTranscripts(
+          'Chai 20 rupees',
+          'Chai 20 rupees',
+        ),
         'Chai 20 rupees',
       );
 
       // 2. Case-insensitive duplicate
       expect(
-        NativePlatformSttEngine.combineTranscripts('chai 20 rupees', 'Chai 20 rupees'),
+        NativePlatformSttEngine.combineTranscripts(
+          'chai 20 rupees',
+          'Chai 20 rupees',
+        ),
         'chai 20 rupees',
       );
 
       // 3. Progressive refinement/extension (new text starts with prior text)
       expect(
-        NativePlatformSttEngine.combineTranscripts('Chai 20', 'Chai 20 rupees on UPI'),
+        NativePlatformSttEngine.combineTranscripts(
+          'Chai 20',
+          'Chai 20 rupees on UPI',
+        ),
         'Chai 20 rupees on UPI',
       );
 
       // 4. Base already ends with the addition
       expect(
-        NativePlatformSttEngine.combineTranscripts('Dinner 200, Chai 20 rupees', 'Chai 20 rupees'),
+        NativePlatformSttEngine.combineTranscripts(
+          'Dinner 200, Chai 20 rupees',
+          'Chai 20 rupees',
+        ),
         'Dinner 200, Chai 20 rupees',
       );
 
       // 5. Genuinely distinct utterances separated cleanly by comma
       expect(
-        NativePlatformSttEngine.combineTranscripts('Chai 20 rupees', 'Dosa 50 rupees'),
+        NativePlatformSttEngine.combineTranscripts(
+          'Chai 20 rupees',
+          'Dosa 50 rupees',
+        ),
         'Chai 20 rupees, Dosa 50 rupees',
       );
 

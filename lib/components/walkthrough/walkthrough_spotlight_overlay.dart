@@ -65,8 +65,7 @@ class _WalkthroughSpotlightOverlayState
       final key = WalkthroughKeys.keyForTarget(step.targetId);
 
       if (key?.currentContext != null) {
-        final renderBox =
-            key!.currentContext!.findRenderObject() as RenderBox?;
+        final renderBox = key!.currentContext!.findRenderObject() as RenderBox?;
         if (renderBox != null && renderBox.hasSize) {
           final offset = renderBox.localToGlobal(Offset.zero);
           final rect = offset & renderBox.size;
@@ -194,8 +193,9 @@ class _WalkthroughSpotlightOverlayState
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: (isDark ? Colors.white : Colors.black)
-                    .withValues(alpha: 0.1),
+                color: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.1,
+                ),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -226,8 +226,14 @@ class _WalkthroughSpotlightOverlayState
     final placeBelow = spaceBelow >= cardHeight || spaceBelow > rect.top;
 
     final topPosition = placeBelow
-        ? (rect.bottom + 14).clamp(margin, screenSize.height - cardHeight - margin)
-        : (rect.top - cardHeight - 14).clamp(margin, screenSize.height - cardHeight - margin);
+        ? (rect.bottom + 14).clamp(
+            margin,
+            screenSize.height - cardHeight - margin,
+          )
+        : (rect.top - cardHeight - 14).clamp(
+            margin,
+            screenSize.height - cardHeight - margin,
+          );
 
     return Positioned(
       top: topPosition,
@@ -272,7 +278,9 @@ class _WalkthroughSpotlightOverlayState
                     child: Text(
                       '${step.badgeText.toUpperCase()} • ${widget.currentStepIndex + 1}/${kSpotlightSteps.length}',
                       style: AppTypography.labelSmall.copyWith(
-                        color: isDark ? AppColors.emerald300 : AppColors.emerald700,
+                        color: isDark
+                            ? AppColors.emerald300
+                            : AppColors.emerald700,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.8,
                         fontSize: 10,
@@ -284,7 +292,9 @@ class _WalkthroughSpotlightOverlayState
                     onPressed: widget.onExit,
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      foregroundColor: isDark ? AppColors.gray400 : AppColors.gray600,
+                      foregroundColor: isDark
+                          ? AppColors.gray400
+                          : AppColors.gray600,
                       padding: EdgeInsets.zero,
                     ),
                     child: const Text('Exit Tour'),
@@ -323,7 +333,9 @@ class _WalkthroughSpotlightOverlayState
                       key: const Key('walkthrough_tour_prev_button'),
                       onPressed: widget.onPrevious,
                       style: TextButton.styleFrom(
-                        foregroundColor: isDark ? AppColors.gray300 : AppColors.gray700,
+                        foregroundColor: isDark
+                            ? AppColors.gray300
+                            : AppColors.gray700,
                       ),
                       child: const Text('Back'),
                     )
@@ -381,10 +393,7 @@ class _SpotlightPainter extends CustomPainter {
   final Rect? targetRect;
   final double pulseFactor;
 
-  _SpotlightPainter({
-    required this.targetRect,
-    required this.pulseFactor,
-  });
+  _SpotlightPainter({required this.targetRect, required this.pulseFactor});
 
   @override
   void paint(Canvas canvas, Size size) {

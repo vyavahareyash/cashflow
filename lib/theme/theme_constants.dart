@@ -47,7 +47,7 @@ class AppColors {
   static const Color gray300 = Color(0xFFCBD5E1); // Slate 300
   static const Color gray200 = Color(0xFFE2E8F0); // Slate 200
   static const Color gray100 = Color(0xFFF1F5F9); // Slate 100
-  static const Color gray50 = Color(0xFFF8FAFC);  // Slate 50
+  static const Color gray50 = Color(0xFFF8FAFC); // Slate 50
   static const Color white = Color(0xFFFFFFFF);
 
   // Dark Mode Surfaces
@@ -215,7 +215,11 @@ class AppFormatters {
     decimalDigits: 0,
   );
 
-  static String currency(double amount, {bool hideDecimals = false, bool isPrivate = false}) {
+  static String currency(
+    double amount, {
+    bool hideDecimals = false,
+    bool isPrivate = false,
+  }) {
     if (isPrivate) return '••••••';
     if (hideDecimals || amount == amount.roundToDouble()) {
       return _currencyNoDecimal.format(amount);
@@ -254,34 +258,106 @@ class CategoryStyle {
   static CategoryStyle getStyle(String name) {
     final lower = name.toLowerCase().trim();
     if (lower.contains('groc') || lower.contains('supermarket')) {
-      return const CategoryStyle(icon: Icons.shopping_basket_rounded, color: AppColors.emerald600);
-    } else if (lower.contains('din') || lower.contains('food') || lower.contains('eat') || lower.contains('restaurant')) {
-      return const CategoryStyle(icon: Icons.restaurant_rounded, color: AppColors.orange);
-    } else if (lower.contains('trans') || lower.contains('fuel') || lower.contains('cab') || lower.contains('auto') || lower.contains('travel')) {
-      return const CategoryStyle(icon: Icons.directions_car_rounded, color: AppColors.info);
-    } else if (lower.contains('entertain') || lower.contains('movie') || lower.contains('game') || lower.contains('ott')) {
-      return const CategoryStyle(icon: Icons.movie_filter_rounded, color: AppColors.purple);
-    } else if (lower.contains('bill') || lower.contains('util') || lower.contains('rent') || lower.contains('elec')) {
-      return const CategoryStyle(icon: Icons.electric_bolt_rounded, color: AppColors.warning);
-    } else if (lower.contains('shop') || lower.contains('cloth') || lower.contains('apparel')) {
-      return const CategoryStyle(icon: Icons.shopping_bag_rounded, color: AppColors.pink);
-    } else if (lower.contains('health') || lower.contains('med') || lower.contains('doc')) {
-      return const CategoryStyle(icon: Icons.medical_services_rounded, color: AppColors.danger);
-    } else if (lower.contains('invest') || lower.contains('sip') || lower.contains('stock')) {
-      return const CategoryStyle(icon: Icons.trending_up_rounded, color: AppColors.emerald700);
-    } else if (lower.contains('edu') || lower.contains('course') || lower.contains('book')) {
-      return const CategoryStyle(icon: Icons.school_rounded, color: Color(0xFF0284C7));
+      return const CategoryStyle(
+        icon: Icons.shopping_basket_rounded,
+        color: AppColors.emerald600,
+      );
+    } else if (lower.contains('din') ||
+        lower.contains('food') ||
+        lower.contains('eat') ||
+        lower.contains('restaurant')) {
+      return const CategoryStyle(
+        icon: Icons.restaurant_rounded,
+        color: AppColors.orange,
+      );
+    } else if (lower.contains('trans') ||
+        lower.contains('fuel') ||
+        lower.contains('cab') ||
+        lower.contains('auto') ||
+        lower.contains('travel')) {
+      return const CategoryStyle(
+        icon: Icons.directions_car_rounded,
+        color: AppColors.info,
+      );
+    } else if (lower.contains('entertain') ||
+        lower.contains('movie') ||
+        lower.contains('game') ||
+        lower.contains('ott')) {
+      return const CategoryStyle(
+        icon: Icons.movie_filter_rounded,
+        color: AppColors.purple,
+      );
+    } else if (lower.contains('bill') ||
+        lower.contains('util') ||
+        lower.contains('rent') ||
+        lower.contains('elec')) {
+      return const CategoryStyle(
+        icon: Icons.electric_bolt_rounded,
+        color: AppColors.warning,
+      );
+    } else if (lower.contains('shop') ||
+        lower.contains('cloth') ||
+        lower.contains('apparel')) {
+      return const CategoryStyle(
+        icon: Icons.shopping_bag_rounded,
+        color: AppColors.pink,
+      );
+    } else if (lower.contains('health') ||
+        lower.contains('med') ||
+        lower.contains('doc')) {
+      return const CategoryStyle(
+        icon: Icons.medical_services_rounded,
+        color: AppColors.danger,
+      );
+    } else if (lower.contains('invest') ||
+        lower.contains('sip') ||
+        lower.contains('stock')) {
+      return const CategoryStyle(
+        icon: Icons.trending_up_rounded,
+        color: AppColors.emerald700,
+      );
+    } else if (lower.contains('edu') ||
+        lower.contains('course') ||
+        lower.contains('book')) {
+      return const CategoryStyle(
+        icon: Icons.school_rounded,
+        color: Color(0xFF0284C7),
+      );
     } else if (lower.contains('credit') || lower.contains('card')) {
-      return const CategoryStyle(icon: Icons.credit_card_rounded, color: AppColors.purple);
-    } else if (lower.contains('salar') || lower.contains('wage') || lower.contains('paycheck')) {
-      return const CategoryStyle(icon: Icons.account_balance_wallet_rounded, color: AppColors.emerald600);
-    } else if (lower.contains('freelance') || lower.contains('consult') || lower.contains('gig')) {
-      return const CategoryStyle(icon: Icons.laptop_mac_rounded, color: AppColors.info);
-    } else if (lower.contains('gift') || lower.contains('reward') || lower.contains('bonus')) {
-      return const CategoryStyle(icon: Icons.card_giftcard_rounded, color: AppColors.pink);
+      return const CategoryStyle(
+        icon: Icons.credit_card_rounded,
+        color: AppColors.purple,
+      );
+    } else if (lower.contains('salar') ||
+        lower.contains('wage') ||
+        lower.contains('paycheck')) {
+      return const CategoryStyle(
+        icon: Icons.account_balance_wallet_rounded,
+        color: AppColors.emerald600,
+      );
+    } else if (lower.contains('freelance') ||
+        lower.contains('consult') ||
+        lower.contains('gig')) {
+      return const CategoryStyle(
+        icon: Icons.laptop_mac_rounded,
+        color: AppColors.info,
+      );
+    } else if (lower.contains('gift') ||
+        lower.contains('reward') ||
+        lower.contains('bonus')) {
+      return const CategoryStyle(
+        icon: Icons.card_giftcard_rounded,
+        color: AppColors.pink,
+      );
     } else if (lower.contains('income')) {
-      return const CategoryStyle(icon: Icons.savings_rounded, color: AppColors.emerald700);
+      return const CategoryStyle(
+        icon: Icons.savings_rounded,
+        color: AppColors.emerald700,
+      );
     }
-    return const CategoryStyle(icon: Icons.category_rounded, color: AppColors.emerald700);
+    return const CategoryStyle(
+      icon: Icons.category_rounded,
+      color: AppColors.emerald700,
+    );
   }
 }

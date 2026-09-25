@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:intl/intl.dart';
 
 import '../models/account_model.dart';
@@ -63,7 +64,10 @@ class VoiceEntityParser {
   }
 
   /// Identifies the default primary account ID from [accounts] (US 7).
-  static int? resolvePrimaryAccountId(List<Account> accounts, [int? preferredId]) {
+  static int? resolvePrimaryAccountId(
+    List<Account> accounts, [
+    int? preferredId,
+  ]) {
     if (preferredId != null && accounts.any((a) => a.id == preferredId)) {
       return preferredId;
     }
@@ -119,19 +123,27 @@ class VoiceEntityParser {
     }
     if (RegExp(r'\b(?:checking|bank)\b').hasMatch(lower)) {
       final chk = accounts
-          .where((a) => a.name.toLowerCase().contains('checking') || a.type == 'Bank')
+          .where(
+            (a) =>
+                a.name.toLowerCase().contains('checking') || a.type == 'Bank',
+          )
           .firstOrNull;
       if (chk != null) return chk;
     }
     if (RegExp(r'\b(?:savings|save)\b').hasMatch(lower)) {
       final sav = accounts
-          .where((a) => a.name.toLowerCase().contains('savings') || a.type == 'Savings')
+          .where(
+            (a) =>
+                a.name.toLowerCase().contains('savings') || a.type == 'Savings',
+          )
           .firstOrNull;
       if (sav != null) return sav;
     }
     if (RegExp(r'\b(?:cash|wallet)\b').hasMatch(lower)) {
       final c = accounts
-          .where((a) => a.type == 'Cash' || a.name.toLowerCase().contains('cash'))
+          .where(
+            (a) => a.type == 'Cash' || a.name.toLowerCase().contains('cash'),
+          )
           .firstOrNull;
       if (c != null) return c;
     }
@@ -155,33 +167,82 @@ class VoiceEntityParser {
 
     // 3. Keyword semantic associations
     final foodKeywords = [
-      'coffee', 'latte', 'starbucks', 'diner', 'lunch', 'dinner',
-      'breakfast', 'subway', 'mcdonalds', 'burger', 'pizza', 'restaurant',
-      'cafe', 'food', 'tea', 'bakery', 'snack'
+      'coffee',
+      'latte',
+      'starbucks',
+      'diner',
+      'lunch',
+      'dinner',
+      'breakfast',
+      'subway',
+      'mcdonalds',
+      'burger',
+      'pizza',
+      'restaurant',
+      'cafe',
+      'food',
+      'tea',
+      'bakery',
+      'snack',
     ];
     final groceryKeywords = [
-      'grocery', 'groceries', 'walmart', 'supermarket', 'market',
-      'target', 'costco', 'trader joe', 'kroger', 'safeway'
+      'grocery',
+      'groceries',
+      'walmart',
+      'supermarket',
+      'market',
+      'target',
+      'costco',
+      'trader joe',
+      'kroger',
+      'safeway',
     ];
     final transportKeywords = [
-      'gas', 'fuel', 'petrol', 'uber', 'lyft', 'taxi', 'transit',
-      'bus', 'train', 'metro', 'subway fare', 'parking', 'toll'
+      'gas',
+      'fuel',
+      'petrol',
+      'uber',
+      'lyft',
+      'taxi',
+      'transit',
+      'bus',
+      'train',
+      'metro',
+      'subway fare',
+      'parking',
+      'toll',
     ];
     final billKeywords = [
-      'rent', 'electricity', 'water', 'internet', 'utility', 'utilities',
-      'wifi', 'bill', 'insurance'
+      'rent',
+      'electricity',
+      'water',
+      'internet',
+      'utility',
+      'utilities',
+      'wifi',
+      'bill',
+      'insurance',
     ];
     final entertainmentKeywords = [
-      'movie', 'cinema', 'game', 'netflix', 'spotify', 'concert',
-      'entertainment', 'subscription'
+      'movie',
+      'cinema',
+      'game',
+      'netflix',
+      'spotify',
+      'concert',
+      'entertainment',
+      'subscription',
     ];
 
-    bool containsAny(List<String> list) => list.any((k) => lower.contains(k));
+    bool containsAny(List<String> list) => list.any(lower.contains);
 
     if (containsAny(foodKeywords)) {
       final cat = categories.where((c) {
         final n = c.name.toLowerCase();
-        return n.contains('food') || n.contains('dining') || n.contains('coffee') || n.contains('restaurant');
+        return n.contains('food') ||
+            n.contains('dining') ||
+            n.contains('coffee') ||
+            n.contains('restaurant');
       }).firstOrNull;
       if (cat != null) return cat;
     }
@@ -189,7 +250,9 @@ class VoiceEntityParser {
     if (containsAny(groceryKeywords)) {
       final cat = categories.where((c) {
         final n = c.name.toLowerCase();
-        return n.contains('grocer') || n.contains('food') || n.contains('supermarket');
+        return n.contains('grocer') ||
+            n.contains('food') ||
+            n.contains('supermarket');
       }).firstOrNull;
       if (cat != null) return cat;
     }
@@ -197,7 +260,10 @@ class VoiceEntityParser {
     if (containsAny(transportKeywords)) {
       final cat = categories.where((c) {
         final n = c.name.toLowerCase();
-        return n.contains('transport') || n.contains('gas') || n.contains('travel') || n.contains('car');
+        return n.contains('transport') ||
+            n.contains('gas') ||
+            n.contains('travel') ||
+            n.contains('car');
       }).firstOrNull;
       if (cat != null) return cat;
     }
@@ -213,7 +279,9 @@ class VoiceEntityParser {
     if (containsAny(entertainmentKeywords)) {
       final cat = categories.where((c) {
         final n = c.name.toLowerCase();
-        return n.contains('entertain') || n.contains('leisure') || n.contains('fun');
+        return n.contains('entertain') ||
+            n.contains('leisure') ||
+            n.contains('fun');
       }).firstOrNull;
       if (cat != null) return cat;
     }
@@ -230,7 +298,10 @@ class VoiceEntityParser {
     required List<Category> categories,
     int? primaryAccountId,
   }) {
-    final effectivePrimaryId = resolvePrimaryAccountId(accounts, primaryAccountId);
+    final effectivePrimaryId = resolvePrimaryAccountId(
+      accounts,
+      primaryAccountId,
+    );
     final trimmed = jsonString.trim();
 
     List<dynamic> list;
@@ -270,7 +341,10 @@ class VoiceEntityParser {
       // Date resolution
       String date = (map['date'] as String?) ?? '';
       if (!RegExp(r'^20\d{2}-[0-1]\d-[0-3]\d$').hasMatch(date)) {
-        date = resolveRelativeDate(date.isNotEmpty ? date : 'today', anchorDate);
+        date = resolveRelativeDate(
+          date.isNotEmpty ? date : 'today',
+          anchorDate,
+        );
       }
 
       // Account resolution & fallback (US 7)
@@ -330,7 +404,9 @@ class VoiceEntityParser {
           categoryId: categoryId,
           date: date,
           note: note,
-          rawSpeech: (map['raw_speech'] as String?) ?? (rawNote.isNotEmpty ? rawNote : null),
+          rawSpeech:
+              (map['raw_speech'] as String?) ??
+              (rawNote.isNotEmpty ? rawNote : null),
           hasUnassignedAccount: hasUnassignedAccount,
           hasUnassignedCategory: hasUnassignedCategory,
         ),
@@ -349,7 +425,10 @@ class VoiceEntityParser {
     required List<Category> categories,
     int? primaryAccountId,
   }) {
-    final effectivePrimaryId = resolvePrimaryAccountId(accounts, primaryAccountId);
+    final effectivePrimaryId = resolvePrimaryAccountId(
+      accounts,
+      primaryAccountId,
+    );
     final clauses = _splitMonologue(transcript);
     final drafts = <DraftTransaction>[];
 
@@ -424,13 +503,15 @@ class VoiceEntityParser {
     int? sourceAccountId;
     int? destAccountId;
 
-    final isIncome = lower.contains('salary') ||
+    final isIncome =
+        lower.contains('salary') ||
         lower.contains('paycheck') ||
         lower.contains('deposited') ||
         lower.contains('earned') ||
         lower.contains('income');
 
-    final isTransfer = lower.contains('transfer') ||
+    final isTransfer =
+        lower.contains('transfer') ||
         lower.contains('moved') ||
         lower.contains('move') ||
         (lower.contains('from') && lower.contains('to'));
@@ -498,7 +579,9 @@ class VoiceEntityParser {
     }
 
     // 6. Formulate clean contextual note from transaction context
-    final matchedSourceAcc = accounts.where((a) => a.id == sourceAccountId).firstOrNull;
+    final matchedSourceAcc = accounts
+        .where((a) => a.id == sourceAccountId)
+        .firstOrNull;
     final matchedDestAcc = destAccountId != null
         ? accounts.where((a) => a.id == destAccountId).firstOrNull
         : null;
@@ -535,27 +618,37 @@ class VoiceEntityParser {
     if (lower.isEmpty) return true;
 
     // Has digits or currency tokens
-    if (RegExp(r'(?:\$|\b\d+(?:\.\d{1,2})?\b|dollars?|bucks?|rupees?|cents?)').hasMatch(lower)) {
+    if (RegExp(r'(?:\$|\b\d+(?:\.\d{1,2})?\b|dollars?|bucks?|rupees?|cents?)')
+        .hasMatch(lower)) {
       return true;
     }
 
     // Has date or relative date words
-    if (RegExp(r'\b(?:yesterday|today|the day before yesterday|tomorrow|last\s+[a-z]+)\b').hasMatch(lower)) {
+    if (RegExp(
+      r'\b(?:yesterday|today|the day before yesterday|tomorrow|last\s+[a-z]+)\b',
+    ).hasMatch(lower)) {
       return true;
     }
 
     // Starts with conversational verbs
-    if (RegExp(r'^(?:spent|spend|bought|buy|paid|pay|ordered|transferred|moved|received|deposited)\b').hasMatch(lower)) {
+    if (RegExp(
+      r'^(?:spent|spend|bought|buy|paid|pay|ordered|transferred|moved|received|deposited)\b',
+    ).hasMatch(lower)) {
       return true;
     }
 
     // Contains conversational account connector phrases (e.g., "with chase", "on my card", "from checking to savings")
-    if (RegExp(r'\b(?:on\s+my\s+card|using\s+(?:my\s+)?card|from\s+.+?\s+to\s+)\b').hasMatch(lower)) {
+    if (RegExp(
+      r'\b(?:on\s+my\s+card|using\s+(?:my\s+)?card|from\s+.+?\s+to\s+)\b',
+    ).hasMatch(lower)) {
       return true;
     }
 
     // Too long to be a clean note title (> 5 words)
-    final words = lower.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = lower
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
     if (words.length > 5) {
       return true;
     }
@@ -567,7 +660,19 @@ class VoiceEntityParser {
   static String toTitleCase(String text) {
     if (text.trim().isEmpty) return '';
     final words = text.trim().split(RegExp(r'\s+'));
-    const minorWords = {'at', 'for', 'in', 'on', 'to', 'with', 'a', 'an', 'the', 'of', 'and'};
+    const minorWords = {
+      'at',
+      'for',
+      'in',
+      'on',
+      'to',
+      'with',
+      'a',
+      'an',
+      'the',
+      'of',
+      'and',
+    };
     final result = <String>[];
     for (int i = 0; i < words.length; i++) {
       final w = words[i];
@@ -607,7 +712,10 @@ class VoiceEntityParser {
 
     // Currency symbols and units
     cleaned = cleaned.replaceAll(
-      RegExp(r'(?:\$|\b)\s*\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|\b)', caseSensitive: false),
+      RegExp(
+        r'(?:\$|\b)\s*\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|\b)',
+        caseSensitive: false,
+      ),
       ' ',
     );
     // Standalone numbers
@@ -615,20 +723,31 @@ class VoiceEntityParser {
 
     // Relative dates and weekday references
     cleaned = cleaned.replaceAll(
-      RegExp(r'\b(?:the day before yesterday|yesterday|today|tomorrow|last\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b', caseSensitive: false),
+      RegExp(
+        r'\b(?:the day before yesterday|yesterday|today|tomorrow|last\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b',
+        caseSensitive: false,
+      ),
       ' ',
     );
 
     // Source account name & keywords
     if (sourceAccount != null) {
       cleaned = cleaned.replaceAll(
-        RegExp(r'\b(?:on|using|with|via|from|to|into)\s+' + RegExp.escape(sourceAccount.name) + r'\b', caseSensitive: false),
+        RegExp(
+          r'\b(?:on|using|with|via|from|to|into)\s+' +
+              RegExp.escape(sourceAccount.name) +
+              r'\b',
+          caseSensitive: false,
+        ),
         ' ',
       );
       for (final word in sourceAccount.name.split(RegExp(r'\s+'))) {
         if (word.length >= 3) {
           cleaned = cleaned.replaceAll(
-            RegExp(r'\b(?:on|using|with|via)\s+' + RegExp.escape(word) + r'\b', caseSensitive: false),
+            RegExp(
+              r'\b(?:on|using|with|via)\s+' + RegExp.escape(word) + r'\b',
+              caseSensitive: false,
+            ),
             ' ',
           );
         }
@@ -637,33 +756,50 @@ class VoiceEntityParser {
 
     // Generic payment phrases
     cleaned = cleaned.replaceAll(
-      RegExp(r'\b(?:on\s+my\s+card|using\s+card|on\s+card|with\s+card|on\s+credit|with\s+debit|using\s+debit|using\s+upi|on\s+upi|in\s+cash|with\s+cash)\b', caseSensitive: false),
+      RegExp(
+        r'\b(?:on\s+my\s+card|using\s+card|on\s+card|with\s+card|on\s+credit|with\s+debit|using\s+debit|using\s+upi|on\s+upi|in\s+cash|with\s+cash)\b',
+        caseSensitive: false,
+      ),
       ' ',
     );
 
     // Transaction verbs
     cleaned = cleaned.replaceAll(
-      RegExp(r'\b(?:spent|spend|spending|bought|buy|buying|paid\s+for|paid|pay|paying|cost\s+me|cost|ordered|order|purchased|purchase|charged\s+to|charged|received|deposited|deposit|earned|moved|transfer|transferred)\b', caseSensitive: false),
+      RegExp(
+        r'\b(?:spent|spend|spending|bought|buy|buying|paid\s+for|paid|pay|paying|cost\s+me|cost|ordered|order|purchased|purchase|charged\s+to|charged|received|deposited|deposit|earned|moved|transfer|transferred)\b',
+        caseSensitive: false,
+      ),
       ' ',
     );
 
     // Clean leading/trailing prepositions and conjunctions
     cleaned = cleaned.replaceAll(
-      RegExp(r'^\s*(?:for|at|on|with|from|to|using|in|into|and|also|then)\s+', caseSensitive: false),
+      RegExp(
+        r'^\s*(?:for|at|on|with|from|to|using|in|into|and|also|then)\s+',
+        caseSensitive: false,
+      ),
       ' ',
     );
     cleaned = cleaned.replaceAll(
-      RegExp(r'\s+(?:for|at|on|with|from|to|using|in|into|and|also|then)\s*$', caseSensitive: false),
+      RegExp(
+        r'\s+(?:for|at|on|with|from|to|using|in|into|and|also|then)\s*$',
+        caseSensitive: false,
+      ),
       ' ',
     );
 
     // Normalize punctuation & whitespace
-    cleaned = cleaned.replaceAll(RegExp(r'[;,\.\-]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+    cleaned = cleaned
+        .replaceAll(RegExp(r'[;,\.\-]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
 
     // 3. Fallback synthesis if cleaned text is empty or meaningless
     if (cleaned.isEmpty || cleaned.length <= 1) {
       if (type == 'income') {
-        return sourceAccount != null ? 'Income (${sourceAccount.name})' : 'Income';
+        return sourceAccount != null
+            ? 'Income (${sourceAccount.name})'
+            : 'Income';
       }
       if (category != null && category.name.isNotEmpty) {
         return category.name;

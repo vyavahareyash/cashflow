@@ -9,6 +9,7 @@ import 'package:cashflow/services/database_helper.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker.db';
 
   setUp(() async {
@@ -49,7 +50,9 @@ void main() {
         date: '2026-08-05T12:00:00.000',
       );
 
-      final cycle1Spent = await db.getMonthlySpendingByCategoryId(cycle: cycle1);
+      final cycle1Spent = await db.getMonthlySpendingByCategoryId(
+        cycle: cycle1,
+      );
       expect(cycle1Spent[groceriesId], 4000.0);
 
       // Cycle 2: August 25, 2026 to September 24, 2026
@@ -61,7 +64,9 @@ void main() {
       expect(cycle2.endDateString, '2026-09-24');
 
       // Prior to any spending in Cycle 2, spend MUST be 0.0 (zero rollover, no budget carryover)
-      final cycle2InitialSpent = await db.getMonthlySpendingByCategoryId(cycle: cycle2);
+      final cycle2InitialSpent = await db.getMonthlySpendingByCategoryId(
+        cycle: cycle2,
+      );
       expect(cycle2InitialSpent[groceriesId] ?? 0.0, 0.0);
 
       // Add spending in Cycle 2: ₹12,000 (over budget by ₹2,000 against fresh ₹10,000 limit)
@@ -72,11 +77,15 @@ void main() {
         date: '2026-08-28T14:30:00.000',
       );
 
-      final cycle2FinalSpent = await db.getMonthlySpendingByCategoryId(cycle: cycle2);
+      final cycle2FinalSpent = await db.getMonthlySpendingByCategoryId(
+        cycle: cycle2,
+      );
       expect(cycle2FinalSpent[groceriesId], 12000.0);
 
       // Verify Cycle 1 spending remains intact and unaffected
-      final cycle1Rechecked = await db.getMonthlySpendingByCategoryId(cycle: cycle1);
+      final cycle1Rechecked = await db.getMonthlySpendingByCategoryId(
+        cycle: cycle1,
+      );
       expect(cycle1Rechecked[groceriesId], 4000.0);
 
       // Cycle 3: September 25, 2026 to October 24, 2026
@@ -88,7 +97,9 @@ void main() {
       expect(cycle3.endDateString, '2026-10-24');
 
       // Cycle 3 starts fresh at 0.0 (overspend in Cycle 2 does NOT penalize Cycle 3)
-      final cycle3Spent = await db.getMonthlySpendingByCategoryId(cycle: cycle3);
+      final cycle3Spent = await db.getMonthlySpendingByCategoryId(
+        cycle: cycle3,
+      );
       expect(cycle3Spent[groceriesId] ?? 0.0, 0.0);
     });
 
@@ -220,7 +231,10 @@ void main() {
       expect(cashflow2026['inflow'], 100000.0); // 50000 + 50000
       expect(cashflow2026['outflow'], 26000.0);
       expect(cashflow2026['netSavings'], 74000.0); // 100000 - 26000
-      expect(cashflow2026['savingsRate'], closeTo(74.0, 0.01)); // 74000 / 100000 * 100
+      expect(
+        cashflow2026['savingsRate'],
+        closeTo(74.0, 0.01),
+      ); // 74000 / 100000 * 100
 
       // Prior year 2025 isolation check
       final ytdSpend2025 = await db.getYtdSpending(year: 2025);

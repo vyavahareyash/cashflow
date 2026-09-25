@@ -59,16 +59,14 @@ void main() {
       type: 'Bank',
     );
 
-    testWidgets('hides locked funds toggle when account has no locks',
-        (tester) async {
+    testWidgets('hides locked funds toggle when account has no locks', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData.light(),
           home: Scaffold(
-            body: AccountCard(
-              account: testAccount,
-              locks: const [],
-            ),
+            body: AccountCard(account: testAccount, locks: const []),
           ),
         ),
       );
@@ -76,184 +74,187 @@ void main() {
       expect(find.text('Main Checking'), findsOneWidget);
       expect(find.text(AppFormatters.currency(150000.0)), findsOneWidget);
       expect(find.textContaining('locked'), findsNothing);
-      expect(find.byKey(const Key('account_locked_funds_toggle_1')),
-          findsNothing);
+      expect(
+        find.byKey(const Key('account_locked_funds_toggle_1')),
+        findsNothing,
+      );
     });
 
     testWidgets(
-        'shows toggle but hides breakdown by default (collapsed by default)',
-        (tester) async {
-      final locks = [
-        LockedAllocation(
-          id: 1,
-          goalId: 10,
-          accountId: 1,
-          amount: 5000.0,
-          goalName: 'Vacation',
-        ),
-        LockedAllocation(
-          id: 2,
-          goalId: 10,
-          accountId: 1,
-          amount: 5000.0,
-          goalName: 'Vacation',
-        ),
-        LockedAllocation(
-          id: 3,
-          goalId: 20,
-          accountId: 1,
-          amount: 15000.0,
-          goalName: 'Laptop',
-        ),
-      ];
+      'shows toggle but hides breakdown by default (collapsed by default)',
+      (tester) async {
+        final locks = [
+          LockedAllocation(
+            id: 1,
+            goalId: 10,
+            accountId: 1,
+            amount: 5000.0,
+            goalName: 'Vacation',
+          ),
+          LockedAllocation(
+            id: 2,
+            goalId: 10,
+            accountId: 1,
+            amount: 5000.0,
+            goalName: 'Vacation',
+          ),
+          LockedAllocation(
+            id: 3,
+            goalId: 20,
+            accountId: 1,
+            amount: 15000.0,
+            goalName: 'Laptop',
+          ),
+        ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.light(),
-          home: Scaffold(
-            body: AccountCard(
-              account: testAccount,
-              locks: locks,
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.light(),
+            home: Scaffold(
+              body: AccountCard(account: testAccount, locks: locks),
             ),
           ),
-        ),
-      );
+        );
 
-      // Account name and actual balance (150,000) as primary number
-      expect(find.text('Main Checking'), findsOneWidget);
-      expect(find.text(AppFormatters.currency(150000.0)), findsOneWidget);
+        // Account name and actual balance (150,000) as primary number
+        expect(find.text('Main Checking'), findsOneWidget);
+        expect(find.text(AppFormatters.currency(150000.0)), findsOneWidget);
 
-      // Balance subtitle shows usable balance when locks are active (150,000 - 25,000 = 125,000)
-      expect(
+        // Balance subtitle shows usable balance when locks are active (150,000 - 25,000 = 125,000)
+        expect(
           find.text('${AppFormatters.compactCurrency(125000.0)} usable'),
-          findsOneWidget);
+          findsOneWidget,
+        );
 
-      // Toggle button is visible with aggregate summary
-      final toggleFinder =
-          find.byKey(const Key('account_locked_funds_toggle_1'));
-      expect(toggleFinder, findsOneWidget);
-      expect(find.text('Locked Funds (2 goals)'), findsOneWidget);
-      expect(find.text(AppFormatters.currency(25000.0)), findsWidgets);
+        // Toggle button is visible with aggregate summary
+        final toggleFinder = find.byKey(
+          const Key('account_locked_funds_toggle_1'),
+        );
+        expect(toggleFinder, findsOneWidget);
+        expect(find.text('Locked Funds (2 goals)'), findsOneWidget);
+        expect(find.text(AppFormatters.currency(25000.0)), findsWidgets);
 
-      // Breakdown rows should NOT be visible initially
-      expect(find.text('Vacation'), findsNothing);
-      expect(find.text('Laptop'), findsNothing);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsNothing);
-    });
+        // Breakdown rows should NOT be visible initially
+        expect(find.text('Vacation'), findsNothing);
+        expect(find.text('Laptop'), findsNothing);
+        expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsNothing);
+      },
+    );
 
     testWidgets(
-        'tapping toggle expands and collapses aggregated locked funds breakdown',
-        (tester) async {
-      final locks = [
-        LockedAllocation(
-          id: 1,
-          goalId: 10,
-          accountId: 1,
-          amount: 5000.0,
-          goalName: 'Vacation',
-        ),
-        LockedAllocation(
-          id: 2,
-          goalId: 10,
-          accountId: 1,
-          amount: 5000.0,
-          goalName: 'Vacation',
-        ),
-        LockedAllocation(
-          id: 3,
-          goalId: 20,
-          accountId: 1,
-          amount: 15000.0,
-          goalName: 'Laptop',
-        ),
-      ];
+      'tapping toggle expands and collapses aggregated locked funds breakdown',
+      (tester) async {
+        final locks = [
+          LockedAllocation(
+            id: 1,
+            goalId: 10,
+            accountId: 1,
+            amount: 5000.0,
+            goalName: 'Vacation',
+          ),
+          LockedAllocation(
+            id: 2,
+            goalId: 10,
+            accountId: 1,
+            amount: 5000.0,
+            goalName: 'Vacation',
+          ),
+          LockedAllocation(
+            id: 3,
+            goalId: 20,
+            accountId: 1,
+            amount: 15000.0,
+            goalName: 'Laptop',
+          ),
+        ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.light(),
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: AccountCard(
-                account: testAccount,
-                locks: locks,
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.light(),
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: AccountCard(account: testAccount, locks: locks),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      final toggleFinder =
-          find.byKey(const Key('account_locked_funds_toggle_1'));
+        final toggleFinder = find.byKey(
+          const Key('account_locked_funds_toggle_1'),
+        );
 
-      // Initially collapsed
-      expect(find.text('Vacation'), findsNothing);
-      expect(find.text('Laptop'), findsNothing);
+        // Initially collapsed
+        expect(find.text('Vacation'), findsNothing);
+        expect(find.text('Laptop'), findsNothing);
 
-      // Tap to expand
-      await tester.tap(toggleFinder);
-      await tester.pumpAndSettle();
+        // Tap to expand
+        await tester.tap(toggleFinder);
+        await tester.pumpAndSettle();
 
-      // Now expanded: goal names and aggregated amounts with thousand separators are visible
-      expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsOneWidget);
-      expect(find.text('Vacation'), findsOneWidget);
-      // Vacation should show aggregated ₹10,000 (not two separate ₹5,000 rows)
-      expect(find.text(AppFormatters.currency(10000.0)), findsOneWidget);
-      expect(find.text('Laptop'), findsOneWidget);
-      expect(find.text(AppFormatters.currency(15000.0)), findsOneWidget);
+        // Now expanded: goal names and aggregated amounts with thousand separators are visible
+        expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsOneWidget);
+        expect(find.text('Vacation'), findsOneWidget);
+        // Vacation should show aggregated ₹10,000 (not two separate ₹5,000 rows)
+        expect(find.text(AppFormatters.currency(10000.0)), findsOneWidget);
+        expect(find.text('Laptop'), findsOneWidget);
+        expect(find.text(AppFormatters.currency(15000.0)), findsOneWidget);
 
-      // Tap again to collapse
-      await tester.tap(toggleFinder);
-      await tester.pumpAndSettle();
+        // Tap again to collapse
+        await tester.tap(toggleFinder);
+        await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
-      expect(find.text('Vacation'), findsNothing);
-      expect(find.text('Laptop'), findsNothing);
-    });
+        expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+        expect(find.text('Vacation'), findsNothing);
+        expect(find.text('Laptop'), findsNothing);
+      },
+    );
 
     testWidgets(
-        'supports external controlled expansion via isExpanded and onExpansionChanged',
-        (tester) async {
-      final locks = [
-        LockedAllocation(
-          id: 1,
-          goalId: 10,
-          accountId: 1,
-          amount: 10000.0,
-          goalName: 'Emergency',
-        ),
-      ];
+      'supports external controlled expansion via isExpanded and onExpansionChanged',
+      (tester) async {
+        final locks = [
+          LockedAllocation(
+            id: 1,
+            goalId: 10,
+            accountId: 1,
+            amount: 10000.0,
+            goalName: 'Emergency',
+          ),
+        ];
 
-      bool? receivedExpansion;
+        bool? receivedExpansion;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.light(),
-          home: Scaffold(
-            body: StatefulBuilder(
-              builder: (context, setState) {
-                return AccountCard(
-                  account: testAccount,
-                  locks: locks,
-                  isExpanded: false,
-                  onExpansionChanged: (val) {
-                    receivedExpansion = val;
-                  },
-                );
-              },
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData.light(),
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  return AccountCard(
+                    account: testAccount,
+                    locks: locks,
+                    isExpanded: false,
+                    onExpansionChanged: (val) {
+                      receivedExpansion = val;
+                    },
+                  );
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('Emergency'), findsNothing);
+        expect(find.text('Emergency'), findsNothing);
 
-      final toggleFinder =
-          find.byKey(const Key('account_locked_funds_toggle_1'));
-      await tester.tap(toggleFinder);
-      await tester.pumpAndSettle();
+        final toggleFinder = find.byKey(
+          const Key('account_locked_funds_toggle_1'),
+        );
+        await tester.tap(toggleFinder);
+        await tester.pumpAndSettle();
 
-      expect(receivedExpansion, isTrue);
-    });
+        expect(receivedExpansion, isTrue);
+      },
+    );
   });
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart' hide Category;
 
 import '../models/account_model.dart';
@@ -25,7 +26,9 @@ class VoicePipelineCoordinator {
   final ModelManagementService modelManager;
   final DatabaseHelper dbHelper;
 
-  final ValueNotifier<String> _liveTranscriptNotifier = ValueNotifier<String>('');
+  final ValueNotifier<String> _liveTranscriptNotifier = ValueNotifier<String>(
+    '',
+  );
   final ValueNotifier<bool> _isMicActiveNotifier = ValueNotifier<bool>(false);
   final StreamController<double> _amplitudeController =
       StreamController<double>.broadcast();
@@ -39,20 +42,23 @@ class VoicePipelineCoordinator {
     SlmInferenceService? slmService,
     ModelManagementService? modelManager,
     DatabaseHelper? dbHelper,
-  })  : speechToTextService =
-            speechToTextService ?? SpeechToTextService.instance,
-        modelManager = modelManager ?? ModelManagementService.instance,
-        dbHelper = dbHelper ?? DatabaseHelper.instance,
-        audioPipeline = audioPipeline ??
-            VoiceAudioPipeline(
-              sttService: speechToTextService ?? SpeechToTextService.instance,
-            ),
-        slmService = slmService ??
-            SlmInferenceService(
-              modelService: modelManager ?? ModelManagementService.instance,
-            ) {
-    _audioPipelineAmpSubscription =
-        this.audioPipeline.amplitudeStream.listen((amp) {
+  }) : speechToTextService =
+           speechToTextService ?? SpeechToTextService.instance,
+       modelManager = modelManager ?? ModelManagementService.instance,
+       dbHelper = dbHelper ?? DatabaseHelper.instance,
+       audioPipeline =
+           audioPipeline ??
+           VoiceAudioPipeline(
+             sttService: speechToTextService ?? SpeechToTextService.instance,
+           ),
+       slmService =
+           slmService ??
+           SlmInferenceService(
+             modelService: modelManager ?? ModelManagementService.instance,
+           ) {
+    _audioPipelineAmpSubscription = this.audioPipeline.amplitudeStream.listen((
+      amp,
+    ) {
       if (!_isMicPaused && !_amplitudeController.isClosed) {
         _amplitudeController.add(amp);
       }
@@ -66,7 +72,8 @@ class VoicePipelineCoordinator {
   bool get isMicPaused => _isMicPaused;
 
   /// Observable live streaming transcript updated during active recording.
-  ValueListenable<String> get liveTranscriptListenable => _liveTranscriptNotifier;
+  ValueListenable<String> get liveTranscriptListenable =>
+      _liveTranscriptNotifier;
 
   /// Observable microphone active listening state.
   ValueListenable<bool> get isMicActiveListenable => _isMicActiveNotifier;
@@ -161,7 +168,9 @@ class VoicePipelineCoordinator {
           final samples = await audioPipeline.readActiveRecordingSamples();
           if (samples != null && samples.length >= 8000) {
             _isTranscribingPartial = true;
-            final partial = await speechToTextService.transcribeSamples(samples);
+            final partial = await speechToTextService.transcribeSamples(
+              samples,
+            );
             if (partial.trim().isNotEmpty && isRecording) {
               _liveTranscriptNotifier.value = partial.trim();
             }
@@ -214,7 +223,8 @@ class VoicePipelineCoordinator {
         }
       }
     } on SttSilentAudioException {
-      if (transcript.isEmpty && _liveTranscriptNotifier.value.trim().isNotEmpty) {
+      if (transcript.isEmpty &&
+          _liveTranscriptNotifier.value.trim().isNotEmpty) {
         transcript = _liveTranscriptNotifier.value.trim();
       } else if (transcript.isEmpty) {
         rethrow;
@@ -254,7 +264,9 @@ class VoicePipelineCoordinator {
         categories: categories,
       );
     } catch (e) {
-      debugPrint('SLM inference failed or unavailable, falling back to deterministic parser: $e');
+      debugPrint(
+        'SLM inference failed or unavailable, falling back to deterministic parser: $e',
+      );
       drafts = [];
     }
 

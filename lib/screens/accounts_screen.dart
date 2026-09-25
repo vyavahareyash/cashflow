@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/database_helper.dart';
@@ -47,7 +49,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     _selectedTab = widget.initialTabIndex.clamp(0, 2);
     _loadedTabs.add(_selectedTab);
     if (_selectedTab == 0) {
-      _refreshAccounts();
+      unawaited(_refreshAccounts());
     }
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
@@ -60,7 +62,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
       setState(() {
         _selectedTab = newIndex;
         if (!_loadedTabs.contains(0) && newIndex == 0) {
-          _refreshAccounts();
+          unawaited(_refreshAccounts());
         }
         _loadedTabs.add(newIndex);
       });
@@ -75,7 +77,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   void _onDataChanged() {
     if (mounted) {
-      _refreshAccounts();
+      unawaited(_refreshAccounts());
     }
   }
 
@@ -91,15 +93,15 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final Map<int, double> ccLocks = {};
     for (final cc in ccList) {
       if (cc.id != null) {
-        ccLocks[cc.id!] =
-            await DatabaseHelper.instance.getLockedAmountForCreditCard(cc.id!);
+        ccLocks[cc.id!] = await DatabaseHelper.instance
+            .getLockedAmountForCreditCard(cc.id!);
       }
     }
 
     double physicalTotal = 0.0;
     double ccTotal = 0.0;
     double lockedTotal = 0.0;
-    Map<int, List<LockedAllocation>> locksMap = {};
+    final Map<int, List<LockedAllocation>> locksMap = {};
 
     for (var acc in data) {
       if (acc.isCreditCard) {
@@ -137,350 +139,362 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final statementDayController = TextEditingController(text: '1');
     final dueDayController = TextEditingController(text: '20');
     String selectedType = 'Bank';
-    int? defaultLockAccountId =
-        _accounts.where((a) => !a.isCreditCard).firstOrNull?.id;
+    int? defaultLockAccountId = _accounts
+        .where((a) => !a.isCreditCard)
+        .firstOrNull
+        ?.id;
     bool autoLock = true;
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            final isCC = selectedType == 'Credit Card';
-            return AlertDialog(
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: AppBorderRadius.xlargeBorder,
-              ),
-              title: Text(
-                'Add New Account',
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.bold,
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
+          return StatefulBuilder(
+            builder: (context, setStateDialog) {
+              final isCC = selectedType == 'Credit Card';
+              return AlertDialog(
+                backgroundColor: isDark
+                    ? AppColors.darkSurface
+                    : AppColors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppBorderRadius.xlargeBorder,
                 ),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomInputField(
-                        controller: nameController,
-                        label: isCC ? 'Card Name' : 'Account Name',
-                        hint: isCC
-                            ? 'e.g. HDFC Regalia, ICICI Amazon Pay'
-                            : 'e.g. HDFC Bank, Cash Wallet, Salary A/C',
-                        prefixIcon: isCC
-                            ? Icons.credit_card_rounded
-                            : Icons.account_balance_rounded,
-                        validator: (value) =>
-                            (value == null || value.trim().isEmpty)
-                            ? 'Please enter an account name'
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Account Type',
-                            style: AppTypography.labelMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.gray300
-                                  : AppColors.gray700,
-                              fontWeight: FontWeight.w600,
+                title: Text(
+                  'Add New Account',
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                content: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomInputField(
+                          controller: nameController,
+                          label: isCC ? 'Card Name' : 'Account Name',
+                          hint: isCC
+                              ? 'e.g. HDFC Regalia, ICICI Amazon Pay'
+                              : 'e.g. HDFC Bank, Cash Wallet, Salary A/C',
+                          prefixIcon: isCC
+                              ? Icons.credit_card_rounded
+                              : Icons.account_balance_rounded,
+                          validator: (value) =>
+                              (value == null || value.trim().isEmpty)
+                              ? 'Please enter an account name'
+                              : null,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Account Type',
+                              style: AppTypography.labelMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.gray300
+                                    : AppColors.gray700,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedType,
-                            isExpanded: true,
-                            dropdownColor: isDark
-                                ? AppColors.darkSurfaceElevated
-                                : AppColors.white,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: isDark
-                                  ? AppColors.darkSurface
-                                  : AppColors.gray50,
-                              border: OutlineInputBorder(
-                                borderRadius: AppBorderRadius.mediumBorder,
-                                borderSide: BorderSide(
-                                  color: isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray300,
+                            const SizedBox(height: AppSpacing.xs),
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedType,
+                              isExpanded: true,
+                              dropdownColor: isDark
+                                  ? AppColors.darkSurfaceElevated
+                                  : AppColors.white,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.darkSurface
+                                    : AppColors.gray50,
+                                border: OutlineInputBorder(
+                                  borderRadius: AppBorderRadius.mediumBorder,
+                                  borderSide: BorderSide(
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.md,
                                 ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.md,
-                              ),
+                              items:
+                                  [
+                                        'Bank',
+                                        'Cash',
+                                        'Savings',
+                                        'Wallet',
+                                        'Credit Card',
+                                      ]
+                                      .map(
+                                        (type) => DropdownMenuItem(
+                                          value: type,
+                                          child: Text(type),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setStateDialog(() => selectedType = val);
+                                }
+                              },
                             ),
-                            items: [
-                              'Bank',
-                              'Cash',
-                              'Savings',
-                              'Wallet',
-                              'Credit Card',
-                            ]
-                                .map(
-                                  (type) => DropdownMenuItem(
-                                    value: type,
-                                    child: Text(type),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setStateDialog(() => selectedType = val);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      CustomInputField(
-                        controller: balanceController,
-                        label: isCC
-                            ? 'Current Outstanding (Owed)'
-                            : 'Current Physical Balance',
-                        hint: '0.00',
-                        prefixText: '₹ ',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
+                          ],
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a balance';
-                          }
-                          if (double.tryParse(value) == null) {
-                            return 'Please enter a valid number';
-                          }
-                          return null;
-                        },
-                      ),
-                      if (isCC) ...[
                         const SizedBox(height: AppSpacing.md),
                         CustomInputField(
-                          controller: creditLimitController,
-                          label: 'Total Credit Limit',
-                          hint: 'e.g. 100000',
+                          controller: balanceController,
+                          label: isCC
+                              ? 'Current Outstanding (Owed)'
+                              : 'Current Physical Balance',
+                          hint: '0.00',
                           prefixText: '₹ ',
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter credit limit';
+                              return 'Please enter a balance';
                             }
-                            final numVal = double.tryParse(value);
-                            if (numVal == null || numVal <= 0) {
-                              return 'Please enter a valid positive limit';
+                            if (double.tryParse(value) == null) {
+                              return 'Please enter a valid number';
                             }
                             return null;
                           },
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CustomInputField(
-                                controller: statementDayController,
-                                label: 'Statement Day',
-                                hint: '1 - 31',
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  final day = int.tryParse(value ?? '');
-                                  if (day == null || day < 1 || day > 31) {
-                                    return '1-31';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: CustomInputField(
-                                controller: dueDayController,
-                                label: 'Due Day',
-                                hint: '1 - 31',
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  final day = int.tryParse(value ?? '');
-                                  if (day == null || day < 1 || day > 31) {
-                                    return '1-31';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (bankAccounts.isNotEmpty) ...[
+                        if (isCC) ...[
                           const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'Default Account to Lock Funds',
-                            style: AppTypography.labelMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.gray300
-                                  : AppColors.gray700,
-                              fontWeight: FontWeight.w600,
+                          CustomInputField(
+                            controller: creditLimitController,
+                            label: 'Total Credit Limit',
+                            hint: 'e.g. 100000',
+                            prefixText: '₹ ',
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
                             ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter credit limit';
+                              }
+                              final numVal = double.tryParse(value);
+                              if (numVal == null || numVal <= 0) {
+                                return 'Please enter a valid positive limit';
+                              }
+                              return null;
+                            },
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          DropdownButtonFormField<int>(
-                            initialValue: defaultLockAccountId,
-                            isExpanded: true,
-                            dropdownColor: isDark
-                                ? AppColors.darkSurfaceElevated
-                                : AppColors.white,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: isDark
-                                  ? AppColors.darkSurface
-                                  : AppColors.gray50,
-                              border: OutlineInputBorder(
-                                borderRadius: AppBorderRadius.mediumBorder,
-                                borderSide: BorderSide(
-                                  color: isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray300,
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomInputField(
+                                  controller: statementDayController,
+                                  label: 'Statement Day',
+                                  hint: '1 - 31',
+                                  keyboardType: TextInputType.number,
+                                  validator: (value) {
+                                    final day = int.tryParse(value ?? '');
+                                    if (day == null || day < 1 || day > 31) {
+                                      return '1-31';
+                                    }
+                                    return null;
+                                  },
                                 ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.md,
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: CustomInputField(
+                                  controller: dueDayController,
+                                  label: 'Due Day',
+                                  hint: '1 - 31',
+                                  keyboardType: TextInputType.number,
+                                  validator: (value) {
+                                    final day = int.tryParse(value ?? '');
+                                    if (day == null || day < 1 || day > 31) {
+                                      return '1-31';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
-                            ),
-                            items: bankAccounts
-                                .map(
-                                  (a) => DropdownMenuItem(
-                                    value: a.id,
-                                    child: Text(a.name),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (val) => setStateDialog(
-                              () => defaultLockAccountId = val,
-                            ),
+                            ],
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text(
-                              'Auto-lock funds on spend',
-                              style: AppTypography.bodySmall,
-                            ),
-                            subtitle: Text(
-                              'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
-                              style: AppTypography.labelSmall.copyWith(
+                          if (bankAccounts.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'Default Account to Lock Funds',
+                              style: AppTypography.labelMedium.copyWith(
                                 color: isDark
-                                    ? AppColors.gray400
-                                    : AppColors.gray600,
+                                    ? AppColors.gray300
+                                    : AppColors.gray700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            value: autoLock,
-                            activeThumbColor: AppColors.purple,
-                            onChanged: (val) =>
-                                setStateDialog(() => autoLock = val),
-                          ),
+                            const SizedBox(height: AppSpacing.xs),
+                            DropdownButtonFormField<int>(
+                              initialValue: defaultLockAccountId,
+                              isExpanded: true,
+                              dropdownColor: isDark
+                                  ? AppColors.darkSurfaceElevated
+                                  : AppColors.white,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.darkSurface
+                                    : AppColors.gray50,
+                                border: OutlineInputBorder(
+                                  borderRadius: AppBorderRadius.mediumBorder,
+                                  borderSide: BorderSide(
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.md,
+                                ),
+                              ),
+                              items: bankAccounts
+                                  .map(
+                                    (a) => DropdownMenuItem(
+                                      value: a.id,
+                                      child: Text(a.name),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) => setStateDialog(
+                                () => defaultLockAccountId = val,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                'Auto-lock funds on spend',
+                                style: AppTypography.bodySmall,
+                              ),
+                              subtitle: Text(
+                                'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                ),
+                              ),
+                              value: autoLock,
+                              activeThumbColor: AppColors.purple,
+                              onChanged: (val) =>
+                                  setStateDialog(() => autoLock = val),
+                            ),
+                          ],
                         ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                CustomButton(
-                  label: 'Save Account',
-                  width: 130,
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      final accountId = await DatabaseHelper.instance
-                          .createAccount(
-                            Account(
-                              name: nameController.text.trim(),
-                              balance:
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  CustomButton(
+                    label: 'Save Account',
+                    width: 130,
+                    onPressed: () async {
+                      if (formKey.currentState!.validate()) {
+                        final accountId = await DatabaseHelper.instance
+                            .createAccount(
+                              Account(
+                                name: nameController.text.trim(),
+                                balance:
+                                    double.tryParse(
+                                      balanceController.text.trim(),
+                                    ) ??
+                                    0.0,
+                                type: selectedType,
+                              ),
+                            );
+                        if (selectedType == 'Credit Card') {
+                          await DatabaseHelper.instance.createCreditCard(
+                            CreditCard(
+                              accountId: accountId,
+                              creditLimit:
                                   double.tryParse(
-                                    balanceController.text.trim(),
+                                    creditLimitController.text.trim(),
                                   ) ??
                                   0.0,
-                              type: selectedType,
+                              statementDay:
+                                  int.tryParse(
+                                    statementDayController.text.trim(),
+                                  ) ??
+                                  1,
+                              dueDay:
+                                  int.tryParse(dueDayController.text.trim()) ??
+                                  20,
+                              defaultLockAccountId: defaultLockAccountId,
+                              autoLock: autoLock,
                             ),
                           );
-                      if (selectedType == 'Credit Card') {
-                        await DatabaseHelper.instance.createCreditCard(
-                          CreditCard(
-                            accountId: accountId,
-                            creditLimit:
-                                double.tryParse(
-                                  creditLimitController.text.trim(),
-                                ) ??
-                                0.0,
-                            statementDay:
-                                int.tryParse(
-                                  statementDayController.text.trim(),
-                                ) ??
-                                1,
-                            dueDay:
-                                int.tryParse(dueDayController.text.trim()) ??
-                                20,
-                            defaultLockAccountId: defaultLockAccountId,
-                            autoLock: autoLock,
-                          ),
-                        );
+                        }
+                        if (context.mounted) Navigator.pop(context);
+                        unawaited(_refreshAccounts());
                       }
-                      if (context.mounted) Navigator.pop(context);
-                      _refreshAccounts();
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
   void _showEditAccountDialog(Account account) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => EditAccountDialog(
-        account: account,
-        creditCard: _creditCardsMap[account.id],
-        bankAccounts: _accounts.where((a) => !a.isCreditCard).toList(),
-        onAccountSaved: _refreshAccounts,
-        onAccountDeleted: _refreshAccounts,
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => EditAccountDialog(
+          account: account,
+          creditCard: _creditCardsMap[account.id],
+          bankAccounts: _accounts.where((a) => !a.isCreditCard).toList(),
+          onAccountSaved: _refreshAccounts,
+          onAccountDeleted: _refreshAccounts,
+        ),
       ),
     );
   }
 
   void _showTransferDialog(Account sourceAccount) {
-    final otherAccounts =
-        _accounts.where((a) => a.id != sourceAccount.id && !a.isCreditCard).toList();
+    final otherAccounts = _accounts
+        .where((a) => a.id != sourceAccount.id && !a.isCreditCard)
+        .toList();
     if (otherAccounts.isEmpty) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetCtx) => TransferFundsModal(
-        sourceAccount: sourceAccount,
-        destinationAccounts: otherAccounts,
-        onTransferCompleted: _refreshAccounts,
+    unawaited(
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetCtx) => TransferFundsModal(
+          sourceAccount: sourceAccount,
+          destinationAccounts: otherAccounts,
+          onTransferCompleted: _refreshAccounts,
+        ),
       ),
     );
   }
@@ -502,8 +516,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 _selectedTab == 1
                     ? 'Monthly Budgets'
                     : _selectedTab == 2
-                        ? 'Sinking Funds'
-                        : 'My Accounts',
+                    ? 'Sinking Funds'
+                    : 'My Accounts',
               ),
             )
           : null,
@@ -526,7 +540,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   style: SegmentedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     textStyle: AppTypography.labelMedium,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
                   ),
                   segments: const [
                     ButtonSegment<int>(
@@ -551,7 +567,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     setState(() {
                       _selectedTab = newIndex;
                       if (!_loadedTabs.contains(0) && newIndex == 0) {
-                        _refreshAccounts();
+                        unawaited(_refreshAccounts());
                       }
                       _loadedTabs.add(_selectedTab);
                     });
@@ -625,9 +641,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       Icon(
                         Icons.account_balance_outlined,
                         size: 48,
-                        color: isDark
-                            ? AppColors.gray600
-                            : AppColors.gray400,
+                        color: isDark ? AppColors.gray600 : AppColors.gray400,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
@@ -641,9 +655,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         'Add your physical bank accounts, cash wallets, or credit cards below.',
                         textAlign: TextAlign.center,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: isDark
-                              ? AppColors.gray400
-                              : AppColors.gray600,
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -679,8 +691,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     Text(
                       '${physicalAccounts.length} Total',
                       style: AppTypography.labelSmall.copyWith(
-                        color:
-                            isDark ? AppColors.gray400 : AppColors.gray600,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                   ],
@@ -689,11 +700,17 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   key: const Key('accounts_add_pill_btn'),
                   onPressed: _showAddAccountDialog,
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Add Account', style: AppTypography.labelMedium),
+                  label: const Text(
+                    'Add Account',
+                    style: AppTypography.labelMedium,
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.emerald700,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -712,9 +729,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     child: Text(
                       'No bank or cash accounts added yet.',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: isDark
-                            ? AppColors.gray400
-                            : AppColors.gray600,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                   ),
@@ -725,8 +740,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 (acc) => AccountCard(
                   account: acc,
                   locks: _accountLocks[acc.id] ?? [],
-                  isExpanded: acc.id != null &&
-                      _expandedAccountIds.contains(acc.id),
+                  isExpanded:
+                      acc.id != null && _expandedAccountIds.contains(acc.id),
                   onExpansionChanged: (expanded) {
                     if (acc.id != null) {
                       setState(() {
@@ -760,8 +775,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 Text(
                   '${creditAccounts.length} Total',
                   style: AppTypography.labelSmall.copyWith(
-                    color:
-                        isDark ? AppColors.gray400 : AppColors.gray600,
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
                   ),
                 ),
               ],
@@ -776,9 +790,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     child: Text(
                       'No credit cards added. Tap Add Account to add a card.',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: isDark
-                            ? AppColors.gray400
-                            : AppColors.gray600,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                   ),
@@ -797,13 +809,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   onEdit: () => _showEditAccountDialog(acc),
                   onPayBill: cc != null
                       ? () => PayCcBillModal.show(
-                            context,
-                            ccAccount: acc,
-                            creditCard: cc,
-                            lockedAmount: lockedAmount,
-                            bankAccounts: physicalAccounts,
-                            onPaymentCompleted: _refreshAccounts,
-                          )
+                          context,
+                          ccAccount: acc,
+                          creditCard: cc,
+                          lockedAmount: lockedAmount,
+                          bankAccounts: physicalAccounts,
+                          onPaymentCompleted: _refreshAccounts,
+                        )
                       : null,
                 );
               }),
@@ -927,7 +939,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
       ),
     );
   }
-
 }
 
 class AggregatedGoalLock {
@@ -977,8 +988,7 @@ class AccountCard extends StatefulWidget {
         final existing = map[key]!;
         map[key] = AggregatedGoalLock(
           goalId: id,
-          goalName:
-              existing.goalName.isNotEmpty ? existing.goalName : name,
+          goalName: existing.goalName.isNotEmpty ? existing.goalName : name,
           amount: existing.amount + lock.amount,
           isCreditCard: lock.isCreditCardLock,
         );
@@ -1020,10 +1030,14 @@ class _AccountCardState extends State<AccountCard> {
     final acc = widget.account;
     final isBank = acc.type == 'Bank';
     final aggregatedLocks = AccountCard.aggregateLocks(widget.locks);
-    final totalLocked =
-        widget.locks.fold<double>(0.0, (sum, l) => sum + l.amount);
-    final usableBalance =
-        (acc.balance - totalLocked).clamp(0.0, double.infinity);
+    final totalLocked = widget.locks.fold<double>(
+      0.0,
+      (sum, l) => sum + l.amount,
+    );
+    final usableBalance = (acc.balance - totalLocked).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -1200,16 +1214,21 @@ class _AccountCardState extends State<AccountCard> {
                               : AppColors.gray100.withValues(alpha: 0.6),
                           borderRadius: AppBorderRadius.smallBorder,
                           border: Border.all(
-                            color: isDark ? AppColors.gray700 : AppColors.gray200,
+                            color: isDark
+                                ? AppColors.gray700
+                                : AppColors.gray200,
                             width: 1,
                           ),
                         ),
                         child: Column(
                           children: aggregatedLocks.map((lock) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 2.0,
+                              ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Row(
@@ -1282,8 +1301,7 @@ class CreditCardAccountCard extends StatelessWidget {
     final limit = creditCard?.creditLimit ?? 0.0;
     final outstanding = account.balance;
     final availableCredit = (limit - outstanding).clamp(0.0, double.infinity);
-    final utilization =
-        limit > 0 ? (outstanding / limit).clamp(0.0, 1.0) : 0.0;
+    final utilization = limit > 0 ? (outstanding / limit).clamp(0.0, 1.0) : 0.0;
 
     final isFullyBacked = outstanding > 0 && lockedAmount >= outstanding;
     final isPartiallyBacked =
@@ -1384,12 +1402,15 @@ class CreditCardAccountCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: utilization,
                 minHeight: 6,
-                backgroundColor:
-                    isDark ? AppColors.darkBorder : AppColors.gray200,
+                backgroundColor: isDark
+                    ? AppColors.darkBorder
+                    : AppColors.gray200,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   utilization > 0.8
                       ? AppColors.danger
-                      : (utilization > 0.5 ? AppColors.warning : AppColors.purple),
+                      : (utilization > 0.5
+                            ? AppColors.warning
+                            : AppColors.purple),
                 ),
               ),
             ),
@@ -1565,7 +1586,7 @@ class CreditCardAccountCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     minimumSize: const Size(0, 34),
-                    shape: RoundedRectangleBorder(
+                    shape: const RoundedRectangleBorder(
                       borderRadius: AppBorderRadius.smallBorder,
                     ),
                     textStyle: AppTypography.labelSmall.copyWith(
@@ -1644,34 +1665,36 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Delete Account?'),
-        content: Text(
-          'Are you sure you want to delete "${widget.account.name}"? Any past transactions referencing this account will remain in ledger.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Cancel'),
+    unawaited(
+      showDialog(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Text('Delete Account?'),
+          content: Text(
+            'Are you sure you want to delete "${widget.account.name}"? Any past transactions referencing this account will remain in ledger.',
           ),
-          TextButton(
-            onPressed: () async {
-              await DatabaseHelper.instance.deleteAccount(widget.account.id!);
-              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-              if (context.mounted) Navigator.pop(context);
-              widget.onAccountDeleted?.call();
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(
-                color: AppColors.danger,
-                fontWeight: FontWeight.bold,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await DatabaseHelper.instance.deleteAccount(widget.account.id!);
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                if (context.mounted) Navigator.pop(context);
+                widget.onAccountDeleted?.call();
+              },
+              child: const Text(
+                'Delete',
+                style: TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1684,7 +1707,7 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
 
     return AlertDialog(
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: AppBorderRadius.xlargeBorder,
       ),
       title: Row(
@@ -1718,10 +1741,9 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
               CustomInputField(
                 controller: _nameController,
                 label: isCC ? 'Card Name' : 'Account Name',
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty)
-                        ? 'Please enter an account name'
-                        : null,
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Please enter an account name'
+                    : null,
               ),
               const SizedBox(height: AppSpacing.md),
               CustomInputField(
@@ -1755,20 +1777,17 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                     fillColor: isDark
                         ? AppColors.darkSurface
                         : AppColors.gray50,
-                    border: OutlineInputBorder(
+                    border: const OutlineInputBorder(
                       borderRadius: AppBorderRadius.mediumBorder,
                     ),
                   ),
                   items: ['Bank', 'Cash', 'Savings', 'Wallet']
                       .map(
-                        (type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type),
-                        ),
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
                       )
                       .toList(),
-                  onChanged: (val) =>
-                      setState(() => _selectedType = val!),
+                  onChanged: (val) => setState(() => _selectedType = val!),
                 )
               else ...[
                 CustomInputField(
@@ -1828,9 +1847,7 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                   Text(
                     'Default Account to Lock Funds',
                     style: AppTypography.labelMedium.copyWith(
-                      color: isDark
-                          ? AppColors.gray300
-                          : AppColors.gray700,
+                      color: isDark ? AppColors.gray300 : AppColors.gray700,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1867,9 +1884,8 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                           ),
                         )
                         .toList(),
-                    onChanged: (val) => setState(
-                      () => _defaultLockAccountId = val,
-                    ),
+                    onChanged: (val) =>
+                        setState(() => _defaultLockAccountId = val),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   SwitchListTile(
@@ -1881,15 +1897,12 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                     subtitle: Text(
                       'Locks matching funds in the linked bank account to ensure bill is 100% cash-backed.',
                       style: AppTypography.labelSmall.copyWith(
-                        color: isDark
-                            ? AppColors.gray400
-                            : AppColors.gray600,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                     value: _autoLock,
                     activeThumbColor: AppColors.purple,
-                    onChanged: (val) =>
-                        setState(() => _autoLock = val),
+                    onChanged: (val) => setState(() => _autoLock = val),
                   ),
                 ],
               ],
@@ -1916,8 +1929,7 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                   id: widget.account.id,
                   name: _nameController.text.trim(),
                   balance:
-                      double.tryParse(_balanceController.text.trim()) ??
-                      0.0,
+                      double.tryParse(_balanceController.text.trim()) ?? 0.0,
                   type: _selectedType,
                 ),
               );
@@ -1927,14 +1939,10 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                     id: widget.creditCard!.id,
                     accountId: widget.account.id!,
                     creditLimit:
-                        double.tryParse(
-                          _creditLimitController.text.trim(),
-                        ) ??
+                        double.tryParse(_creditLimitController.text.trim()) ??
                         widget.creditCard!.creditLimit,
                     statementDay:
-                        int.tryParse(
-                          _statementDayController.text.trim(),
-                        ) ??
+                        int.tryParse(_statementDayController.text.trim()) ??
                         widget.creditCard!.statementDay,
                     dueDay:
                         int.tryParse(_dueDayController.text.trim()) ??
@@ -2035,8 +2043,9 @@ class _TransferFundsModalState extends State<TransferFundsModal> {
               controller: _amountController,
               label: 'Amount to Transfer',
               prefixText: '₹ ',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               prefixIcon: Icons.swap_horiz_rounded,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -2056,15 +2065,11 @@ class _TransferFundsModalState extends State<TransferFundsModal> {
                   : AppColors.white,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark
-                    ? AppColors.darkSurface
-                    : AppColors.gray50,
+                fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
                 border: OutlineInputBorder(
                   borderRadius: AppBorderRadius.mediumBorder,
                   borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.darkBorder
-                        : AppColors.gray300,
+                    color: isDark ? AppColors.darkBorder : AppColors.gray300,
                   ),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
@@ -2161,7 +2166,7 @@ class _TransferFundsModalState extends State<TransferFundsModal> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.emerald700,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: AppBorderRadius.mediumBorder,
                   ),
                 ),

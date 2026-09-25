@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cashflow/screens/dashboard_screen.dart';
@@ -40,10 +42,7 @@ Future<void> main() async {
 class MoneyTrackerApp extends StatefulWidget {
   final bool initialAppLockEnabled;
 
-  const MoneyTrackerApp({
-    super.key,
-    this.initialAppLockEnabled = false,
-  });
+  const MoneyTrackerApp({super.key, this.initialAppLockEnabled = false});
 
   @override
   State<MoneyTrackerApp> createState() => _MoneyTrackerAppState();
@@ -64,7 +63,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
     if (_locked) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _tryUnlock());
     } else {
-      _syncAppLock();
+      unawaited(_syncAppLock());
     }
   }
 
@@ -75,7 +74,9 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
   }
 
   Future<void> _syncAppLock() async {
-    final enabled = await DatabaseHelper.instance.getSetting('app_lock_enabled');
+    final enabled = await DatabaseHelper.instance.getSetting(
+      'app_lock_enabled',
+    );
     final isEnabled = enabled == '1';
     if (mounted && isEnabled != _appLockEnabled) {
       setState(() {
@@ -96,11 +97,13 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
         setState(() => _locked = true);
       }
     } else if (state == AppLifecycleState.resumed) {
-      _syncAppLock().then((_) {
-        if (_appLockEnabled && _locked) {
-          _tryUnlock();
-        }
-      });
+      unawaited(
+        _syncAppLock().then((_) {
+          if (_appLockEnabled && _locked) {
+            unawaited(_tryUnlock());
+          }
+        }),
+      );
     }
   }
 
@@ -180,19 +183,25 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
                     Center(
                       child: Builder(
                         builder: (context) {
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          final isDark =
+                              Theme.of(context).brightness == Brightness.dark;
                           return Container(
                             width: 64,
                             height: 64,
                             decoration: BoxDecoration(
-                              color: (isDark ? AppColors.emerald400 : AppColors.emerald700)
-                                  .withValues(alpha: 0.12),
+                              color:
+                                  (isDark
+                                          ? AppColors.emerald400
+                                          : AppColors.emerald700)
+                                      .withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.lock_rounded,
                               size: 32,
-                              color: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                              color: isDark
+                                  ? AppColors.emerald400
+                                  : AppColors.emerald700,
                             ),
                           );
                         },
@@ -346,7 +355,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     WalkthroughController.instance.registerNavigationCallback(_onItemTapped);
-    _checkFirstInstallWalkthrough();
+    unawaited(_checkFirstInstallWalkthrough());
   }
 
   Future<void> _checkFirstInstallWalkthrough() async {
@@ -395,8 +404,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       _accountsSubTabIndex == 1
           ? 'Monthly Budgets'
           : _accountsSubTabIndex == 2
-              ? 'Sinking Funds'
-              : 'My Accounts',
+          ? 'Sinking Funds'
+          : 'My Accounts',
     ];
 
     final scaffold = Scaffold(
@@ -468,7 +477,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         animation: ModelManagementService.instance,
         builder: (context, child) {
           final modelService = ModelManagementService.instance;
-          final isDownloading = modelService.isDownloading ||
+          final isDownloading =
+              modelService.isDownloading ||
               modelService.status == ModelPackStatus.verifying;
 
           return Column(
@@ -577,8 +587,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   currentStepIndex: currentStep,
                   onNext: WalkthroughController.instance.nextStep,
                   onPrevious: WalkthroughController.instance.previousStep,
-                  onExit: () => WalkthroughController.instance.exitTour(context),
-                  onFinish: () => WalkthroughController.instance.finishTour(context),
+                  onExit: () =>
+                      WalkthroughController.instance.exitTour(context),
+                  onFinish: () =>
+                      WalkthroughController.instance.finishTour(context),
                 ),
               ),
           ],
@@ -604,9 +616,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const BackupRestoreScreen(
-                scrollToVoiceModels: true,
-              ),
+              builder: (context) =>
+                  const BackupRestoreScreen(scrollToVoiceModels: true),
             ),
           );
         },
@@ -659,10 +670,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             LinearProgressIndicator(
               value: isVerifying ? null : modelService.progress,
-              backgroundColor:
-                  isDark ? AppColors.darkBorder : AppColors.emerald100,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.emerald600),
+              backgroundColor: isDark
+                  ? AppColors.darkBorder
+                  : AppColors.emerald100,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.emerald600,
+              ),
               minHeight: 2.5,
             ),
           ],
@@ -679,105 +692,107 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           key: WalkthroughKeys.voiceFabKey,
           child: InkWell(
             key: const Key('dashboard_voice_entry_fab'),
-          onTap: () async {
-            final isInstalled =
-                await ModelManagementService.instance.isModelPackInstalled();
-            if (!mounted) return;
-            if (!isInstalled) {
-              await VoiceModelDownloadSheet.show(context);
-            } else {
-              await VoiceRecordingModal.show(
-                context,
-                coordinator: widget.voiceCoordinator,
-              );
-            }
-          },
-          borderRadius: BorderRadius.circular(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 42,
-                width: 42,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isDark
-                        ? const [
-                            Color(0xFF34D399),
-                            Color(0xFF10B981),
-                            Color(0xFF059669),
-                            Color(0xFF047857),
-                          ]
-                        : const [
-                            Color(0xFF34D399),
-                            Color(0xFF10B981),
-                            Color(0xFF059669),
-                            Color(0xFF047857),
-                          ],
+            onTap: () async {
+              final isInstalled = await ModelManagementService.instance
+                  .isModelPackInstalled();
+              if (!mounted) return;
+              if (!isInstalled) {
+                unawaited(VoiceModelDownloadSheet.show(context));
+              } else {
+                unawaited(
+                  VoiceRecordingModal.show(
+                    context,
+                    coordinator: widget.voiceCoordinator,
                   ),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF6EE7B7) : Colors.white,
-                    width: 2.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF10B981)
-                          .withValues(alpha: isDark ? 0.55 : 0.40),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 2),
+                );
+              }
+            },
+            borderRadius: BorderRadius.circular(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 42,
+                  width: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDark
+                          ? const [
+                              Color(0xFF34D399),
+                              Color(0xFF10B981),
+                              Color(0xFF059669),
+                              Color(0xFF047857),
+                            ]
+                          : const [
+                              Color(0xFF34D399),
+                              Color(0xFF10B981),
+                              Color(0xFF059669),
+                              Color(0xFF047857),
+                            ],
                     ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/icon/ai_voice_icon.jpg',
-                    width: 42,
-                    height: 42,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(
-                          Icons.mic_rounded,
-                          color: Colors.white,
-                          size: 21,
-                        ),
-                        Positioned(
-                          top: 3,
-                          right: 3,
-                          child: Icon(
-                            Icons.auto_awesome,
-                            color: Colors.amber.shade300,
-                            size: 11,
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF6EE7B7) : Colors.white,
+                      width: 2.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981)
+                            .withValues(alpha: isDark ? 0.55 : 0.40),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/icon/ai_voice_icon.jpg',
+                      width: 42,
+                      height: 42,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(
+                            Icons.mic_rounded,
+                            color: Colors.white,
+                            size: 21,
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            top: 3,
+                            right: 3,
+                            child: Icon(
+                              Icons.auto_awesome,
+                              color: Colors.amber.shade300,
+                              size: 11,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Voice',
-                style: AppTypography.labelSmall.copyWith(
-                  color: isDark ? AppColors.emerald300 : AppColors.emerald800,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 10,
-                  letterSpacing: 0.2,
+                const SizedBox(height: 2),
+                Text(
+                  'Voice',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.emerald300 : AppColors.emerald800,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                    letterSpacing: 0.2,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildNavItem({
     required int index,
@@ -803,12 +818,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? (isDark
-                          ? AppColors.emerald900.withValues(alpha: 0.5)
-                          : AppColors.emerald100)
+                            ? AppColors.emerald900.withValues(alpha: 0.5)
+                            : AppColors.emerald100)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
