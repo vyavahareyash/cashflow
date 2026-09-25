@@ -34,7 +34,7 @@ Test-to-production ratio:
 
 $$\text{Test Ratio (\%)} = \left( \frac{\text{Test LOC}}{\text{Production LOC}} \right) \times 100$$
 
-> **Industry Benchmark & Citation**: Empirical studies on mobile repositories (e.g., Kochhar et al., *"An Empirical Study of Testing Practices in Mobile Applications"*, IEEE; and Microsoft Research empirical software telemetry) report median test-to-code ratios in open-source mobile projects between **15% and 25%**. Cashflow's **52.7%** test-to-production ratio substantially exceeds industry norms and places it in the upper quartile of automated verification density.
+> **Industry Benchmark & Citation**: Empirical studies on mobile repositories (e.g., Kochhar et al., *"An Empirical Study of Testing Practices in Mobile Applications"*, IEEE; and Microsoft Research empirical software telemetry) report median test-to-code ratios in open-source mobile projects between **15% and 25%**. Cashflow's **52.3%** test-to-production ratio substantially exceeds industry norms and places it in the upper quartile of automated verification density.
 
 ### 1.3 Documentation Footprint
 
@@ -70,9 +70,9 @@ $$\text{Active Days} = \left| \{ \text{Date}(c) \mid c \in \text{commits} \} \ri
 
 Engineering velocity per active sprint day:
 
-$$v_{\text{LOC}} = \left\lfloor \frac{\text{Total Dart LOC}}{\max(1, \text{Active Days})} \right\rfloor \approx 2,880 \text{ LOC/day}$$
+$$v_{\text{LOC}} = \left\lfloor \frac{\text{Total Dart LOC}}{\max(1, \text{Active Days})} \right\rfloor \approx 2,671 \text{ LOC/day}$$
 
-$$v_{\text{commits}} = \frac{\text{Total Commits}}{\max(1, \text{Active Days})} \approx 8.1 \text{ commits/day}$$
+$$v_{\text{commits}} = \frac{\text{Total Commits}}{\max(1, \text{Active Days})} \approx 8.7 \text{ commits/day}$$
 
 > **Engineering Quality Note**: LOC/day reflects aggregate volume throughput enabled by modern AI-augmented workflows. Software reliability is strictly governed by automated test passing rates and zero static analysis warnings rather than raw code volume.
 
@@ -80,7 +80,7 @@ $$v_{\text{commits}} = \frac{\text{Total Commits}}{\max(1, \text{Active Days})} 
 
 Release tags are extracted via `git for-each-ref refs/tags` and sorted by Semantic Versioning order:
 
-$$\text{Release Cadence (Days)} = \frac{\text{Calendar Duration (Days)}}{\max(1, |\text{releases}|)} \approx \frac{40}{15} \approx 2.7 \text{ Days / Release}$$
+$$\text{Release Cadence (Days)} = \frac{\text{Calendar Duration (Days)}}{\max(1, |\text{releases}|)} \approx \frac{40}{18} \approx 2.2 \text{ Days / Release}$$
 
 ---
 
@@ -108,9 +108,10 @@ Finds the sliding 4-hour consecutive block with the highest cumulative commits:
 
 $$\text{Window}^* = \arg\max_{h \in [0, 20]} \sum_{i=0}^3 \text{hours}[h + i]$$
 
-- **Identified Deep-Work Window**: `20:00 – 23:00 IST` accounting for $39$ commits ($33.9\%$ of total repository engineering activity).
-- **Peak Burst Days**: Tuesday ($32$ commits) and weekends ($36$ commits).
-- **Cadence Observation**: Zero Friday commits observed across repository history, correlating with dedicated device dogfooding, offline manual testing, and weekend sprint roadmapping.
+- **Identified Deep-Work Window**: `20:00 – 23:00 IST` accounting for $50$ commits ($38.2\%$ of total repository engineering activity).
+- **Peak Midweek Velocity**: Tuesday ($32$ commits) followed by Thursday ($24$ commits).
+- **Weekend Sprint Ratio**: $36$ commits ($27.5\%$) across Saturday ($16$) and Sunday ($20$).
+- **Night-Owl Focus Concentration**: $64.9\%$ of commits ($85$ commits) completed after 18:00 IST.
 
 ---
 
@@ -136,11 +137,11 @@ $$\text{Nominal Months} = \frac{\text{Effort (PM)}}{2.5}$$
 
 Estimates an external procurement counterfactual—what a commercial digital product agency (US/Western Europe) would quote to construct this exact production software from scratch:
 
-$$\text{Agency Hours} = \lfloor \text{KLOC} \times 26 \rfloor \approx 1,034\text{ Hours}$$
+$$\text{Agency Hours} = \lfloor \text{KLOC} \times 26 \rfloor \approx 1,042\text{ Hours}$$
 
 At a blended senior consultancy billing rate of 125 USD / hour:
 
-$$\text{Agency Commercial Cost} = \text{Agency Hours} \times 125 \approx 129,250\text{ USD}$$
+$$\text{Agency Commercial Cost} = \text{Agency Hours} \times 125 \approx 130,250\text{ USD}$$
 
 > **Scope Note**: This represents a commissioned agency procurement quote, not a financial asset valuation of the application itself.
 
@@ -158,42 +159,42 @@ Detailed accounting of autonomous context throughput, LLM API compute credits, u
 - Compiler lint review & test execution feedback iteration: $\sim 30,000$ tokens
 - **Empirical Constant**: $180,000\text{ tokens / commit lifecycle} = 0.18\text{M tokens/commit}$
 
-$$\text{Total AI Context Volume} = \text{Total Commits} \times 0.18\text{M} \approx 20.3\text{M Tokens}$$
+$$\text{Total AI Context Volume} = \text{Total Commits} \times 0.18\text{M} \approx 23.6\text{M Tokens}$$
 
-- **Input (Prompt) Ratio**: $70\%$ ($\approx 14.2\text{M Tokens}$)
-- **Output (Completion) Ratio**: $30\%$ ($\approx 6.1\text{M Tokens}$)
+- **Input (Prompt) Ratio**: $70\%$ ($\approx 16.5\text{M Tokens}$)
+- **Output (Completion) Ratio**: $30\%$ ($\approx 7.1\text{M Tokens}$)
 
 ### 5.2 Compute Spend & Token Pricing
 
 Blended market rate of 3.50 USD / Million Tokens across frontier reasoning models (Claude 3.5 Sonnet, Gemini 1.5 Pro, GPT-4o):
 
-$$\text{Estimated AI Compute Spend} = \max\left(25.0, \text{Total AI Tokens (M)} \times 3.50\right) \approx 71.05\text{ USD}$$
+$$\text{Estimated AI Compute Spend} = \max\left(25.0, \text{Total AI Tokens (M)} \times 3.50\right) \approx 82.60\text{ USD}$$
 
 ### 5.3 Unit Economics per Artifact
 
 Cost per commit:
 
-$$\text{Cost Per Commit} = \frac{\text{Estimated AI Spend}}{\text{Total Commits}} \approx \frac{71.05}{113} \approx 0.63\text{ USD / commit}$$
+$$\text{Cost Per Commit} = \frac{\text{Estimated AI Spend}}{\text{Total Commits}} \approx \frac{82.60}{131} \approx 0.63\text{ USD / commit}$$
 
 Cost per 1,000 lines of tested code (KLOC):
 
-$$\text{Cost Per KLOC} = \frac{\text{Estimated AI Spend}}{\text{KLOC}} \approx \frac{71.05}{39.8} \approx 1.78\text{ USD / KLOC}$$
+$$\text{Cost Per KLOC} = \frac{\text{Estimated AI Spend}}{\text{KLOC}} \approx \frac{82.60}{40.1} \approx 2.06\text{ USD / KLOC}$$
 
 ### 5.4 Capital Efficiency Multiplier
 
 Measures capital leverage achieved by an AI-augmented solo engineer over a conventional software consultancy:
 
-$$\text{Capital Leverage Multiple} = \left\lfloor \frac{\text{Agency Commercial Cost}}{\text{Estimated AI Compute Spend}} \right\rfloor \approx \frac{129,250}{71.05} \approx 1,819\times$$
+$$\text{Capital Leverage Multiple} = \left\lfloor \frac{\text{Agency Commercial Cost}}{\text{Estimated AI Compute Spend}} \right\rfloor \approx \frac{130,250}{82.60} \approx 1,576\times$$
 
 ### 5.5 Human Focus Hours Saved
 
 Human development hours spent across active sprint days:
 
-$$\text{Actual Human Sprint Hours} = \text{Active Days} \times 12\text{ hrs/day} \approx 14 \times 12 = 168\text{ Hours}$$
+$$\text{Actual Human Sprint Hours} = \text{Active Days} \times 12\text{ hrs/day} \approx 15 \times 12 = 180\text{ Hours}$$
 
 Net hours saved relative to conventional agency baseline:
 
-$$\text{Net Hours Saved} = \max\left(0, \text{Agency Hours} - \text{Actual Human Hours}\right) \approx 1,034 - 168 = 866\text{ Hours}$$
+$$\text{Net Hours Saved} = \max\left(0, \text{Agency Hours} - \text{Actual Human Hours}\right) \approx 1,042 - 180 = 862\text{ Hours}$$
 
 ---
 
@@ -204,9 +205,9 @@ The 6-axis readiness radar assesses software maturity on a normalized $0 \dots 1
 | Dimension | Formula / Value | Architectural Rationale & Verification |
 |---|---|---|
 | **ACID & Data Integrity** | $98 / 100$ | Strict local SQLite foreign keys, automated schema migrations ($v1 \to v4$), double-entry atomic journal commits, zero cloud sync failure modes. |
-| **Automated Testing & QA** | $\min\left(99, \left\lfloor 82 + \frac{\text{Test Assertions}}{350} \times 15 \right\rfloor\right) \to 96$ | $326$ automated tests across $44$ suites + $27$ automated UI screenshot markers via ADB. |
+| **Automated Testing & QA** | $\min\left(99, \left\lfloor 82 + \frac{\text{Test Assertions}}{350} \times 15 \right\rfloor\right) \to 95$ | $326$ automated tests across $44$ suites + $44$ automated UI screenshot markers via ADB. |
 | **Edge AI & Local SLM** | $94 / 100$ | Platform-native Speech-to-Text, local SmolLM2 SLM running in background Dart isolate, deterministic GBNF grammar constraints, live waveform visualizer. |
-| **CI/CD & Release Ops** | $\min\left(99, \left\lfloor 82 + \frac{\text{Releases}}{20} \times 14 \right\rfloor\right) \to 92$ | Automated GitHub Actions pipelines building versioned Android APKs, Play Store AAB bundles, iOS, Web builds, and GitHub Pages. |
+| **CI/CD & Release Ops** | $\min\left(99, \left\lfloor 82 + \frac{\text{Releases}}{20} \times 14 \right\rfloor\right) \to 94$ | Automated GitHub Actions pipelines building versioned Android APKs, Play Store AAB bundles, iOS, Web builds, and GitHub Pages. |
 | **Clean Architecture** | $\min\left(99, \left\lfloor 85 + \frac{\text{Production LOC}}{30,000} \times 13 \right\rfloor\right) \to 96$ | Strict layered architecture, zero network telemetry invariant, deep module seams, reactive change notifier state flow. |
 | **Product & UX Design** | $95 / 100$ | 60fps glassmorphic floating pill, privacy mode screen masking, celebratory confetti flair, in-app Google Play Billing tip jar. |
 
