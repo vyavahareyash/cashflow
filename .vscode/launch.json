@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Cashflow",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "Cashflow (Play Store Coffee)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=ENABLE_EXTERNAL_DONATIONS=false"
+      ]
+    },
+    {
+      "name": "Cashflow (Buy Me a Coffee)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=ENABLE_EXTERNAL_DONATIONS=true"
+      ]
+    }
+  ]
+}
