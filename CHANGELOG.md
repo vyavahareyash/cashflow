@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.0] - 2026-09-25
+
+### Added
+- **Embedded Accounts Subtabs**: Integrated Budgets and Goals directly as subtabs within the Accounts screen with lazy-loading IndexedStack and smooth tab switching (#117, #118).
+- **Section Header Action Pills**: Replaced floating action buttons (FAB) with contextual action pills in section headers to avoid navigation bar collision (#117, #118).
+- **Direct Dashboard Subtab Routing**: Dashboard quick actions now deep-route directly to their target subtabs within Accounts (#117, #118).
+- **Engineering Retrospective & Learnings**: Added dedicated Retrospective and Learnings tab to the interactive analytics dashboard with incident post-mortems and capability metrics (fb4e217).
+
+### Fixed
+- **Persistent Voice Model Downloads**: Prevented cancellation of on-device neural model downloads when navigating pages or backgrounding the application (#115, #116).
+
+### Documentation
+- **Telemetry & Metrics Synchronization**: Synchronized project analytics metrics, weekend/night-owl telemetry, and automated update workflow (#114).
+
+---
+
 ## [4.1.1] - 2026-09-24
 
 ### Changed

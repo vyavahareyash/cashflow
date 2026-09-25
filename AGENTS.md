@@ -20,3 +20,4 @@ Consult detailed references on demand when handling specific feature areas:
 - **Product Specification**: See [SPECIFICATION.md](docs/product/SPECIFICATION.md) when verifying user-facing feature requirements and transaction lifecycle rules.
 - **User Experience & Walkthrough**: See [FEATURE_GUIDE.md](docs/user/FEATURE_GUIDE.md) when modifying UI flows, privacy mode, or settings.
 - **Analytics & Metrics**: See [METRICS_METHODOLOGY.md](docs/engineering/METRICS_METHODOLOGY.md) when updating project telemetry, estimation formulas, or portfolio reports.
+- **Release Preparation**: See [prepare-release](.agents/skills/prepare-release/SKILL.md) when cutting, versioning, or publishing app releases.

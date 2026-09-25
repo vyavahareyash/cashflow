@@ -12,6 +12,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../config/app_config.dart';
 import '../services/billing_service.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 export '../components/export_backup_dialog.dart' show ExportFormat;
@@ -19,10 +20,7 @@ export '../components/export_backup_dialog.dart' show ExportFormat;
 class BackupRestoreScreen extends StatefulWidget {
   final bool scrollToVoiceModels;
 
-  const BackupRestoreScreen({
-    super.key,
-    this.scrollToVoiceModels = false,
-  });
+  const BackupRestoreScreen({super.key, this.scrollToVoiceModels = false});
 
   @override
   State<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
@@ -131,7 +129,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       final defaultDir = kIsWeb ? '' : await db.getDefaultBackupDirectory();
       final effectiveDir = await db.getEffectiveBackupDirectory();
       final appLockVal = await db.getSetting('app_lock_enabled');
-      final canBiometric = await PlatformSecurityService.instance.canAuthenticate();
+      final canBiometric = await PlatformSecurityService.instance
+          .canAuthenticate();
 
       if (mounted) {
         setState(() {
@@ -169,10 +168,16 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   Future<void> _updateAppLock(bool value) async {
     final authenticated = await PlatformSecurityService.instance.authenticate();
     if (!authenticated) {
-      _showFeedback('Authentication required to change App Lock setting', isError: true);
+      _showFeedback(
+        'Authentication required to change App Lock setting',
+        isError: true,
+      );
       return;
     }
-    await DatabaseHelper.instance.setSetting('app_lock_enabled', value ? '1' : '0');
+    await DatabaseHelper.instance.setSetting(
+      'app_lock_enabled',
+      value ? '1' : '0',
+    );
     if (mounted) {
       setState(() {
         _appLockEnabled = value;
@@ -239,7 +244,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Salary payday set to ${_formatDayOrdinal(clamped)} of the month'),
+          content: Text(
+            'Salary payday set to ${_formatDayOrdinal(clamped)} of the month',
+          ),
           backgroundColor: AppColors.emerald700,
           duration: const Duration(seconds: 2),
         ),
@@ -354,7 +361,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
         title: Text(
           'Import & Restore Data',
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -615,9 +624,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               size: 24,
             ),
             SizedBox(width: 8),
-            Expanded(
-              child: Text('Reset All Data?'),
-            ),
+            Expanded(child: Text('Reset All Data?')),
           ],
         ),
         content: const Text(
@@ -686,101 +693,101 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          // 1. PRIVACY HERO CARD
-          _buildPrivacyHeroCard(isDark),
-          const SizedBox(height: AppSpacing.md),
-          _buildPrivacyPreferencesCard(isDark),
-          if (_canUseBiometric) ...[
+            // 1. PRIVACY HERO CARD
+            _buildPrivacyHeroCard(isDark),
             const SizedBox(height: AppSpacing.md),
-            _buildAppLockCard(isDark),
-          ],
-          const SizedBox(height: AppSpacing.xl),
-
-          // 2. FINANCIAL & CYCLE PREFERENCES
-          _buildSectionHeader('Financial & Cycle Preferences', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildSalaryPreferencesCard(isDark),
-          const SizedBox(height: AppSpacing.xl),
-
-          // 3. LOCAL STORAGE SNAPSHOT
-          _buildSectionHeader('Storage & Record Count', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildStorageOverviewCard(isDark),
-          const SizedBox(height: AppSpacing.xl),
-
-          // 3. BACKUP & EXPORT ACTIONS
-          _buildSectionHeader('Backup & Data Portability', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildBackupGroupCard(isDark),
-          if (_statusMessage.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              key: const Key('backup_status_message_banner'),
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkSurfaceElevated
-                    : AppColors.emerald50,
-                border: Border.all(
-                  color: AppColors.emerald500.withValues(alpha: 0.3),
-                ),
-                borderRadius: AppBorderRadius.mediumBorder,
-              ),
-              child: Text(
-                _statusMessage,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.emerald400 : AppColors.emerald800,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.xl),
-
-          // 4. OFFLINE VOICE AI MODEL PACK
-          KeyedSubtree(
-            key: _voiceModelSectionKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionHeader('Voice AI & Offline Models', isDark),
-                const SizedBox(height: AppSpacing.xs),
-                _buildVoiceAiModelPackCard(isDark),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-
-          // 5. DEMO DATA GENERATOR
-          _buildSectionHeader('Demo & Testing', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildDemoDataCard(isDark),
-          const SizedBox(height: AppSpacing.xxl),
-
-          // 5. DANGER ZONE
-          _buildSectionHeader('Danger Zone', isDark, isDanger: true),
-          const SizedBox(height: AppSpacing.xs),
-          _buildDangerZoneCard(isDark),
-          const SizedBox(height: AppSpacing.xl),
-
-          // 6. SUPPORT & OPEN SOURCE (Conditional on compile-time flag)
-          if (AppConfig.enableExternalDonations ||
-              AppConfig.enablePlayStoreTips) ...[
-            _buildSectionHeader('Support & Open Source', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildSupportDevelopmentCard(isDark),
+            _buildPrivacyPreferencesCard(isDark),
+            if (_canUseBiometric) ...[
+              const SizedBox(height: AppSpacing.md),
+              _buildAppLockCard(isDark),
+            ],
             const SizedBox(height: AppSpacing.xl),
-          ],
 
-          // 7. APP INFO & SYSTEM FOOTER
-          _buildSectionHeader('System & About', isDark),
-          const SizedBox(height: AppSpacing.xs),
-          _buildAboutSystemCard(isDark),
-          const SizedBox(height: AppSpacing.md),
-          _buildDeveloperFooter(isDark),
-          const SizedBox(height: AppSpacing.huge),
-        ],
+            // 2. FINANCIAL & CYCLE PREFERENCES
+            _buildSectionHeader('Financial & Cycle Preferences', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildSalaryPreferencesCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+
+            // 3. LOCAL STORAGE SNAPSHOT
+            _buildSectionHeader('Storage & Record Count', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildStorageOverviewCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+
+            // 3. BACKUP & EXPORT ACTIONS
+            _buildSectionHeader('Backup & Data Portability', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildBackupGroupCard(isDark),
+            if (_statusMessage.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                key: const Key('backup_status_message_banner'),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkSurfaceElevated
+                      : AppColors.emerald50,
+                  border: Border.all(
+                    color: AppColors.emerald500.withValues(alpha: 0.3),
+                  ),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: Text(
+                  _statusMessage,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.emerald400 : AppColors.emerald800,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+
+            // 4. OFFLINE VOICE AI MODEL PACK
+            KeyedSubtree(
+              key: _voiceModelSectionKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader('Voice AI & Offline Models', isDark),
+                  const SizedBox(height: AppSpacing.xs),
+                  _buildVoiceAiModelPackCard(isDark),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // 5. DEMO DATA GENERATOR
+            _buildSectionHeader('Demo & Testing', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildDemoDataCard(isDark),
+            const SizedBox(height: AppSpacing.xxl),
+
+            // 5. DANGER ZONE
+            _buildSectionHeader('Danger Zone', isDark, isDanger: true),
+            const SizedBox(height: AppSpacing.xs),
+            _buildDangerZoneCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+
+            // 6. SUPPORT & OPEN SOURCE (Conditional on compile-time flag)
+            if (AppConfig.enableExternalDonations ||
+                AppConfig.enablePlayStoreTips) ...[
+              _buildSectionHeader('Support & Open Source', isDark),
+              const SizedBox(height: AppSpacing.xs),
+              _buildSupportDevelopmentCard(isDark),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+
+            // 7. APP INFO & SYSTEM FOOTER
+            _buildSectionHeader('System & About', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildAboutSystemCard(isDark),
+            const SizedBox(height: AppSpacing.md),
+            _buildDeveloperFooter(isDark),
+            const SizedBox(height: AppSpacing.huge),
+          ],
         ),
       ),
     );
@@ -887,7 +894,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Start in Privacy Mode', style: AppTypography.titleMedium),
+                    Text(
+                      'Start in Privacy Mode',
+                      style: AppTypography.titleMedium,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'Mask balances and financial figures whenever the app launches',
@@ -987,7 +997,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Salary & Payday Preferences', style: AppTypography.titleMedium),
+                    Text(
+                      'Salary & Payday Preferences',
+                      style: AppTypography.titleMedium,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'Anchors budget cycles, countdowns, and goal savings pacing',
@@ -1012,7 +1025,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceElevated : AppColors.gray50,
+                color: isDark
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.gray50,
                 borderRadius: AppBorderRadius.mediumBorder,
                 border: Border.all(
                   color: isDark ? AppColors.darkBorder : AppColors.gray200,
@@ -1083,9 +1098,14 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             ),
                             if (_salaryDay == 1)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.emerald500.withValues(alpha: 0.15),
+                                  color: AppColors.emerald500.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: AppBorderRadius.pillBorder,
                                 ),
                                 child: Text(
@@ -1099,15 +1119,22 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                               )
                             else if (_salaryDay >= 28)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.gray500.withValues(alpha: 0.15),
+                                  color: AppColors.gray500.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: AppBorderRadius.pillBorder,
                                 ),
                                 child: Text(
                                   _salaryDay == 31 ? 'Month-End' : 'Near End',
                                   style: AppTypography.labelSmall.copyWith(
-                                    color: isDark ? AppColors.gray300 : AppColors.gray700,
+                                    color: isDark
+                                        ? AppColors.gray300
+                                        : AppColors.gray700,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 10,
                                   ),
@@ -1119,7 +1146,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         Text(
                           cycle.resetCountdownText,
                           style: AppTypography.labelSmall.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
                           ),
                         ),
                       ],
@@ -1309,15 +1338,15 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                             color: isSelected
                                 ? AppColors.emerald600
                                 : (isDark
-                                    ? AppColors.darkSurfaceElevated
-                                    : AppColors.gray100),
+                                      ? AppColors.darkSurfaceElevated
+                                      : AppColors.gray100),
                             borderRadius: AppBorderRadius.mediumBorder,
                             border: Border.all(
                               color: isSelected
                                   ? AppColors.emerald600
                                   : (isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray200),
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray200),
                               width: isSelected ? 1.5 : 1,
                             ),
                           ),
@@ -1331,8 +1360,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                 color: isSelected
                                     ? Colors.white
                                     : (isDark
-                                        ? AppColors.gray200
-                                        : AppColors.gray800),
+                                          ? AppColors.gray200
+                                          : AppColors.gray800),
                               ),
                             ),
                           ),
@@ -1355,9 +1384,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         : AppColors.gray50,
                     borderRadius: AppBorderRadius.mediumBorder,
                     border: Border.all(
-                      color: isDark
-                          ? AppColors.darkBorder
-                          : AppColors.gray200,
+                      color: isDark ? AppColors.darkBorder : AppColors.gray200,
                       width: 0.5,
                     ),
                   ),
@@ -1492,7 +1519,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             child: Row(
               children: [
                 Icon(
-                  hasBackup ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                  hasBackup
+                      ? Icons.cloud_done_rounded
+                      : Icons.cloud_off_rounded,
                   size: 20,
                   color: hasBackup
                       ? AppColors.emerald600
@@ -1518,9 +1547,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                           fontWeight: FontWeight.w600,
                           color: hasBackup
                               ? (isDark
-                                  ? AppColors.emerald400
-                                  : AppColors.emerald800)
-                              : (isDark ? AppColors.gray400 : AppColors.gray600),
+                                    ? AppColors.emerald400
+                                    : AppColors.emerald800)
+                              : (isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600),
                         ),
                       ),
                     ],
@@ -1532,8 +1563,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     vertical: AppSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
-                    color: (hasBackup ? AppColors.emerald600 : AppColors.gray500)
-                        .withValues(alpha: 0.15),
+                    color:
+                        (hasBackup ? AppColors.emerald600 : AppColors.gray500)
+                            .withValues(alpha: 0.15),
                     borderRadius: AppBorderRadius.pillBorder,
                   ),
                   child: Text(
@@ -1590,9 +1622,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               subtitle: _effectiveBackupDirectory.isNotEmpty
                   ? _effectiveBackupDirectory
                   : (_defaultBackupDirectory.isNotEmpty
-                      ? _defaultBackupDirectory
-                      : 'System default directory'),
-              onTap: _isProcessing ? null : () => _showConfigureDirectoryDialog(isDark),
+                        ? _defaultBackupDirectory
+                        : 'System default directory'),
+              onTap: _isProcessing
+                  ? null
+                  : () => _showConfigureDirectoryDialog(isDark),
               isDark: isDark,
             ),
           ],
@@ -1819,23 +1853,21 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         mode: LaunchMode.externalApplication,
       );
       if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
   }
 
   Future<void> _openBuyMeACoffee() => _openExternalUrl(
-        AppConfig.buyMeACoffeeUrl,
-        'Could not open browser to visit support page.',
-      );
+    AppConfig.buyMeACoffeeUrl,
+    'Could not open browser to visit support page.',
+  );
 
   void _onTipCompleted() {
     if (!mounted) return;
@@ -1846,11 +1878,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           borderRadius: AppBorderRadius.largeBorder,
         ),
         title: const Row(
-          children: [
-            Text('☕'),
-            SizedBox(width: 8),
-            Text('Thank You!'),
-          ],
+          children: [Text('☕'), SizedBox(width: 8), Text('Thank You!')],
         ),
         content: const Text(
           'Thank you so much for supporting Cashflow! Your contribution directly fuels open-source, private, and offline development.',
@@ -1999,7 +2027,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           final message = !billing.isAvailable
               ? 'Unable to connect to Google Play Store. Please ensure Play Store is available and connected.'
               : (billing.errorMessage ??
-                  'Google Play products pending setup in Play Console or testing track.');
+                    'Google Play products pending setup in Play Console or testing track.');
 
           return Container(
             width: double.infinity,
@@ -2028,8 +2056,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   label: const Text('Check Connection'),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor:
-                        isDark ? AppColors.primaryLight : AppColors.primary,
+                    foregroundColor: isDark
+                        ? AppColors.primaryLight
+                        : AppColors.primary,
                   ),
                 ),
               ],
@@ -2157,8 +2186,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     ...billing.products.map((product) {
                       final isDouble = product.id.contains('double');
                       final isPot = product.id.contains('pot');
-                      final assetImage =
-                          BillingService.productIconAsset(product.id);
+                      final assetImage = BillingService.productIconAsset(
+                        product.id,
+                      );
                       final title = isPot
                           ? 'Coffee Pot'
                           : (isDouble ? '2 Coffees' : '1 Coffee');
@@ -2229,24 +2259,24 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                       children: [
                                         Text(
                                           title,
-                                          style:
-                                              AppTypography.titleMedium.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? AppColors.darkText
-                                                : AppColors.gray900,
-                                          ),
+                                          style: AppTypography.titleMedium
+                                              .copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark
+                                                    ? AppColors.darkText
+                                                    : AppColors.gray900,
+                                              ),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
                                           tagline,
-                                          style:
-                                              AppTypography.bodySmall.copyWith(
-                                            color: isDark
-                                                ? AppColors.gray400
-                                                : AppColors.gray600,
-                                            height: 1.25,
-                                          ),
+                                          style: AppTypography.bodySmall
+                                              .copyWith(
+                                                color: isDark
+                                                    ? AppColors.gray400
+                                                    : AppColors.gray600,
+                                                height: 1.25,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -2259,8 +2289,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isDark
-                                          ? AppColors.emerald900
-                                              .withValues(alpha: 0.4)
+                                          ? AppColors.emerald900.withValues(
+                                              alpha: 0.4,
+                                            )
                                           : AppColors.emerald50,
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
@@ -2271,8 +2302,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                                     ),
                                     child: Text(
                                       product.price,
-                                      style:
-                                          AppTypography.labelMedium.copyWith(
+                                      style: AppTypography.labelMedium.copyWith(
                                         color: isDark
                                             ? AppColors.emerald400
                                             : AppColors.emerald700,
@@ -2314,7 +2344,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         children: [
           _buildInfoRow('Application', 'Cashflow', isDark),
           const Divider(height: 16),
-          _buildInfoRow('Version', '4.4.0 (Build 18)', isDark),
+          _buildInfoRow('Version', '4.5.0 (Build 19)', isDark),
           const Divider(height: 16),
           _buildInfoRow('Storage Engine', 'SQLite (Local-First)', isDark),
           const Divider(height: 16),
@@ -2400,8 +2430,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (isDark ? AppColors.emerald500 : AppColors.emerald600)
-                          .withValues(alpha: 0.3),
+                      color:
+                          (isDark ? AppColors.emerald500 : AppColors.emerald600)
+                              .withValues(alpha: 0.3),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -2437,7 +2468,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                         Icon(
                           Icons.verified_user_outlined,
                           size: 12,
-                          color: isDark ? AppColors.emerald400 : AppColors.emerald700,
+                          color: isDark
+                              ? AppColors.emerald400
+                              : AppColors.emerald700,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -2555,7 +2588,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
         title: Text(
           'Default Export Directory',
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2572,7 +2607,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceElevated : AppColors.gray100,
+                color: isDark
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.gray100,
                 borderRadius: AppBorderRadius.smallBorder,
                 border: Border.all(
                   color: isDark ? AppColors.gray700 : AppColors.gray300,
@@ -2600,20 +2637,27 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 if (dialogCtx.mounted) {
                   Navigator.of(dialogCtx).pop();
                 }
-                _showFeedback('Reset export directory to system default', isSuccess: true);
+                _showFeedback(
+                  'Reset export directory to system default',
+                  isSuccess: true,
+                );
               },
             ),
           FilledButton.icon(
             key: const Key('settings_browse_export_directory_button'),
             icon: const Icon(Icons.folder_open_rounded, size: 18),
             label: const Text('Browse Folder'),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.emerald600),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.emerald600,
+            ),
             onPressed: () async {
               final picked = await pickBackupDirectory(
                 initialDirectory: currentDir,
               );
               if (picked != null && picked.trim().isNotEmpty) {
-                await DatabaseHelper.instance.setCustomBackupPath(picked.trim());
+                await DatabaseHelper.instance.setCustomBackupPath(
+                  picked.trim(),
+                );
                 await _loadStats();
                 if (dialogCtx.mounted) {
                   Navigator.of(dialogCtx).pop();
@@ -2704,7 +2748,10 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Voice AI Model Pack', style: AppTypography.titleMedium),
+                    Text(
+                      'Voice AI Model Pack',
+                      style: AppTypography.titleMedium,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'On-device SmolLM2 neural model (~270 MB)',
@@ -2811,7 +2858,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 onChanged: isDownloading
                     ? null
                     : (val) async {
-                        await DatabaseHelper.instance.setVoiceModelsWifiOnly(val);
+                        await DatabaseHelper.instance.setVoiceModelsWifiOnly(
+                          val,
+                        );
                         if (mounted) {
                           setState(() {
                             _voiceModelsWifiOnly = val;
@@ -2828,7 +2877,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             LinearProgressIndicator(
               key: const Key('voice_model_download_progress_bar'),
               value: isVerifying ? null : modelService.progress,
-              backgroundColor: isDark ? AppColors.darkBorder : AppColors.gray200,
+              backgroundColor: isDark
+                  ? AppColors.darkBorder
+                  : AppColors.gray200,
               valueColor: AlwaysStoppedAnimation<Color>(
                 isVerifying ? Colors.orange : AppColors.emerald600,
               ),
@@ -2878,8 +2929,11 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: AppColors.danger, size: 18),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.danger,
+                    size: 18,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
@@ -2977,9 +3031,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             children: const [
               Icon(Icons.network_cell_rounded, color: Colors.orange, size: 22),
               SizedBox(width: 8),
-              Expanded(
-                child: Text('Cellular Data Warning'),
-              ),
+              Expanded(child: Text('Cellular Data Warning')),
             ],
           ),
           content: const Text(
@@ -3029,12 +3081,13 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         key: const Key('delete_models_dialog'),
         title: Row(
           children: const [
-            Icon(Icons.delete_outline_rounded,
-                color: AppColors.danger, size: 22),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text('Delete Voice AI Models?'),
+            Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.danger,
+              size: 22,
             ),
+            SizedBox(width: 8),
+            Expanded(child: Text('Delete Voice AI Models?')),
           ],
         ),
         content: const Text(
@@ -3069,4 +3122,3 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     }
   }
 }
-

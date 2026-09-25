@@ -9,7 +9,6 @@ import 'package:cashflow/services/voice_audio_pipeline.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -194,10 +193,9 @@ class FakeSpeechToText extends Fake implements stt.SpeechToText {
   }
 
   void emitResult(String words, bool isFinal) {
-    final res = SpeechRecognitionResult(
-      [SpeechRecognitionWords(words, [words], 0.95)],
-      isFinal ? 1 : 0,
-    );
+    final res = SpeechRecognitionResult([
+      SpeechRecognitionWords(words, [words], 0.95),
+    ], isFinal ? 1 : 0);
     resultListener?.call(res);
   }
 
@@ -214,7 +212,9 @@ void main() {
 
   setUp(() async {
     testTempDir = await Directory.systemTemp.createTemp('cashflow_audio_test_');
-    testModelDir = await Directory.systemTemp.createTemp('cashflow_models_test_');
+    testModelDir = await Directory.systemTemp.createTemp(
+      'cashflow_models_test_',
+    );
   });
 
   tearDown(() async {
@@ -249,19 +249,22 @@ void main() {
       expect(await File(path).exists(), isFalse);
     });
 
-    test('throws AudioCapturePermissionException when mic permission denied', () async {
-      final fakeClient = FakeAudioRecorderClient(permissionGranted: false);
-      final service = AudioCaptureService(
-        recorderClient: fakeClient,
-        tempDirectory: testTempDir,
-      );
+    test(
+      'throws AudioCapturePermissionException when mic permission denied',
+      () async {
+        final fakeClient = FakeAudioRecorderClient(permissionGranted: false);
+        final service = AudioCaptureService(
+          recorderClient: fakeClient,
+          tempDirectory: testTempDir,
+        );
 
-      expect(
-        () => service.startRecording(),
-        throwsA(isA<AudioCapturePermissionException>()),
-      );
-      expect(service.isRecording, isFalse);
-    });
+        expect(
+          () => service.startRecording(),
+          throwsA(isA<AudioCapturePermissionException>()),
+        );
+        expect(service.isRecording, isFalse);
+      },
+    );
 
     test('cancelRecording immediately purges active recording file', () async {
       final fakeClient = FakeAudioRecorderClient();
@@ -278,73 +281,84 @@ void main() {
       expect(await File(path).exists(), isFalse);
     });
 
-    test('purgeTemporaryWavs removes all lingering wav files in audio directory', () async {
-      final fakeClient = FakeAudioRecorderClient();
-      final service = AudioCaptureService(
-        recorderClient: fakeClient,
-        tempDirectory: testTempDir,
-      );
+    test(
+      'purgeTemporaryWavs removes all lingering wav files in audio directory',
+      () async {
+        final fakeClient = FakeAudioRecorderClient();
+        final service = AudioCaptureService(
+          recorderClient: fakeClient,
+          tempDirectory: testTempDir,
+        );
 
-      final audioDir = await service.getAudioDirectory();
-      final file1 = File(p.join(audioDir.path, 'lingering_1.wav'));
-      final file2 = File(p.join(audioDir.path, 'lingering_2.wav'));
-      final otherFile = File(p.join(audioDir.path, 'notes.txt'));
+        final audioDir = await service.getAudioDirectory();
+        final file1 = File(p.join(audioDir.path, 'lingering_1.wav'));
+        final file2 = File(p.join(audioDir.path, 'lingering_2.wav'));
+        final otherFile = File(p.join(audioDir.path, 'notes.txt'));
 
-      await file1.writeAsString('dummy');
-      await file2.writeAsString('dummy');
-      await otherFile.writeAsString('keep');
+        await file1.writeAsString('dummy');
+        await file2.writeAsString('dummy');
+        await otherFile.writeAsString('keep');
 
-      final deleted = await service.purgeTemporaryWavs();
-      expect(deleted, equals(2));
-      expect(await file1.exists(), isFalse);
-      expect(await file2.exists(), isFalse);
-      expect(await otherFile.exists(), isTrue);
-    });
+        final deleted = await service.purgeTemporaryWavs();
+        expect(deleted, equals(2));
+        expect(await file1.exists(), isFalse);
+        expect(await file2.exists(), isFalse);
+        expect(await otherFile.exists(), isTrue);
+      },
+    );
   });
 
   group('SpeechToTextService (ADR-0006)', () {
-    test('validates platform-native STT readiness with zero weight download', () async {
-      final mockManager = ModelManagementService(baseDirectory: testModelDir);
-      final mockEngine = MockSttEngine();
-      final service = SpeechToTextService(
-        engine: mockEngine,
-        modelManager: mockManager,
-      );
+    test(
+      'validates platform-native STT readiness with zero weight download',
+      () async {
+        final mockManager = ModelManagementService(baseDirectory: testModelDir);
+        final mockEngine = MockSttEngine();
+        final service = SpeechToTextService(
+          engine: mockEngine,
+          modelManager: mockManager,
+        );
 
-      // Platform STT requires zero downloaded weights
-      expect(await service.checkModelsInstalled(), isTrue);
-      await service.initializeEngine();
-      expect(service.isEngineInitialized, isTrue);
-    });
+        // Platform STT requires zero downloaded weights
+        expect(await service.checkModelsInstalled(), isTrue);
+        await service.initializeEngine();
+        expect(service.isEngineInitialized, isTrue);
+      },
+    );
 
-    test('streaming startListening and stopListening delivers live transcripts', () async {
-      final mockEngine = MockSttEngine(defaultTranscript: 'Chai 20 rupees on UPI');
-      final service = SpeechToTextService(
-        engine: mockEngine,
-        modelManager: ModelManagementService(baseDirectory: testModelDir),
-      );
+    test(
+      'streaming startListening and stopListening delivers live transcripts',
+      () async {
+        final mockEngine = MockSttEngine(
+          defaultTranscript: 'Chai 20 rupees on UPI',
+        );
+        final service = SpeechToTextService(
+          engine: mockEngine,
+          modelManager: ModelManagementService(baseDirectory: testModelDir),
+        );
 
-      String liveWords = '';
-      bool wasFinal = false;
-      double lastSound = 0.0;
+        String liveWords = '';
+        bool wasFinal = false;
+        double lastSound = 0.0;
 
-      await service.startListening(
-        onResult: (words, isFinal) {
-          liveWords = words;
-          wasFinal = isFinal;
-        },
-        onSoundLevelChange: (sound) {
-          lastSound = sound;
-        },
-      );
+        await service.startListening(
+          onResult: (words, isFinal) {
+            liveWords = words;
+            wasFinal = isFinal;
+          },
+          onSoundLevelChange: (sound) {
+            lastSound = sound;
+          },
+        );
 
-      expect(liveWords, equals('Chai 20 rupees on UPI'));
-      expect(wasFinal, isTrue);
-      expect(lastSound, equals(0.5));
+        expect(liveWords, equals('Chai 20 rupees on UPI'));
+        expect(wasFinal, isTrue);
+        expect(lastSound, equals(0.5));
 
-      final finalResult = await service.stopListening();
-      expect(finalResult, equals('Chai 20 rupees on UPI'));
-    });
+        final finalResult = await service.stopListening();
+        expect(finalResult, equals('Chai 20 rupees on UPI'));
+      },
+    );
 
     test('detects silent audio and throws SttSilentAudioException', () async {
       final mockEngine = MockSttEngine();
@@ -365,9 +379,11 @@ void main() {
     });
 
     test('propagates engine failures as SttEngineException', () async {
-      final mockEngine = MockSttEngine(onTranscribe: (_) {
-        throw const SttEngineException('Decoding stream timeout');
-      });
+      final mockEngine = MockSttEngine(
+        onTranscribe: (_) {
+          throw const SttEngineException('Decoding stream timeout');
+        },
+      );
       await mockEngine.initialize(modelDirPath: testModelDir.path);
 
       final validWav = File(p.join(testTempDir.path, 'valid.wav'));
@@ -468,111 +484,121 @@ void main() {
       expect(lastResult, equals('lunch 250 rupees'));
     });
 
-    test('updateTranscript updates committed buffer and appends subsequent speech', () async {
-      final fakeSpeech = FakeSpeechToText();
-      final engine = NativePlatformSttEngine(speech: fakeSpeech);
-      await engine.initialize();
+    test(
+      'updateTranscript updates committed buffer and appends subsequent speech',
+      () async {
+        final fakeSpeech = FakeSpeechToText();
+        final engine = NativePlatformSttEngine(speech: fakeSpeech);
+        await engine.initialize();
 
-      String lastResult = '';
-      await engine.startListening(
-        onResult: (words, isFinal) {
-          lastResult = words;
-        },
-      );
+        String lastResult = '';
+        await engine.startListening(
+          onResult: (words, isFinal) {
+            lastResult = words;
+          },
+        );
 
-      // 1. Spoken words
-      fakeSpeech.emitResult('lunch 25 rupees', false);
-      expect(lastResult, equals('lunch 25 rupees'));
+        // 1. Spoken words
+        fakeSpeech.emitResult('lunch 25 rupees', false);
+        expect(lastResult, equals('lunch 25 rupees'));
 
-      // 2. Pause
-      await engine.pauseListening();
+        // 2. Pause
+        await engine.pauseListening();
 
-      // 3. User corrects typo manually
-      engine.updateTranscript('lunch 250 rupees');
+        // 3. User corrects typo manually
+        engine.updateTranscript('lunch 250 rupees');
 
-      // 4. User resumes and speaks additional items
-      await engine.resumeListening();
-      fakeSpeech.emitResult('and 30 tea', true);
+        // 4. User resumes and speaks additional items
+        await engine.resumeListening();
+        fakeSpeech.emitResult('and 30 tea', true);
 
-      final finalTranscript = await engine.stopListening();
-      expect(finalTranscript, equals('lunch 250 rupees, and 30 tea'));
-    });
+        final finalTranscript = await engine.stopListening();
+        expect(finalTranscript, equals('lunch 250 rupees, and 30 tea'));
+      },
+    );
   });
 
   group('VoiceAudioPipeline - Zero Audio Persistence Invariant (US 13)', () {
-    test('transcribes speech accurately and purges WAV file on success', () async {
-      final fakeClient = FakeAudioRecorderClient();
-      final captureService = AudioCaptureService(
-        recorderClient: fakeClient,
-        tempDirectory: testTempDir,
-      );
+    test(
+      'transcribes speech accurately and purges WAV file on success',
+      () async {
+        final fakeClient = FakeAudioRecorderClient();
+        final captureService = AudioCaptureService(
+          recorderClient: fakeClient,
+          tempDirectory: testTempDir,
+        );
 
-      final mockEngine = MockSttEngine(
-        defaultTranscript: 'Lunch 12 dollars at Subway yesterday',
-      );
-      await mockEngine.initialize(modelDirPath: testModelDir.path);
+        final mockEngine = MockSttEngine(
+          defaultTranscript: 'Lunch 12 dollars at Subway yesterday',
+        );
+        await mockEngine.initialize(modelDirPath: testModelDir.path);
 
-      final sttService = SpeechToTextService(
-        engine: mockEngine,
-        modelManager: ModelManagementService(baseDirectory: testModelDir),
-      );
+        final sttService = SpeechToTextService(
+          engine: mockEngine,
+          modelManager: ModelManagementService(baseDirectory: testModelDir),
+        );
 
-      final pipeline = VoiceAudioPipeline(
-        captureService: captureService,
-        sttService: sttService,
-      );
+        final pipeline = VoiceAudioPipeline(
+          captureService: captureService,
+          sttService: sttService,
+        );
 
-      // 1. Start recording
-      final wavPath = await pipeline.startRecording();
-      expect(pipeline.isRecording, isTrue);
-      expect(await File(wavPath).exists(), isTrue);
+        // 1. Start recording
+        final wavPath = await pipeline.startRecording();
+        expect(pipeline.isRecording, isTrue);
+        expect(await File(wavPath).exists(), isTrue);
 
-      // 2. Stop and transcribe
-      final transcript = await pipeline.stopAndTranscribe();
-      expect(transcript, equals('Lunch 12 dollars at Subway yesterday'));
+        // 2. Stop and transcribe
+        final transcript = await pipeline.stopAndTranscribe();
+        expect(transcript, equals('Lunch 12 dollars at Subway yesterday'));
 
-      // 3. Verify US 13: Zero audio persistence - file deleted immediately
-      expect(await File(wavPath).exists(), isFalse);
+        // 3. Verify US 13: Zero audio persistence - file deleted immediately
+        expect(await File(wavPath).exists(), isFalse);
 
-      // 4. Verify 0 lingering files in audio directory
-      final lingering = await pipeline.purgeLingeringCache();
-      expect(lingering, equals(0));
-    });
+        // 4. Verify 0 lingering files in audio directory
+        final lingering = await pipeline.purgeLingeringCache();
+        expect(lingering, equals(0));
+      },
+    );
 
-    test('guarantees WAV deletion even when transcription fails with error', () async {
-      final fakeClient = FakeAudioRecorderClient();
-      final captureService = AudioCaptureService(
-        recorderClient: fakeClient,
-        tempDirectory: testTempDir,
-      );
+    test(
+      'guarantees WAV deletion even when transcription fails with error',
+      () async {
+        final fakeClient = FakeAudioRecorderClient();
+        final captureService = AudioCaptureService(
+          recorderClient: fakeClient,
+          tempDirectory: testTempDir,
+        );
 
-      final mockEngine = MockSttEngine(
-        onTranscribe: (_) => throw const SttEngineException('ONNX runtime crash'),
-      );
-      await mockEngine.initialize(modelDirPath: testModelDir.path);
+        final mockEngine = MockSttEngine(
+          onTranscribe: (_) =>
+              throw const SttEngineException('ONNX runtime crash'),
+        );
+        await mockEngine.initialize(modelDirPath: testModelDir.path);
 
-      final sttService = SpeechToTextService(
-        engine: mockEngine,
-        modelManager: ModelManagementService(baseDirectory: testModelDir),
-      );
+        final sttService = SpeechToTextService(
+          engine: mockEngine,
+          modelManager: ModelManagementService(baseDirectory: testModelDir),
+        );
 
-      final pipeline = VoiceAudioPipeline(
-        captureService: captureService,
-        sttService: sttService,
-      );
+        final pipeline = VoiceAudioPipeline(
+          captureService: captureService,
+          sttService: sttService,
+        );
 
-      final wavPath = await pipeline.startRecording();
-      expect(await File(wavPath).exists(), isTrue);
+        final wavPath = await pipeline.startRecording();
+        expect(await File(wavPath).exists(), isTrue);
 
-      // Stop and transcribe fails
-      await expectLater(
-        () => pipeline.stopAndTranscribe(),
-        throwsA(isA<SttEngineException>()),
-      );
+        // Stop and transcribe fails
+        await expectLater(
+          () => pipeline.stopAndTranscribe(),
+          throwsA(isA<SttEngineException>()),
+        );
 
-      // Invariant US 13: WAV must STILL be purged in finally block!
-      expect(await File(wavPath).exists(), isFalse);
-    });
+        // Invariant US 13: WAV must STILL be purged in finally block!
+        expect(await File(wavPath).exists(), isFalse);
+      },
+    );
 
     test('guarantees WAV deletion when audio is silent', () async {
       final fakeClient = FakeAudioRecorderClient(generateSilentWav: true);
