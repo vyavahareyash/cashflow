@@ -179,8 +179,34 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Support & Open Source'), findsOneWidget);
+      expect(find.byKey(const Key('play_store_buy_coffee_button')), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('play_store_buy_coffee_button')),
+        300,
+      );
+      await tester.tap(find.byKey(const Key('play_store_buy_coffee_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Buy Me a Coffee'), findsOneWidget);
       expect(find.byKey(const Key('tip_button_coffee_single')), findsOneWidget);
       expect(find.byKey(const Key('tip_button_coffee_double')), findsOneWidget);
+      expect(find.text('Fuel a quick bug fix or optimization'), findsOneWidget);
+      expect(find.text('Power a new feature & test cycle'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('tip_button_coffee_single')),
+          matching: find.byType(Image),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('tip_button_coffee_double')),
+          matching: find.byType(Image),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Developer & Community footer displays correctly with GitHub and LinkedIn buttons', (tester) async {

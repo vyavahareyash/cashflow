@@ -56,7 +56,7 @@ void main() {
   });
 
   group('BillingService product definitions and initial state', () {
-    test('Product identifiers are defined for coffee tiers', () {
+    test('Product identifiers and icon asset paths are defined for coffee tiers', () {
       expect(BillingService.productCoffeeSingle, equals('coffee_single'));
       expect(BillingService.productCoffeeDouble, equals('coffee_double'));
       expect(BillingService.productCoffeePot, equals('coffee_pot'));
@@ -68,6 +68,18 @@ void main() {
           'coffee_pot',
         ]),
       );
+      expect(BillingService.assetCoffeeSingle, equals('assets/icon/products/coffee_single_3d.png'));
+      expect(BillingService.assetCoffeeDouble, equals('assets/icon/products/coffee_double_3d.png'));
+      expect(BillingService.assetCoffeePot, equals('assets/icon/products/coffee_pot_3d.png'));
+      expect(BillingService.assetCoffeeSingleOriginal, equals('assets/icon/products/coffee_single.png'));
+      expect(BillingService.assetCoffeeDoubleOriginal, equals('assets/icon/products/coffee_double.png'));
+      expect(BillingService.assetCoffeePotOriginal, equals('assets/icon/products/coffee_pot.png'));
+      expect(BillingService.productIconAsset('coffee_single'), equals(BillingService.assetCoffeeSingle));
+      expect(BillingService.productIconAsset('coffee_double'), equals(BillingService.assetCoffeeDouble));
+      expect(BillingService.productIconAsset('coffee_pot'), equals(BillingService.assetCoffeePot));
+      expect(BillingService.productTagline('coffee_single'), equals('Fuel a quick bug fix or optimization'));
+      expect(BillingService.productTagline('coffee_double'), equals('Power a new feature & test cycle'));
+      expect(BillingService.productTagline('coffee_pot'), equals('Supercharge continuous development & maintenance'));
     });
 
     test('Initial instance state has default empty values', () {
