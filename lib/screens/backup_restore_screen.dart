@@ -758,6 +758,8 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.xl),
+
             // 5. APP WALKTHROUGH & CONCEPTS
             _buildSectionHeader('App Walkthrough & Concepts', isDark),
             const SizedBox(height: AppSpacing.xs),
