@@ -10,7 +10,6 @@ import '../components/export_backup_dialog.dart';
 import '../models/salary_cycle.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
-import '../components/custom_button.dart';
 import '../config/app_config.dart';
 import '../services/billing_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,6 +29,7 @@ class BackupRestoreScreen extends StatefulWidget {
 }
 
 class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
+  static const Color bmcYellow = Color(0xFFFFDD00);
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _voiceModelSectionKey = GlobalKey();
 
@@ -1866,8 +1866,6 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Widget _buildSupportDevelopmentCard(bool isDark) {
-    const bmcYellow = Color(0xFFFFDD00);
-
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
@@ -2039,100 +2037,271 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           );
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: billing.products.map((product) {
-                final isDouble = product.id.contains('double');
-                final isPot = product.id.contains('pot');
-                final icon = isPot ? '☕☕☕' : (isDouble ? '☕☕' : '☕');
-                final title = isPot
-                    ? 'Coffee Pot'
-                    : (isDouble ? '2 Coffees' : '1 Coffee');
+        return Material(
+          key: const Key('play_store_buy_coffee_button'),
+          color: bmcYellow,
+          borderRadius: BorderRadius.circular(14),
+          elevation: 2,
+          shadowColor: bmcYellow.withValues(alpha: 0.4),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _showPlayStoreCoffeeBottomSheet(context, isDark),
+            child: Container(
+              width: double.infinity,
+              height: 52,
+              alignment: Alignment.center,
+              child: Image.asset(
+                'assets/icon/bmc_official_button.png',
+                height: 48,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Material(
-                      key: Key('tip_button_${product.id}'),
-                      color: isDark ? AppColors.darkSurface : Colors.white,
-                      borderRadius: AppBorderRadius.mediumBorder,
-                      elevation: 1,
-                      child: InkWell(
-                        borderRadius: AppBorderRadius.mediumBorder,
-                        onTap: billing.purchasePending
-                            ? null
-                            : () => billing.buyProduct(product),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md,
-                            horizontal: 4,
-                          ),
+  void _showPlayStoreCoffeeBottomSheet(BuildContext context, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return ListenableBuilder(
+          listenable: BillingService.instance,
+          builder: (context, _) {
+            final billing = BillingService.instance;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.gray700 : AppColors.gray300,
+                          borderRadius: AppBorderRadius.pillBorder,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            border: Border.all(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : AppColors.gray200,
-                            ),
+                            color: bmcYellow,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: bmcYellow.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
+                          child: Image.asset(
+                            'assets/icon/bmc_cup_icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
                           child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(icon, style: const TextStyle(fontSize: 20)),
-                              const SizedBox(height: 4),
                               Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.labelSmall.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                'Buy Me a Coffee',
+                                style: AppTypography.titleMedium.copyWith(
                                   color: isDark
                                       ? AppColors.darkText
                                       : AppColors.gray900,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                product.price,
+                                'Support ongoing development via Google Play',
                                 style: AppTypography.bodySmall.copyWith(
                                   color: isDark
-                                      ? AppColors.emerald400
-                                      : AppColors.emerald700,
-                                  fontWeight: FontWeight.w600,
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          tooltip: 'Close',
+                        ),
+                      ],
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            if (billing.purchasePending) ...[
-              const SizedBox(height: AppSpacing.sm),
-              const Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                    const SizedBox(height: AppSpacing.lg),
+                    ...billing.products.map((product) {
+                      final isDouble = product.id.contains('double');
+                      final isPot = product.id.contains('pot');
+                      final assetImage =
+                          BillingService.productIconAsset(product.id);
+                      final title = isPot
+                          ? 'Coffee Pot'
+                          : (isDouble ? '2 Coffees' : '1 Coffee');
+                      final tagline = BillingService.productTagline(product.id);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Material(
+                          key: Key('tip_button_${product.id}'),
+                          color: isDark
+                              ? AppColors.darkSurfaceElevated
+                              : AppColors.gray50,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: billing.purchasePending
+                                ? null
+                                : () => billing.buyProduct(product),
+                            child: Container(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.darkBorder
+                                      : AppColors.gray200,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                      border: Border.all(
+                                        color: isDark
+                                            ? AppColors.darkBorder
+                                            : AppColors.gray200,
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: isDark ? 0.3 : 0.08,
+                                          ),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.asset(
+                                        assetImage,
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                        excludeFromSemantics: true,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style:
+                                              AppTypography.titleMedium.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? AppColors.darkText
+                                                : AppColors.gray900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          tagline,
+                                          style:
+                                              AppTypography.bodySmall.copyWith(
+                                            color: isDark
+                                                ? AppColors.gray400
+                                                : AppColors.gray600,
+                                            height: 1.25,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? AppColors.emerald900
+                                              .withValues(alpha: 0.4)
+                                          : AppColors.emerald50,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? AppColors.emerald700
+                                            : AppColors.emerald600,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      product.price,
+                                      style:
+                                          AppTypography.labelMedium.copyWith(
+                                        color: isDark
+                                            ? AppColors.emerald400
+                                            : AppColors.emerald700,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    if (billing.purchasePending) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
-            if (billing.errorMessage != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                billing.errorMessage!,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.danger,
-                ),
-              ),
-            ],
-          ],
+            );
+          },
         );
       },
     );

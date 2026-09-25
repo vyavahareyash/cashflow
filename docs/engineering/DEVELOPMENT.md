@@ -43,6 +43,16 @@ flutter run -d macos
 flutter run -d <wireless-device-id> # e.g. adb-RZCX127ARVK-Q5g91b._adb-tls-connect._tcp
 ```
 
+Run with Play Store version of coffee (Google Play Billing tip jar):
+```bash
+flutter run --dart-define=ENABLE_EXTERNAL_DONATIONS=false
+```
+
+Run with Buy Me a Coffee version (external donations - default in debug):
+```bash
+flutter run --dart-define=ENABLE_EXTERNAL_DONATIONS=true
+```
+
 ### Static Analysis & Formatting
 Format code according to project rules:
 ```bash

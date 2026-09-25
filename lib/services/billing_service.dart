@@ -35,6 +35,34 @@ class BillingService extends ChangeNotifier {
   static const String productCoffeeDouble = 'coffee_double';
   static const String productCoffeePot = 'coffee_pot';
 
+  static const String assetCoffeeSingle = 'assets/icon/products/coffee_single_3d.png';
+  static const String assetCoffeeDouble = 'assets/icon/products/coffee_double_3d.png';
+  static const String assetCoffeePot = 'assets/icon/products/coffee_pot_3d.png';
+
+  static const String assetCoffeeSingleOriginal = 'assets/icon/products/coffee_single.png';
+  static const String assetCoffeeDoubleOriginal = 'assets/icon/products/coffee_double.png';
+  static const String assetCoffeePotOriginal = 'assets/icon/products/coffee_pot.png';
+
+  /// Resolves the asset image path corresponding to a coffee tip product identifier.
+  static String productIconAsset(String productId) {
+    if (productId.contains('pot')) {
+      return assetCoffeePot;
+    } else if (productId.contains('double')) {
+      return assetCoffeeDouble;
+    }
+    return assetCoffeeSingle;
+  }
+
+  /// Resolves a user-friendly tagline describing the impact of a coffee tip tier.
+  static String productTagline(String productId) {
+    if (productId.contains('pot')) {
+      return 'Supercharge continuous development & maintenance';
+    } else if (productId.contains('double')) {
+      return 'Power a new feature & test cycle';
+    }
+    return 'Fuel a quick bug fix or optimization';
+  }
+
   static const Set<String> productIds = {
     productCoffeeSingle,
     productCoffeeDouble,
