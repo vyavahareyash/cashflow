@@ -19,3 +19,4 @@ Consult detailed references on demand when handling specific feature areas:
 - **Architectural Decisions**: See [docs/adr/](docs/adr/) when revisiting or evaluating trade-offs for core state, goal locking, or budget tracking.
 - **Product Specification**: See [SPECIFICATION.md](docs/product/SPECIFICATION.md) when verifying user-facing feature requirements and transaction lifecycle rules.
 - **User Experience & Walkthrough**: See [FEATURE_GUIDE.md](docs/user/FEATURE_GUIDE.md) when modifying UI flows, privacy mode, or settings.
+- **Analytics & Metrics**: See [METRICS_METHODOLOGY.md](docs/engineering/METRICS_METHODOLOGY.md) when updating project telemetry, estimation formulas, or portfolio reports.

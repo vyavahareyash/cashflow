@@ -91,6 +91,13 @@ def main():
                 test_cases += len(re.findall(r'\b(?:test|testWidgets)\(', content))
         except: pass
 
+    screenshot_markers = 0
+    if os.path.exists("integration_test/screenshots_test.dart"):
+        try:
+            with open("integration_test/screenshots_test.dart") as fp:
+                screenshot_markers = len(re.findall(r'_markScreen\(', fp.read()))
+        except: pass
+
     # 4. Punchcard Heatmap Data & Deep-Work Analysis
     heat_raw = run("git log --date=iso --pretty=format:'%ad'")
     matrix = defaultdict(lambda: defaultdict(int))
@@ -120,6 +127,12 @@ def main():
 
     top_day_tuple = days_counter.most_common(1)
     top_day_name, top_day_commits = top_day_tuple[0] if top_day_tuple else ('Tue', 0)
+
+    weekend_commits = days_counter.get('Sat', 0) + days_counter.get('Sun', 0)
+    weekend_pct = round((weekend_commits / max(1, total_commits)) * 100, 1)
+
+    after_18_commits = sum(hours_counter[h] for h in range(18, 24)) + sum(hours_counter[h] for h in range(0, 4))
+    after_18_pct = round((after_18_commits / max(1, total_commits)) * 100, 1)
 
     # 5. Timeline chart data
     sorted_dates = sorted(date_counts.keys())
@@ -487,7 +500,7 @@ def main():
 
     .heatmap-callouts {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 1rem;
       margin-top: 1.5rem;
     }}
@@ -930,14 +943,19 @@ def main():
           <div class="callout-sub">{best_win_count} commits ({win_pct}% of total development activity)</div>
         </div>
         <div class="callout-box">
-          <div class="callout-title">Peak Sprint Days</div>
-          <div class="callout-val">{top_day_name} &amp; Weekend</div>
-          <div class="callout-sub">{top_day_name} ({top_day_commits} commits), Sat ({days_counter.get('Sat', 0)}), Sun ({days_counter.get('Sun', 0)})</div>
+          <div class="callout-title">Peak Midweek Velocity</div>
+          <div class="callout-val">{top_day_name} ({top_day_commits} commits)</div>
+          <div class="callout-sub">Primary sprint throughput day followed by Thu ({days_counter.get('Thu', 0)} commits)</div>
         </div>
         <div class="callout-box">
-          <div class="callout-title">Disciplined Planning Cadence</div>
-          <div class="callout-val">{days_counter.get('Fri', 0)} Friday Commits</div>
-          <div class="callout-sub">Dedicated to testing validation, documentation &amp; roadmapping</div>
+          <div class="callout-title">Weekend Sprint Ratio</div>
+          <div class="callout-val">{weekend_commits} Commits ({weekend_pct}%)</div>
+          <div class="callout-sub">Dedicated solo focus across Sat ({days_counter.get('Sat', 0)}) &amp; Sun ({days_counter.get('Sun', 0)})</div>
+        </div>
+        <div class="callout-box">
+          <div class="callout-title">Night-Owl Engineering</div>
+          <div class="callout-val">{after_18_pct}% After 18:00 IST</div>
+          <div class="callout-sub">{after_18_commits} commits shipped during evening &amp; late-night focus hours</div>
         </div>
       </div>
     </div>
@@ -995,7 +1013,7 @@ def main():
             <li><span>Development Augmentation</span> <span class="val">Agentic AI & LLM Pair Programming</span></li>
             <li><span>Estimated LLM Context Volume</span> <span class="val">~{estimated_ai_tokens_m}M Tokens</span></li>
             <li><span>Estimated Compute Spend</span> <span class="val">~${estimated_ai_spend_usd} USD in Token Credits</span></li>
-            <li><span>Hallucination Verification</span> <span class="val">{test_cases} tests + 27 visual markers</span></li>
+            <li><span>Hallucination Verification</span> <span class="val">{test_cases} tests + {screenshot_markers} visual markers</span></li>
             <li><span>Capital Efficiency Multiplier</span> <span class="val">~{capital_efficiency_mult:,}&times; vs Agency Spend</span></li>
             <li><span>Net Human Hours Saved</span> <span class="val">~{max(0, agency_hours - actual_burst_hours):,} Hours</span></li>
           </ul>
@@ -1049,7 +1067,7 @@ def main():
         <div class="callout-box">
           <div class="callout-title">Hallucination Verification</div>
           <div class="callout-val">0% Unverified Code</div>
-          <div class="callout-sub">{test_cases} automated tests + 27 visual UI screenshot markers</div>
+          <div class="callout-sub">{test_cases} automated tests + {screenshot_markers} visual UI screenshot markers</div>
         </div>
       </div>
 
@@ -1143,7 +1161,7 @@ def main():
           <span class="value-card-icon">🧪</span>
           <h4>Exhaustive Automated Test Bed</h4>
           <p>
-            Over {test_cases} automated unit, widget, and visual integration tests with sequential SQLite locking guardrails and 27 visual screenshot markers automated via adb workflows.
+            Over {test_cases} automated unit, widget, and visual integration tests with sequential SQLite locking guardrails and {screenshot_markers} visual screenshot markers automated via adb workflows.
           </p>
         </div>
 
