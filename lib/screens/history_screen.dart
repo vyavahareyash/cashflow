@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -42,7 +44,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadTransactions();
+    unawaited(_loadTransactions());
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
 
@@ -54,7 +56,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _onDataChanged() {
     if (mounted) {
-      _loadTransactions();
+      unawaited(_loadTransactions());
     }
   }
 
@@ -160,7 +162,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Filters', style: AppTypography.titleLarge),
+                              const Text(
+                                'Filters',
+                                style: AppTypography.titleLarge,
+                              ),
                               const Spacer(),
                               IconButton(
                                 tooltip: 'Close filters',
@@ -290,8 +295,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _exportCSV() async {
     try {
-      final defaultDir = kIsWeb ? '' : await DatabaseHelper.instance.getDefaultBackupDirectory();
-      final effectiveDir = await DatabaseHelper.instance.getEffectiveBackupDirectory();
+      final defaultDir = kIsWeb
+          ? ''
+          : await DatabaseHelper.instance.getDefaultBackupDirectory();
+      final effectiveDir = await DatabaseHelper.instance
+          .getEffectiveBackupDirectory();
       if (!mounted) return;
 
       final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -309,9 +317,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
       if (result == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('CSV export cancelled')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('CSV export cancelled')));
         }
         return;
       }
@@ -325,7 +333,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
 
       final path = await DatabaseHelper.instance.exportTransactionsAsCSV(
-        destinationDirectory: result.directory.isEmpty ? null : result.directory,
+        destinationDirectory: result.directory.isEmpty
+            ? null
+            : result.directory,
         fileName: result.fileName,
       );
       if (!mounted) return;
@@ -421,12 +431,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _endDate = null;
       }
     });
-    _loadTransactions();
+    unawaited(_loadTransactions());
   }
 
   void _stepPeriod(int monthDelta) {
     final current =
-        _selectedPeriod ?? DateTime(DateTime.now().year, DateTime.now().month, 1);
+        _selectedPeriod ??
+        DateTime(DateTime.now().year, DateTime.now().month, 1);
     final next = DateTime(current.year, current.month + monthDelta, 1);
     _setPeriod(next);
   }
@@ -589,8 +600,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ? amountNum.toStringAsFixed(0)
           : amountNum.toStringAsFixed(2),
     );
-    final noteController =
-        TextEditingController(text: tx['note'] as String? ?? '');
+    final noteController = TextEditingController(
+      text: tx['note'] as String? ?? '',
+    );
 
     DateTime selectedDate =
         DateTime.tryParse(tx['date'] as String? ?? '') ?? DateTime.now();
@@ -604,14 +616,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return true;
     }).toList();
 
-    if (!accounts.any((a) => a.id == selectedAccountId) && accounts.isNotEmpty) {
+    if (!accounts.any((a) => a.id == selectedAccountId) &&
+        accounts.isNotEmpty) {
       selectedAccountId = accounts.first.id!;
     }
     if (isTransfer &&
         selectedDestAccountId != null &&
         !accounts.any((a) => a.id == selectedDestAccountId)) {
-      selectedDestAccountId =
-          accounts.where((a) => a.id != selectedAccountId).firstOrNull?.id;
+      selectedDestAccountId = accounts
+          .where((a) => a.id != selectedAccountId)
+          .firstOrNull
+          ?.id;
     }
     if (selectedCategoryId != null &&
         !filteredCategories.any((c) => c.id == selectedCategoryId)) {
@@ -633,7 +648,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 left: AppSpacing.lg,
                 right: AppSpacing.lg,
                 top: AppSpacing.lg,
-                bottom: MediaQuery.of(sheetContext).viewInsets.bottom +
+                bottom:
+                    MediaQuery.of(sheetContext).viewInsets.bottom +
                     AppSpacing.lg,
               ),
               decoration: BoxDecoration(
@@ -699,8 +715,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     TextField(
                       key: const Key('edit_transaction_amount_field'),
                       controller: amountController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: 'Amount',
                         prefixText: '₹ ',
@@ -760,7 +777,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const SizedBox(height: AppSpacing.md),
                     if (isTransfer) ...[
                       DropdownButtonFormField<int>(
-                        key: const Key('edit_transaction_dest_account_dropdown'),
+                        key: const Key(
+                          'edit_transaction_dest_account_dropdown',
+                        ),
                         initialValue: selectedDestAccountId,
                         decoration: const InputDecoration(
                           labelText: 'Destination Account',
@@ -791,7 +810,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         filteredCategories.isNotEmpty) ...[
                       DropdownButtonFormField<int?>(
                         key: const Key('edit_transaction_category_dropdown'),
-                        initialValue: filteredCategories.any((c) => c.id == selectedCategoryId)
+                        initialValue:
+                            filteredCategories.any(
+                              (c) => c.id == selectedCategoryId,
+                            )
                             ? selectedCategoryId
                             : null,
                         decoration: const InputDecoration(
@@ -832,8 +854,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     FilledButton(
                       key: const Key('edit_transaction_save_btn'),
                       onPressed: () async {
-                        final parsed =
-                            double.tryParse(amountController.text.trim());
+                        final parsed = double.tryParse(
+                          amountController.text.trim(),
+                        );
                         if (parsed == null || parsed <= 0) {
                           await AppDialogs.showWarning(
                             sheetContext,
@@ -867,7 +890,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Transaction updated successfully.'),
+                              content: Text(
+                                'Transaction updated successfully.',
+                              ),
                               backgroundColor: AppColors.emerald700,
                             ),
                           );
@@ -941,7 +966,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final netCashflow = totalInflow - totalOutflow;
 
     // Group transactions by month
-    Map<String, List<Map<String, dynamic>>> grouped = {};
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var tx in filtered) {
       final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
       final monthKey = DateFormat('MMMM yyyy').format(date);
@@ -1050,7 +1075,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         key: const Key('activity_ledger_open_filters_btn'),
                         icon: Icon(
                           Icons.tune_rounded,
-                          color: (_selectedCategories.isNotEmpty ||
+                          color:
+                              (_selectedCategories.isNotEmpty ||
                                   _startDate != null)
                               ? AppColors.emerald600
                               : null,
@@ -1063,12 +1089,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: AppBorderRadius.mediumBorder,
                             side: BorderSide(
-                              color: (_selectedCategories.isNotEmpty ||
+                              color:
+                                  (_selectedCategories.isNotEmpty ||
                                       _startDate != null)
                                   ? AppColors.emerald600
                                   : (isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray200),
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray200),
                             ),
                           ),
                           minimumSize: const Size(48, 48),
@@ -1089,7 +1116,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           _selectedTypes.isEmpty,
                           () {
                             setState(() => _selectedTypes.clear());
-                            _loadTransactions();
+                            unawaited(_loadTransactions());
                           },
                           isDark,
                         ),
@@ -1106,7 +1133,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 _selectedTypes = {'expense'};
                               }
                             });
-                            _loadTransactions();
+                            unawaited(_loadTransactions());
                           },
                           isDark,
                         ),
@@ -1123,7 +1150,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 _selectedTypes = {'income'};
                               }
                             });
-                            _loadTransactions();
+                            unawaited(_loadTransactions());
                           },
                           isDark,
                         ),
@@ -1140,7 +1167,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 _selectedTypes = {'transfer'};
                               }
                             });
-                            _loadTransactions();
+                            unawaited(_loadTransactions());
                           },
                           isDark,
                         ),
@@ -1161,7 +1188,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 };
                               }
                             });
-                            _loadTransactions();
+                            unawaited(_loadTransactions());
                           },
                           isDark,
                         ),
@@ -1182,14 +1209,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Row(
                               children: [
                                 IconButton(
-                                  key: const Key('activity_ledger_prev_period_btn'),
+                                  key: const Key(
+                                    'activity_ledger_prev_period_btn',
+                                  ),
                                   icon: const Icon(Icons.chevron_left_rounded),
                                   tooltip: 'Previous Month',
                                   onPressed: () => _stepPeriod(-1),
                                   visualDensity: VisualDensity.compact,
                                 ),
                                 InkWell(
-                                  key: const Key('activity_ledger_pick_period_btn'),
+                                  key: const Key(
+                                    'activity_ledger_pick_period_btn',
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                   onTap: _pickPeriodMonthYear,
                                   child: Padding(
@@ -1210,17 +1241,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         Text(
                                           _selectedPeriod == null
                                               ? 'All Time'
-                                              : DateFormat('MMMM yyyy').format(_selectedPeriod!),
-                                          style: AppTypography.titleMedium.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                              : DateFormat('MMMM yyyy')
+                                                    .format(_selectedPeriod!),
+                                          style: AppTypography.titleMedium
+                                              .copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
                                 IconButton(
-                                  key: const Key('activity_ledger_next_period_btn'),
+                                  key: const Key(
+                                    'activity_ledger_next_period_btn',
+                                  ),
                                   icon: const Icon(Icons.chevron_right_rounded),
                                   tooltip: 'Next Month',
                                   onPressed: () => _stepPeriod(1),
@@ -1229,7 +1264,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               ],
                             ),
                             TextButton(
-                              key: const Key('activity_ledger_toggle_all_time_btn'),
+                              key: const Key(
+                                'activity_ledger_toggle_all_time_btn',
+                              ),
                               onPressed: () => _setPeriod(
                                 _selectedPeriod == null
                                     ? DateTime(
@@ -1240,7 +1277,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     : null,
                               ),
                               child: Text(
-                                _selectedPeriod == null ? 'Show Month' : 'All Time',
+                                _selectedPeriod == null
+                                    ? 'Show Month'
+                                    : 'All Time',
                               ),
                             ),
                           ],
@@ -1410,192 +1449,197 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 : '$accountName → $destinationName';
                             final label = _transactionLabel(type);
 
-                                    final isGoalTx = type == 'goal_lock' ||
-                                        type == 'goal_unlock' ||
-                                        type == 'goal_payment';
-                                    final dateFormatted =
-                                        DateFormat('MMM dd').format(date);
-                                    String tileTitle;
-                                    String tileSubtitle;
+                            final isGoalTx =
+                                type == 'goal_lock' ||
+                                type == 'goal_unlock' ||
+                                type == 'goal_payment';
+                            final dateFormatted = DateFormat('MMM dd')
+                                .format(date);
+                            String tileTitle;
+                            String tileSubtitle;
 
-                                    if (isGoalTx) {
-                                      final planDisplay = goalName ?? label;
-                                      final catInfo = (type == 'goal_payment' &&
-                                              categoryName != 'General' &&
-                                              categoryName.isNotEmpty)
-                                          ? ' • $categoryName'
-                                          : '';
-                                      if (note != null && note.isNotEmpty) {
-                                        tileTitle = note;
-                                        tileSubtitle =
-                                            '$label • Goal: $planDisplay$catInfo • $detail • $dateFormatted';
-                                      } else {
-                                        tileTitle = planDisplay;
-                                        tileSubtitle =
-                                            '$label$catInfo • $detail • $dateFormatted';
-                                      }
-                                    } else {
-                                      if (note != null && note.isNotEmpty) {
-                                        tileTitle = note;
-                                        tileSubtitle =
-                                            '${type == 'expense' ? categoryName : label} • $detail • $dateFormatted';
-                                      } else {
-                                        tileTitle = type == 'expense'
-                                            ? categoryName
-                                            : label;
-                                        tileSubtitle =
-                                            '$detail • $dateFormatted';
-                                      }
-                                    }
+                            if (isGoalTx) {
+                              final planDisplay = goalName ?? label;
+                              final catInfo =
+                                  (type == 'goal_payment' &&
+                                      categoryName != 'General' &&
+                                      categoryName.isNotEmpty)
+                                  ? ' • $categoryName'
+                                  : '';
+                              if (note != null && note.isNotEmpty) {
+                                tileTitle = note;
+                                tileSubtitle =
+                                    '$label • Goal: $planDisplay$catInfo • $detail • $dateFormatted';
+                              } else {
+                                tileTitle = planDisplay;
+                                tileSubtitle =
+                                    '$label$catInfo • $detail • $dateFormatted';
+                              }
+                            } else {
+                              if (note != null && note.isNotEmpty) {
+                                tileTitle = note;
+                                tileSubtitle =
+                                    '${type == 'expense' ? categoryName : label} • $detail • $dateFormatted';
+                              } else {
+                                tileTitle = type == 'expense'
+                                    ? categoryName
+                                    : label;
+                                tileSubtitle = '$detail • $dateFormatted';
+                              }
+                            }
 
-                                    return CustomCard(
-                                      margin: const EdgeInsets.only(
-                                        bottom: AppSpacing.sm,
-                                      ),
-                                      padding: const EdgeInsets.all(AppSpacing.md),
-                                      child: Row(
-                                        children: [
-                                          CategoryBadge(
-                                            label: type == 'expense'
-                                                ? categoryName
-                                                : label,
-                                            iconOnly: true,
-                                          ),
-                                          const SizedBox(width: AppSpacing.sm + 2),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  tileTitle,
-                                                  style: AppTypography.bodyMedium
-                                                      .copyWith(
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                Text(
-                                                  tileSubtitle,
-                                                  style: AppTypography.labelSmall
-                                                      .copyWith(
-                                                        color: isDark
-                                                            ? AppColors.gray400
-                                                            : AppColors.gray600,
-                                                      ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: AppSpacing.xs),
-                                          Text(
-                                            '${_isCredit(type)
-                                                ? '+'
-                                                : type == 'transfer'
-                                                ? ''
-                                                : '-'}${AppFormatters.currency(amount)}',
-                                            style: AppTypography.titleMedium.copyWith(
-                                              color: _isCredit(type)
-                                                  ? AppColors.success
-                                                  : type == 'transfer'
-                                                  ? AppColors.info
-                                                  : AppColors.danger,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          PopupMenuButton<String>(
-                                            key: Key('options_tx_${tx['id']}'),
-                                            icon: Icon(
-                                              Icons.more_vert_rounded,
-                                              size: 18,
-                                              color: isDark
-                                                  ? AppColors.gray400
-                                                  : AppColors.gray600,
-                                            ),
-                                            tooltip: 'Transaction options',
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            splashRadius: 16,
-                                            color: isDark
-                                                ? AppColors.darkSurface
-                                                : AppColors.white,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  AppBorderRadius.mediumBorder,
-                                              side: BorderSide(
-                                                color: isDark
-                                                    ? AppColors.darkBorder
-                                                    : AppColors.gray200,
-                                                width: 1,
+                            return CustomCard(
+                              margin: const EdgeInsets.only(
+                                bottom: AppSpacing.sm,
+                              ),
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Row(
+                                children: [
+                                  CategoryBadge(
+                                    label: type == 'expense'
+                                        ? categoryName
+                                        : label,
+                                    iconOnly: true,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm + 2),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          tileTitle,
+                                          style: AppTypography.bodyMedium
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
                                               ),
-                                            ),
-                                            onSelected: (value) {
-                                              if (value == 'edit') {
-                                                _showEditTransactionDialog(tx);
-                                              } else if (value == 'delete') {
-                                                _deleteTransaction(tx);
-                                              }
-                                            },
-                                            itemBuilder: (context) => [
-                                              if (tx['type'] != 'cc_payment' &&
-                                                  tx['type'] != 'cc_lock' &&
-                                                  tx['type'] != 'cc_unlock')
-                                                PopupMenuItem(
-                                                  value: 'edit',
-                                                  height: 36,
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(
-                                                        Icons.edit_outlined,
-                                                        size: 16,
-                                                        color: isDark
-                                                            ? AppColors.gray300
-                                                            : AppColors.gray700,
-                                                      ),
-                                                      const SizedBox(
-                                                          width: AppSpacing.sm),
-                                                      Text(
-                                                        'Edit',
-                                                        style: AppTypography.labelMedium
-                                                            .copyWith(
-                                                          color: isDark
-                                                              ? AppColors.darkText
-                                                              : AppColors.gray900,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              PopupMenuItem(
-                                                value: 'delete',
-                                                height: 36,
-                                                child: Row(
-                                                  children: [
-                                                    const Icon(
-                                                      Icons.delete_outline_rounded,
-                                                      size: 16,
-                                                      color: AppColors.danger,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          tileSubtitle,
+                                          style: AppTypography.labelSmall
+                                              .copyWith(
+                                                color: isDark
+                                                    ? AppColors.gray400
+                                                    : AppColors.gray600,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  Text(
+                                    '${_isCredit(type)
+                                        ? '+'
+                                        : type == 'transfer'
+                                        ? ''
+                                        : '-'}${AppFormatters.currency(amount)}',
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: _isCredit(type)
+                                          ? AppColors.success
+                                          : type == 'transfer'
+                                          ? AppColors.info
+                                          : AppColors.danger,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    key: Key('options_tx_${tx['id']}'),
+                                    icon: Icon(
+                                      Icons.more_vert_rounded,
+                                      size: 18,
+                                      color: isDark
+                                          ? AppColors.gray400
+                                          : AppColors.gray600,
+                                    ),
+                                    tooltip: 'Transaction options',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    splashRadius: 16,
+                                    color: isDark
+                                        ? AppColors.darkSurface
+                                        : AppColors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          AppBorderRadius.mediumBorder,
+                                      side: BorderSide(
+                                        color: isDark
+                                            ? AppColors.darkBorder
+                                            : AppColors.gray200,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        unawaited(
+                                          _showEditTransactionDialog(tx),
+                                        );
+                                      } else if (value == 'delete') {
+                                        unawaited(_deleteTransaction(tx));
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      if (tx['type'] != 'cc_payment' &&
+                                          tx['type'] != 'cc_lock' &&
+                                          tx['type'] != 'cc_unlock')
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          height: 36,
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.edit_outlined,
+                                                size: 16,
+                                                color: isDark
+                                                    ? AppColors.gray300
+                                                    : AppColors.gray700,
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.sm,
+                                              ),
+                                              Text(
+                                                'Edit',
+                                                style: AppTypography.labelMedium
+                                                    .copyWith(
+                                                      color: isDark
+                                                          ? AppColors.darkText
+                                                          : AppColors.gray900,
                                                     ),
-                                                    const SizedBox(
-                                                        width: AppSpacing.sm),
-                                                    Text(
-                                                      'Delete',
-                                                      style: AppTypography.labelMedium
-                                                          .copyWith(
-                                                        color: AppColors.danger,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
                                               ),
                                             ],
                                           ),
-                                        ],
+                                        ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        height: 36,
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.delete_outline_rounded,
+                                              size: 16,
+                                              color: AppColors.danger,
+                                            ),
+                                            const SizedBox(
+                                              width: AppSpacing.sm,
+                                            ),
+                                            Text(
+                                              'Delete',
+                                              style: AppTypography.labelMedium
+                                                  .copyWith(
+                                                    color: AppColors.danger,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    );
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
                           }),
                         ],
                       );

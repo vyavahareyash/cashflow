@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+
 import 'salary_cycle.dart';
 
 class Goal {

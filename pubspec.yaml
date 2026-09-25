@@ -60,6 +60,7 @@ dev_dependencies:
   path_provider_platform_interface: any
   plugin_platform_interface: any
 
+  in_app_purchase_platform_interface: any
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true

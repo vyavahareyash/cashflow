@@ -12,6 +12,7 @@ import 'package:cashflow/theme/theme_constants.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker.db';
 
   setUp(() async {
@@ -49,9 +50,7 @@ void main() {
         Category(name: 'Utilities', monthlyBudget: 5000.0),
       );
       // Category without a budget limit (unbudgeted tracking)
-      final miscCatId = await db.createCategory(
-        Category(name: 'Misc'),
-      );
+      final miscCatId = await db.createCategory(Category(name: 'Misc'));
 
       // 3. Seed goals and lock allocations
       final laptopGoalId = await db.createGoal(
@@ -72,7 +71,8 @@ void main() {
 
       // 4. Seed categorized expense transactions in current salary cycle
       final cycle = SalaryCycle.resolve(salaryDay: 1);
-      final currentDateStr = cycle.startDateString; // Guaranteed inside active cycle
+      final currentDateStr =
+          cycle.startDateString; // Guaranteed inside active cycle
 
       await db.insertTransaction(
         TransactionModel(
@@ -107,7 +107,10 @@ void main() {
 
       // --- Verify Metrics ---
       final accounts = await db.readAllAccounts();
-      final totalPhysical = accounts.fold<double>(0.0, (sum, a) => sum + a.balance);
+      final totalPhysical = accounts.fold<double>(
+        0.0,
+        (sum, a) => sum + a.balance,
+      );
       final locked = await db.getTotalLockedAmount();
       final usable = await db.calculateUsableBalance();
 
@@ -118,7 +121,10 @@ void main() {
       );
 
       final spendingMap = await db.getMonthlySpendingByCategoryId(cycle: cycle);
-      final totalSpent = spendingMap.values.fold<double>(0.0, (sum, val) => sum + val);
+      final totalSpent = spendingMap.values.fold<double>(
+        0.0,
+        (sum, val) => sum + val,
+      );
 
       // Physical sum: 75,000 + 5,000 = 80,000
       expect(totalPhysical, 80000.0);
@@ -132,14 +138,23 @@ void main() {
       expect(totalSpent, 7000.0);
 
       // Remaining budget calculation
-      final remainingBudget = (totalBudgetLimit - totalSpent).clamp(0.0, double.infinity);
+      final remainingBudget = (totalBudgetLimit - totalSpent).clamp(
+        0.0,
+        double.infinity,
+      );
       expect(remainingBudget, 18000.0);
 
       // Verify UI string representations
       expect(AppFormatters.currency(usable, isPrivate: false), '₹65,000');
-      expect(AppFormatters.compactCurrency(totalPhysical, isPrivate: false), '₹80.0k');
+      expect(
+        AppFormatters.compactCurrency(totalPhysical, isPrivate: false),
+        '₹80.0k',
+      );
       expect(AppFormatters.compactCurrency(locked, isPrivate: false), '₹15.0k');
-      expect(AppFormatters.compactCurrency(totalBudgetLimit, isPrivate: false), '₹25.0k');
+      expect(
+        AppFormatters.compactCurrency(totalBudgetLimit, isPrivate: false),
+        '₹25.0k',
+      );
       expect(AppFormatters.currency(totalSpent, isPrivate: false), '₹7,000');
     });
   });
@@ -239,129 +254,144 @@ void main() {
       expect(await db.calculateUsableBalance(), 25000.0);
     });
 
-    test('monthly tracking budgets do NOT deduct physical cash or usable balance', () async {
-      final db = DatabaseHelper.instance;
+    test(
+      'monthly tracking budgets do NOT deduct physical cash or usable balance',
+      () async {
+        final db = DatabaseHelper.instance;
 
-      await db.createAccount(
-        Account(name: 'Checking', balance: 40000.0, type: 'Bank'),
-      );
+        await db.createAccount(
+          Account(name: 'Checking', balance: 40000.0, type: 'Bank'),
+        );
 
-      expect(await db.calculateUsableBalance(), 40000.0);
+        expect(await db.calculateUsableBalance(), 40000.0);
 
-      // Create categories with huge budgets (e.g. 500,000 total)
-      await db.createCategory(
-        Category(name: 'Luxury Travel', monthlyBudget: 300000.0),
-      );
-      await db.createCategory(
-        Category(name: 'Investments', monthlyBudget: 200000.0),
-      );
+        // Create categories with huge budgets (e.g. 500,000 total)
+        await db.createCategory(
+          Category(name: 'Luxury Travel', monthlyBudget: 300000.0),
+        );
+        await db.createCategory(
+          Category(name: 'Investments', monthlyBudget: 200000.0),
+        );
 
-      // Monthly budgets are tracking limits, NOT cash deductions
-      // Usable cash must still be 40,000
-      expect(await db.calculateUsableBalance(), 40000.0);
-    });
+        // Monthly budgets are tracking limits, NOT cash deductions
+        // Usable cash must still be 40,000
+        expect(await db.calculateUsableBalance(), 40000.0);
+      },
+    );
 
-    test('income, expenses, and inter-account transfers reflect correctly', () async {
-      final db = DatabaseHelper.instance;
+    test(
+      'income, expenses, and inter-account transfers reflect correctly',
+      () async {
+        final db = DatabaseHelper.instance;
 
-      final accA = await db.createAccount(
-        Account(name: 'Account A', balance: 20000.0, type: 'Bank'),
-      );
-      final accB = await db.createAccount(
-        Account(name: 'Account B', balance: 10000.0, type: 'Bank'),
-      );
+        final accA = await db.createAccount(
+          Account(name: 'Account A', balance: 20000.0, type: 'Bank'),
+        );
+        final accB = await db.createAccount(
+          Account(name: 'Account B', balance: 10000.0, type: 'Bank'),
+        );
 
-      // Initial usable = 30,000
-      expect(await db.calculateUsableBalance(), 30000.0);
+        // Initial usable = 30,000
+        expect(await db.calculateUsableBalance(), 30000.0);
 
-      // Transfer 5,000 from A to B
-      await db.createTransferTransaction(
-        sourceAccountId: accA,
-        destinationAccountId: accB,
-        amount: 5000.0,
-        date: '2026-09-11',
-        note: 'Internal transfer',
-      );
+        // Transfer 5,000 from A to B
+        await db.createTransferTransaction(
+          sourceAccountId: accA,
+          destinationAccountId: accB,
+          amount: 5000.0,
+          date: '2026-09-11',
+          note: 'Internal transfer',
+        );
 
-      // Net physical and usable balances remain 30,000
-      final accountsAfterTransfer = await db.readAllAccounts();
-      final balanceA = accountsAfterTransfer.firstWhere((a) => a.id == accA).balance;
-      final balanceB = accountsAfterTransfer.firstWhere((a) => a.id == accB).balance;
-      expect(balanceA, 15000.0);
-      expect(balanceB, 15000.0);
-      expect(await db.calculateUsableBalance(), 30000.0);
+        // Net physical and usable balances remain 30,000
+        final accountsAfterTransfer = await db.readAllAccounts();
+        final balanceA = accountsAfterTransfer
+            .firstWhere((a) => a.id == accA)
+            .balance;
+        final balanceB = accountsAfterTransfer
+            .firstWhere((a) => a.id == accB)
+            .balance;
+        expect(balanceA, 15000.0);
+        expect(balanceB, 15000.0);
+        expect(await db.calculateUsableBalance(), 30000.0);
 
-      // Income of 10,000 into Account A
-      await db.createIncomeTransaction(
-        accountId: accA,
-        amount: 10000.0,
-        date: '2026-09-12',
-        note: 'Freelance gig',
-      );
-      expect(await db.calculateUsableBalance(), 40000.0);
+        // Income of 10,000 into Account A
+        await db.createIncomeTransaction(
+          accountId: accA,
+          amount: 10000.0,
+          date: '2026-09-12',
+          note: 'Freelance gig',
+        );
+        expect(await db.calculateUsableBalance(), 40000.0);
 
-      // Expense of 4,000 from Account B
-      final catId = await db.createCategory(Category(name: 'Shopping', monthlyBudget: 5000.0));
-      await db.createExpenseTransaction(
-        accountId: accB,
-        categoryId: catId,
-        amount: 4000.0,
-        date: '2026-09-13',
-        note: 'Clothes',
-      );
-      expect(await db.calculateUsableBalance(), 36000.0);
-    });
+        // Expense of 4,000 from Account B
+        final catId = await db.createCategory(
+          Category(name: 'Shopping', monthlyBudget: 5000.0),
+        );
+        await db.createExpenseTransaction(
+          accountId: accB,
+          categoryId: catId,
+          amount: 4000.0,
+          date: '2026-09-13',
+          note: 'Clothes',
+        );
+        expect(await db.calculateUsableBalance(), 36000.0);
+      },
+    );
   });
 
   group('AC3: Refresh After Write Updates Displayed Values & Revision Listener', () {
-    test('DatabaseHelper.dataRevision fires across inserts, updates, and deletes', () async {
-      final db = DatabaseHelper.instance;
-      int revisions = 0;
-      void listener() => revisions++;
-      DatabaseHelper.dataRevision.addListener(listener);
+    test(
+      'DatabaseHelper.dataRevision fires across inserts, updates, and deletes',
+      () async {
+        final db = DatabaseHelper.instance;
+        int revisions = 0;
+        void listener() => revisions++;
+        DatabaseHelper.dataRevision.addListener(listener);
 
-      // 1. Insert account
-      final accId = await db.createAccount(
-        Account(name: 'Test Bank', balance: 1000.0, type: 'Bank'),
-      );
-      expect(revisions, 1);
+        // 1. Insert account
+        final accId = await db.createAccount(
+          Account(name: 'Test Bank', balance: 1000.0, type: 'Bank'),
+        );
+        expect(revisions, 1);
 
-      // 2. Insert category
-      final catId = await db.createCategory(
-        Category(name: 'Fuel', monthlyBudget: 3000.0),
-      );
-      expect(revisions, 2);
+        // 2. Insert category
+        final catId = await db.createCategory(
+          Category(name: 'Fuel', monthlyBudget: 3000.0),
+        );
+        expect(revisions, 2);
 
-      // 3. Insert transaction
-      final txId = await db.insertTransaction(
-        TransactionModel(
+        // 3. Insert transaction
+        final txId = await db.insertTransaction(
+          TransactionModel(
+            accountId: accId,
+            categoryId: catId,
+            amount: 500.0,
+            date: '2026-09-14',
+            note: 'Initial fuel',
+            type: 'expense',
+          ),
+        );
+        expect(revisions, 3);
+
+        // 4. Update transaction
+        await db.updateTransaction(
+          id: txId,
           accountId: accId,
           categoryId: catId,
-          amount: 500.0,
+          amount: 600.0,
           date: '2026-09-14',
-          note: 'Initial fuel',
-          type: 'expense',
-        ),
-      );
-      expect(revisions, 3);
+          note: 'Adjusted fuel',
+        );
+        expect(revisions, 4);
 
-      // 4. Update transaction
-      await db.updateTransaction(
-        id: txId,
-        accountId: accId,
-        categoryId: catId,
-        amount: 600.0,
-        date: '2026-09-14',
-        note: 'Adjusted fuel',
-      );
-      expect(revisions, 4);
+        // 5. Delete transaction
+        await db.deleteTransaction(txId);
+        expect(revisions, 5);
 
-      // 5. Delete transaction
-      await db.deleteTransaction(txId);
-      expect(revisions, 5);
-
-      DatabaseHelper.dataRevision.removeListener(listener);
-    });
+        DatabaseHelper.dataRevision.removeListener(listener);
+      },
+    );
   });
 
   group('AC4: Empty and Error / Boundary States Covered', () {
@@ -477,7 +507,10 @@ void main() {
       final spendingMap = await db.getMonthlySpendingByCategoryId(cycle: cycle);
       expect(spendingMap[catId], 25000.0);
 
-      final spentInMonth = await db.getCategorySpendingForMonth(catId, cycle: cycle);
+      final spentInMonth = await db.getCategorySpendingForMonth(
+        catId,
+        cycle: cycle,
+      );
       expect(spentInMonth, 25000.0);
     });
 

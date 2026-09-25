@@ -65,7 +65,7 @@ class CustomButton extends StatelessWidget {
         break;
     }
 
-    Widget content = Row(
+    final Widget content = Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

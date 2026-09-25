@@ -15,6 +15,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfiNoIsolate;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
 
   const databaseFileName = 'money_tracker.db';
 
@@ -57,7 +58,11 @@ void main() {
       expect(restored.isIncome, isTrue);
 
       // Backwards compatibility when type key is omitted
-      final legacyMap = {'id': 11, 'name': 'Old Category', 'monthly_budget': 1000.0};
+      final legacyMap = {
+        'id': 11,
+        'name': 'Old Category',
+        'monthly_budget': 1000.0,
+      };
       final fromLegacy = Category.fromMap(legacyMap);
       expect(fromLegacy.type, 'expense');
       expect(fromLegacy.isExpense, isTrue);
@@ -126,21 +131,24 @@ void main() {
   });
 
   group('P2 Issue #70: DatabaseHelper Income Category and Earnings Query', () {
-    test('readAllCategories filters by type and seeds default income categories', () async {
-      final db = DatabaseHelper.instance;
-      await db.seedDatabase();
-      final allCats = await db.readAllCategories();
-      final expenseCats = await db.readAllCategories(type: 'expense');
-      final incomeCats = await db.readCategoriesByType('income');
+    test(
+      'readAllCategories filters by type and seeds default income categories',
+      () async {
+        final db = DatabaseHelper.instance;
+        await db.seedDatabase();
+        final allCats = await db.readAllCategories();
+        final expenseCats = await db.readAllCategories(type: 'expense');
+        final incomeCats = await db.readCategoriesByType('income');
 
-      expect(incomeCats.isNotEmpty, isTrue);
-      expect(expenseCats.isNotEmpty, isTrue);
-      expect(allCats.length, expenseCats.length + incomeCats.length);
+        expect(incomeCats.isNotEmpty, isTrue);
+        expect(expenseCats.isNotEmpty, isTrue);
+        expect(allCats.length, expenseCats.length + incomeCats.length);
 
-      final incomeNames = incomeCats.map((c) => c.name).toList();
-      expect(incomeNames.contains('Salary'), isTrue);
-      expect(incomeNames.contains('Freelance'), isTrue);
-    });
+        final incomeNames = incomeCats.map((c) => c.name).toList();
+        expect(incomeNames.contains('Salary'), isTrue);
+        expect(incomeNames.contains('Freelance'), isTrue);
+      },
+    );
 
     test('createIncomeTransaction with categoryId and getMonthlyIncomeByCategoryId', () async {
       final db = DatabaseHelper.instance;
@@ -168,8 +176,15 @@ void main() {
   });
 
   group('P2 Issue #66: AccountCard Usable Balance Display & Actions Popup', () {
-    testWidgets('AccountCard displays usable balance when totalLocked > 0', (tester) async {
-      final account = Account(id: 1, name: 'HDFC Checking', balance: 50000.0, type: 'Bank');
+    testWidgets('AccountCard displays usable balance when totalLocked > 0', (
+      tester,
+    ) async {
+      final account = Account(
+        id: 1,
+        name: 'HDFC Checking',
+        balance: 50000.0,
+        type: 'Bank',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -198,16 +213,20 @@ void main() {
       expect(find.byType(PopupMenuButton<String>), findsOneWidget);
     });
 
-    testWidgets('AccountCard displays single balance when totalLocked is 0', (tester) async {
-      final account = Account(id: 2, name: 'Cash in Hand', balance: 5000.0, type: 'Cash');
+    testWidgets('AccountCard displays single balance when totalLocked is 0', (
+      tester,
+    ) async {
+      final account = Account(
+        id: 2,
+        name: 'Cash in Hand',
+        balance: 5000.0,
+        type: 'Cash',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: AccountCard(
-              account: account,
-              locks: const [],
-            ),
+            body: AccountCard(account: account, locks: const []),
           ),
         ),
       );
@@ -218,62 +237,68 @@ void main() {
   });
 
   group('P2 Issue #70: BudgetScreen Segmented Tab and Income Categories', () {
-    testWidgets('SegmentedButton toggles between Expense Budgets and Income Categories', (tester) async {
-      String selectedTab = 'expense';
+    testWidgets(
+      'SegmentedButton toggles between Expense Budgets and Income Categories',
+      (tester) async {
+        String selectedTab = 'expense';
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StatefulBuilder(
-              builder: (context, setState) {
-                return Column(
-                  children: [
-                    SegmentedButton<String>(
-                      key: const Key('budget_tab_segmented_button'),
-                      segments: const [
-                        ButtonSegment<String>(
-                          value: 'expense',
-                          label: Text('Expense Budgets'),
-                          icon: Icon(Icons.pie_chart_outline_rounded),
-                        ),
-                        ButtonSegment<String>(
-                          value: 'income',
-                          label: Text('Income Categories'),
-                          icon: Icon(Icons.savings_outlined),
-                        ),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  return Column(
+                    children: [
+                      SegmentedButton<String>(
+                        key: const Key('budget_tab_segmented_button'),
+                        segments: const [
+                          ButtonSegment<String>(
+                            value: 'expense',
+                            label: Text('Expense Budgets'),
+                            icon: Icon(Icons.pie_chart_outline_rounded),
+                          ),
+                          ButtonSegment<String>(
+                            value: 'income',
+                            label: Text('Income Categories'),
+                            icon: Icon(Icons.savings_outlined),
+                          ),
+                        ],
+                        selected: {selectedTab},
+                        onSelectionChanged: (newSelection) {
+                          setState(() => selectedTab = newSelection.first);
+                        },
+                      ),
+                      if (selectedTab == 'expense') ...[
+                        const Text('Category Allocations'),
+                        const Text('Add Budget'),
+                      ] else ...[
+                        const Text('Income Streams'),
+                        const Text('Add Category'),
                       ],
-                      selected: {selectedTab},
-                      onSelectionChanged: (newSelection) {
-                        setState(() => selectedTab = newSelection.first);
-                      },
-                    ),
-                    if (selectedTab == 'expense') ...[
-                      const Text('Category Allocations'),
-                      const Text('Add Budget'),
-                    ] else ...[
-                      const Text('Income Streams'),
-                      const Text('Add Category'),
                     ],
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byKey(const Key('budget_tab_segmented_button')), findsOneWidget);
-      expect(find.text('Expense Budgets'), findsOneWidget);
-      expect(find.text('Income Categories'), findsOneWidget);
-      expect(find.text('Add Budget'), findsOneWidget);
-      expect(find.text('Category Allocations'), findsOneWidget);
+        expect(
+          find.byKey(const Key('budget_tab_segmented_button')),
+          findsOneWidget,
+        );
+        expect(find.text('Expense Budgets'), findsOneWidget);
+        expect(find.text('Income Categories'), findsOneWidget);
+        expect(find.text('Add Budget'), findsOneWidget);
+        expect(find.text('Category Allocations'), findsOneWidget);
 
-      // Switch to Income Categories tab
-      await tester.tap(find.text('Income Categories'));
-      await tester.pumpAndSettle();
+        // Switch to Income Categories tab
+        await tester.tap(find.text('Income Categories'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Income Streams'), findsOneWidget);
-      expect(find.text('Add Category'), findsOneWidget);
-    });
+        expect(find.text('Income Streams'), findsOneWidget);
+        expect(find.text('Add Category'), findsOneWidget);
+      },
+    );
   });
 }

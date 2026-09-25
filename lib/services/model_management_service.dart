@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -19,21 +20,10 @@ enum ModelPackStatus {
 }
 
 /// Runtime RAM loading and deallocation state for neural model weights (US 16).
-enum ModelMemoryState {
-  unloaded,
-  loading,
-  loaded,
-  unloading,
-}
+enum ModelMemoryState { unloaded, loading, loaded, unloading }
 
 /// Network interface connectivity type for Wi-Fi gating (US 14).
-enum NetworkType {
-  wifi,
-  cellular,
-  ethernet,
-  none,
-  unknown,
-}
+enum NetworkType { wifi, cellular, ethernet, none, unknown }
 
 /// Metadata description for an individual neural model weight binary.
 class AiModelFile {
@@ -55,9 +45,8 @@ class AiModelFile {
     required this.description,
   });
 
-  String get relativeFilePath => relativeSubpath.isEmpty
-      ? filename
-      : p.join(relativeSubpath, filename);
+  String get relativeFilePath =>
+      relativeSubpath.isEmpty ? filename : p.join(relativeSubpath, filename);
 }
 
 /// Manifest of models required for full Offline Voice Transaction Journaling (ADR-0006).
@@ -90,8 +79,7 @@ class AiModelPackManifest {
         id: 'smollm2_360m',
         filename: 'SmolLM2-360M-Instruct-Q4_K_M.gguf',
         relativeSubpath: 'smollm2',
-        downloadUrl:
-            'https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf',
+        downloadUrl: 'https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf',
         expectedSha256:
             '2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2',
         expectedSizeBytes: 270590880,
@@ -138,7 +126,8 @@ class PlatformNetworkConnectivityChecker implements NetworkConnectivityChecker {
           return NetworkType.cellular;
         }
       }
-      return NetworkType.wifi; // Default fallback to unmetered if active interface found
+      return NetworkType
+          .wifi; // Default fallback to unmetered if active interface found
     } catch (_) {
       return NetworkType.unknown;
     }
@@ -195,7 +184,10 @@ class DefaultModelDownloadClient implements ModelDownloadClient {
       _activeRequest!.followRedirects = false;
 
       if (startByte > 0) {
-        _activeRequest!.headers.set(HttpHeaders.rangeHeader, 'bytes=$startByte-');
+        _activeRequest!.headers.set(
+          HttpHeaders.rangeHeader,
+          'bytes=$startByte-',
+        );
       }
 
       if (headers != null) {
@@ -242,7 +234,8 @@ class DefaultModelDownloadClient implements ModelDownloadClient {
 
 /// Manages the download, cryptographic verification, disk storage, and RAM lifecycle
 /// of on-device AI model weights for offline voice journaling.
-class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver {
+class ModelManagementService extends ChangeNotifier
+    with WidgetsBindingObserver {
   static ModelManagementService? _instance;
   static ModelManagementService get instance =>
       _instance ??= ModelManagementService();
@@ -293,8 +286,8 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
     this.connectivityChecker = const PlatformNetworkConnectivityChecker(),
     this.downloadClient,
     DatabaseHelper? databaseHelper,
-  })  : _overrideBaseDirectory = baseDirectory,
-        _dbHelper = databaseHelper {
+  }) : _overrideBaseDirectory = baseDirectory,
+       _dbHelper = databaseHelper {
     _initLifecycleObserver();
   }
 
@@ -347,8 +340,8 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
 
   AiModelPackManifest get effectiveManifest =>
       manifest.packId == AiModelPackManifest.defaultPack.packId
-          ? AiModelPackManifest.defaultPack
-          : manifest;
+      ? AiModelPackManifest.defaultPack
+      : manifest;
 
   /// Checks current network connectivity type.
   Future<NetworkType> checkNetworkType() =>
@@ -378,7 +371,10 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
       if (!await dir.exists()) return 0;
 
       int total = 0;
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity in dir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is File) {
           total += await entity.length();
         }
@@ -390,7 +386,9 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
   }
 
   /// Checks if all model files in the manifest are present and valid on disk.
-  Future<ModelPackStatus> checkInstalledStatus({bool verifyChecksums = false}) async {
+  Future<ModelPackStatus> checkInstalledStatus({
+    bool verifyChecksums = false,
+  }) async {
     // Retain downloading or verifying status so page changes don't clobber active downloads
     if (_status == ModelPackStatus.downloading ||
         _status == ModelPackStatus.verifying) {
@@ -418,9 +416,11 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
 
         if (verifyChecksums) {
           final computedHash = await calculateFileSha256(file);
-          if (computedHash.toLowerCase() != fileDef.expectedSha256.toLowerCase()) {
+          if (computedHash.toLowerCase() !=
+              fileDef.expectedSha256.toLowerCase()) {
             _status = ModelPackStatus.notInstalled;
-            _errorMessage = 'Checksum verification failed for ${fileDef.filename}';
+            _errorMessage =
+                'Checksum verification failed for ${fileDef.filename}';
             notifyListeners();
             return _status;
           }
@@ -472,16 +472,20 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
     final completer = Completer<bool>();
     _activeDownloadFuture = completer.future;
 
-    _executeDownload(
-      allowCellular: allowCellular,
-      dbHelper: dbHelper,
-    ).then((result) {
-      if (!completer.isCompleted) completer.complete(result);
-    }, onError: (Object error, StackTrace stack) {
-      if (!completer.isCompleted) completer.completeError(error, stack);
-    }).whenComplete(() {
-      _activeDownloadFuture = null;
-    });
+    unawaited(
+      _executeDownload(allowCellular: allowCellular, dbHelper: dbHelper)
+          .then(
+            (result) {
+              if (!completer.isCompleted) completer.complete(result);
+            },
+            onError: (Object error, StackTrace stack) {
+              if (!completer.isCompleted) completer.completeError(error, stack);
+            },
+          )
+          .whenComplete(() {
+            _activeDownloadFuture = null;
+          }),
+    );
 
     return _activeDownloadFuture!;
   }
@@ -512,7 +516,8 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
       final db = dbHelper ?? _dbHelper ?? DatabaseHelper.instance;
       final wifiOnly = await db.getVoiceModelsWifiOnly();
       if (wifiOnly) {
-        _errorMessage = 'Cellular connection detected. Download requires Wi-Fi.';
+        _errorMessage =
+            'Cellular connection detected. Download requires Wi-Fi.';
         _statusDetail = 'Blocked by Wi-Fi only policy';
         notifyListeners();
         return false;
@@ -687,7 +692,8 @@ class ModelManagementService extends ChangeNotifier with WidgetsBindingObserver 
         notifyListeners();
 
         final actualSha256 = await calculateFileSha256(partFile);
-        if (actualSha256.toLowerCase() != fileDef.expectedSha256.toLowerCase()) {
+        if (actualSha256.toLowerCase() !=
+            fileDef.expectedSha256.toLowerCase()) {
           if (await partFile.exists()) {
             await partFile.delete();
           }

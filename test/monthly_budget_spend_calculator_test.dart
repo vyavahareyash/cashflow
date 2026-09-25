@@ -9,6 +9,7 @@ import 'package:cashflow/services/database_helper.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker.db';
 
   setUp(() async {
@@ -24,8 +25,7 @@ void main() {
   });
 
   group('Monthly budget spend calculator tests (NEW-008)', () {
-    test('sums expenses by category and calendar month while excluding non-expense types',
-        () async {
+    test('sums expenses by category and calendar month while excluding non-expense types', () async {
       final db = DatabaseHelper.instance;
       final accountId = await db.createAccount(
         Account(name: 'Primary Checking', balance: 50000.0, type: 'Bank'),
@@ -103,8 +103,7 @@ void main() {
       expect(septSpent, equals(2000.0));
     });
 
-    test('correctly handles month boundaries without dropping late-month transactions',
-        () async {
+    test('correctly handles month boundaries without dropping late-month transactions', () async {
       final db = DatabaseHelper.instance;
       final accountId = await db.createAccount(
         Account(name: 'Checking', balance: 20000.0, type: 'Bank'),
@@ -178,33 +177,34 @@ void main() {
       expect(octTotal, equals(600.0));
     });
 
-    test('supports unbudgeted categories (monthlyBudget == null) without errors',
-        () async {
-      final db = DatabaseHelper.instance;
-      final accountId = await db.createAccount(
-        Account(name: 'Checking', balance: 10000.0, type: 'Bank'),
-      );
-      final unbudgetedCatId = await db.createCategory(
-        Category(name: 'Miscellaneous', monthlyBudget: null),
-      );
+    test(
+      'supports unbudgeted categories (monthlyBudget == null) without errors',
+      () async {
+        final db = DatabaseHelper.instance;
+        final accountId = await db.createAccount(
+          Account(name: 'Checking', balance: 10000.0, type: 'Bank'),
+        );
+        final unbudgetedCatId = await db.createCategory(
+          Category(name: 'Miscellaneous', monthlyBudget: null),
+        );
 
-      await db.createExpenseTransaction(
-        accountId: accountId,
-        categoryId: unbudgetedCatId,
-        amount: 450.0,
-        date: '2026-09-10T11:00:00.000',
-      );
+        await db.createExpenseTransaction(
+          accountId: accountId,
+          categoryId: unbudgetedCatId,
+          amount: 450.0,
+          date: '2026-09-10T11:00:00.000',
+        );
 
-      final spent = await db.getCategorySpendingForMonth(
-        unbudgetedCatId,
-        month: 9,
-        year: 2026,
-      );
-      expect(spent, equals(450.0));
-    });
+        final spent = await db.getCategorySpendingForMonth(
+          unbudgetedCatId,
+          month: 9,
+          year: 2026,
+        );
+        expect(spent, equals(450.0));
+      },
+    );
 
-    test('returns 0.0 safely for missing or non-existent categories',
-        () async {
+    test('returns 0.0 safely for missing or non-existent categories', () async {
       final db = DatabaseHelper.instance;
 
       // Existing category with no transactions
@@ -227,8 +227,7 @@ void main() {
       expect(missingSpent, equals(0.0));
     });
 
-    test('batch method getMonthlySpendingByCategoryId returns aggregated category map',
-        () async {
+    test('batch method getMonthlySpendingByCategoryId returns aggregated category map', () async {
       final db = DatabaseHelper.instance;
       final accountId = await db.createAccount(
         Account(name: 'Checking', balance: 30000.0, type: 'Bank'),
@@ -292,8 +291,7 @@ void main() {
       expect(batchMap.containsKey(999999), isFalse);
     });
 
-    test('backward-compatible getCategorySpendingForCurrentMonth returns current month spend',
-        () async {
+    test('backward-compatible getCategorySpendingForCurrentMonth returns current month spend', () async {
       final db = DatabaseHelper.instance;
       final accountId = await db.createAccount(
         Account(name: 'Checking', balance: 10000.0, type: 'Bank'),

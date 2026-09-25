@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -34,7 +36,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   List<Account> _accounts = [];
   Map<int, CreditCard> _creditCardsMap = {};
   Map<int, double> _accountLocksMap = {};
@@ -58,7 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadAllData();
+    unawaited(_loadAllData());
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
   }
 
@@ -74,12 +77,13 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.resumed) {
-      _handleLifecyclePrivacy();
+      unawaited(_handleLifecyclePrivacy());
     }
   }
 
   Future<void> _handleLifecyclePrivacy() async {
-    final startInPrivacy = await DatabaseHelper.instance.getStartInPrivacyMode();
+    final startInPrivacy = await DatabaseHelper.instance
+        .getStartInPrivacyMode();
     if (startInPrivacy && !_isPrivate && mounted) {
       setState(() {
         _isPrivate = true;
@@ -90,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
 
   void _onDataChanged() {
     if (mounted) {
-      _loadAllData();
+      unawaited(_loadAllData());
     }
   }
 
@@ -116,8 +120,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     for (var acc in accountsData) {
       if (!acc.isCreditCard && acc.id != null) {
         final locks = await db.getLocksForAccount(acc.id!);
-        accountLocksMap[acc.id!] =
-            locks.fold<double>(0.0, (sum, l) => sum + l.amount);
+        accountLocksMap[acc.id!] = locks.fold<double>(
+          0.0,
+          (sum, l) => sum + l.amount,
+        );
       }
     }
     final locked = await db.getTotalLockedAmount();
@@ -133,8 +139,9 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
       }
     }
 
-    final categorySpendingMap =
-        await db.getMonthlySpendingByCategoryId(cycle: cycle);
+    final categorySpendingMap = await db.getMonthlySpendingByCategoryId(
+      cycle: cycle,
+    );
     double totalBudget = 0;
     double totalSpent = 0;
     for (var cat in categoriesData) {
@@ -177,7 +184,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     setState(() {
       _isPrivate = nextPrivate;
     });
-    DatabaseHelper.instance.setPrivacyMode(nextPrivate);
+    unawaited(DatabaseHelper.instance.setPrivacyMode(nextPrivate));
   }
 
   @override
@@ -234,8 +241,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   Widget _buildHeroBalanceCard(bool isDark) {
     return Container(
       key: WalkthroughKeys.balanceCardKey,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           colors: [
             Color(0xFF064E3B), // Deep Emerald
             Color(0xFF047857), // Vivid Emerald
@@ -245,7 +252,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
           end: Alignment.bottomRight,
         ),
         borderRadius: AppBorderRadius.xlargeBorder,
-        boxShadow: const [AppShadows.cardGlow],
+        boxShadow: [AppShadows.cardGlow],
       ),
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
@@ -279,8 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Tooltip(
-                    message:
-                        'After goal sinking funds; budgets remain tracking limits',
+                    message: 'After goal sinking funds; budgets remain tracking limits',
                     triggerMode: TooltipTriggerMode.tap,
                     child: Icon(
                       Icons.info_outline_rounded,
@@ -881,8 +887,9 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
 
   // --- ACCOUNTS SNAPSHOT ---
   Widget _buildAccountsSection(bool isDark) {
-    final displayedAccounts =
-        _showAllAccounts ? _accounts : _accounts.take(3).toList();
+    final displayedAccounts = _showAllAccounts
+        ? _accounts
+        : _accounts.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -962,8 +969,10 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
     final isBank = acc.type == 'Bank';
     final isCC = acc.isCreditCard;
     final totalLocked = _accountLocksMap[acc.id] ?? 0.0;
-    final usableBalance =
-        (acc.balance - totalLocked).clamp(0.0, double.infinity);
+    final usableBalance = (acc.balance - totalLocked).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return CustomCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -981,18 +990,19 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: (isCC
-                      ? AppColors.purple
-                      : (isBank ? AppColors.info : AppColors.emerald600))
-                  .withValues(alpha: 0.12),
+              color:
+                  (isCC
+                          ? AppColors.purple
+                          : (isBank ? AppColors.info : AppColors.emerald600))
+                      .withValues(alpha: 0.12),
               borderRadius: AppBorderRadius.mediumBorder,
             ),
             child: Icon(
               isCC
                   ? Icons.credit_card_rounded
                   : (isBank
-                      ? Icons.account_balance_rounded
-                      : Icons.wallet_rounded),
+                        ? Icons.account_balance_rounded
+                        : Icons.wallet_rounded),
               color: isCC
                   ? AppColors.purple
                   : (isBank ? AppColors.info : AppColors.emerald600),
@@ -1025,10 +1035,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                AppFormatters.currency(
-                  acc.balance,
-                  isPrivate: _isPrivate,
-                ),
+                AppFormatters.currency(acc.balance, isPrivate: _isPrivate),
                 style: AppTypography.titleMedium.copyWith(
                   fontWeight: FontWeight.w700,
                   color: (isCC && acc.balance > 0)
@@ -1192,173 +1199,81 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         : _categories.firstOrNull?.id;
     int? selectedGoalId = _goals.isNotEmpty ? _goals.first.id : null;
 
-    final initialCc =
-        selectedAccountId != null ? _creditCardsMap[selectedAccountId] : null;
+    final initialCc = selectedAccountId != null
+        ? _creditCardsMap[selectedAccountId]
+        : null;
     bool lockCcFunds = initialCc?.autoLock ?? true;
     final bankAccounts = _accounts.where((a) => !a.isCreditCard).toList();
-    int? selectedLockBankAccountId = initialCc?.defaultLockAccountId ??
-        bankAccounts.firstOrNull?.id;
+    int? selectedLockBankAccountId =
+        initialCc?.defaultLockAccountId ?? bankAccounts.firstOrNull?.id;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateSheet) {
-            final availableCats = selectedType == 'income'
-                ? incomeCategories
-                : expenseCategories;
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: AppSpacing.lg,
-                right: AppSpacing.lg,
-                top: AppSpacing.lg,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.gray700 : AppColors.gray300,
-                          borderRadius: AppBorderRadius.pillBorder,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Log Transaction',
-                          style: AppTypography.headlineMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Transaction Type Selector
-                    Text(
-                      'Type',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: isDark ? AppColors.gray300 : AppColors.gray700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedType,
-                      isExpanded: true,
-                      dropdownColor: isDark
-                          ? AppColors.darkSurfaceElevated
-                          : AppColors.white,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.darkSurface
-                            : AppColors.gray50,
-                        border: OutlineInputBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                          borderSide: BorderSide(
+    unawaited(
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (context, setStateSheet) {
+              final availableCats = selectedType == 'income'
+                  ? incomeCategories
+                  : expenseCategories;
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  left: AppSpacing.lg,
+                  right: AppSpacing.lg,
+                  top: AppSpacing.lg,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
                             color: isDark
-                                ? AppColors.darkBorder
+                                ? AppColors.gray700
                                 : AppColors.gray300,
+                            borderRadius: AppBorderRadius.pillBorder,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
-                        ),
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'expense',
-                          child: Text('Expense'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'income',
-                          child: Text('Income'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'transfer',
-                          child: Text('Transfer'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'goal_lock',
-                          child: Text('Goal Lock'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setStateSheet(() {
-                            selectedType = val;
-                            if (val != 'expense') {
-                              final acc = _accounts
-                                  .where((a) => a.id == selectedAccountId)
-                                  .firstOrNull;
-                              if (acc?.isCreditCard == true) {
-                                selectedAccountId =
-                                    bankAccounts.firstOrNull?.id;
-                              }
-                            }
-                            if (val == 'income') {
-                              if (!incomeCategories.any((c) => c.id == selectedCategoryId)) {
-                                selectedCategoryId = incomeCategories.firstOrNull?.id;
-                              }
-                            } else if (val == 'expense') {
-                              if (!expenseCategories.any((c) => c.id == selectedCategoryId)) {
-                                selectedCategoryId = expenseCategories.firstOrNull?.id;
-                              }
-                            }
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Amount input
-                    CustomInputField(
-                      controller: amountController,
-                      label: 'Amount',
-                      hint: '0.00',
-                      prefixText: '₹ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Log Transaction',
+                            style: AppTypography.headlineMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.sm),
 
-                    // Category Selector (expense & income)
-                    if (selectedType != 'transfer' &&
-                        selectedType != 'goal_lock') ...[
+                      // Transaction Type Selector
                       Text(
-                        'Category',
+                        'Type',
                         style: AppTypography.labelMedium.copyWith(
                           color: isDark ? AppColors.gray300 : AppColors.gray700,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      DropdownButtonFormField<int>(
-                        key: ValueKey('tx_cat_dropdown_${selectedType}_$selectedCategoryId'),
-                        initialValue: availableCats.any((c) => c.id == selectedCategoryId)
-                            ? selectedCategoryId
-                            : availableCats.firstOrNull?.id,
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedType,
                         isExpanded: true,
                         dropdownColor: isDark
                             ? AppColors.darkSurfaceElevated
@@ -1381,49 +1296,93 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                             vertical: AppSpacing.md,
                           ),
                         ),
-                        items: availableCats
-                            .map(
-                              (cat) => DropdownMenuItem(
-                                value: cat.id,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: CategoryBadge(
-                                        label: cat.name,
-                                        showIcon: true,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) =>
-                            setStateSheet(() => selectedCategoryId = val),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'expense',
+                            child: Text('Expense'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'income',
+                            child: Text('Income'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'transfer',
+                            child: Text('Transfer'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'goal_lock',
+                            child: Text('Goal Lock'),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setStateSheet(() {
+                              selectedType = val;
+                              if (val != 'expense') {
+                                final acc = _accounts
+                                    .where((a) => a.id == selectedAccountId)
+                                    .firstOrNull;
+                                if (acc?.isCreditCard == true) {
+                                  selectedAccountId =
+                                      bankAccounts.firstOrNull?.id;
+                                }
+                              }
+                              if (val == 'income') {
+                                if (!incomeCategories.any(
+                                  (c) => c.id == selectedCategoryId,
+                                )) {
+                                  selectedCategoryId =
+                                      incomeCategories.firstOrNull?.id;
+                                }
+                              } else if (val == 'expense') {
+                                if (!expenseCategories.any(
+                                  (c) => c.id == selectedCategoryId,
+                                )) {
+                                  selectedCategoryId =
+                                      expenseCategories.firstOrNull?.id;
+                                }
+                              }
+                            });
+                          }
+                        },
                       ),
                       const SizedBox(height: AppSpacing.md),
-                    ],
 
-                    // Goal Selector (goal_lock only)
-                    if (selectedType == 'goal_lock') ...[
-                      Text(
-                        'Goal',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: isDark ? AppColors.gray300 : AppColors.gray700,
-                          fontWeight: FontWeight.w600,
+                      // Amount input
+                      CustomInputField(
+                        controller: amountController,
+                        label: 'Amount',
+                        hint: '0.00',
+                        prefixText: '₹ ',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      if (_goals.isEmpty)
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Category Selector (expense & income)
+                      if (selectedType != 'transfer' &&
+                          selectedType != 'goal_lock') ...[
                         Text(
-                          'No goals available. Create a goal first.',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.danger,
+                          'Category',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: isDark
+                                ? AppColors.gray300
+                                : AppColors.gray700,
+                            fontWeight: FontWeight.w600,
                           ),
-                        )
-                      else
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
                         DropdownButtonFormField<int>(
-                          initialValue: selectedGoalId,
+                          key: ValueKey(
+                            'tx_cat_dropdown_${selectedType}_$selectedCategoryId',
+                          ),
+                          initialValue:
+                              availableCats.any(
+                                (c) => c.id == selectedCategoryId,
+                              )
+                              ? selectedCategoryId
+                              : availableCats.firstOrNull?.id,
                           isExpanded: true,
                           dropdownColor: isDark
                               ? AppColors.darkSurfaceElevated
@@ -1446,293 +1405,51 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                               vertical: AppSpacing.md,
                             ),
                           ),
-                          items: _goals
+                          items: availableCats
                               .map(
-                                (goal) => DropdownMenuItem(
-                                  value: goal.id,
-                                  child: Text(
-                                    '${goal.name} (₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)})',
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
+                                (cat) => DropdownMenuItem(
+                                  value: cat.id,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: CategoryBadge(
+                                          label: cat.name,
+                                          showIcon: true,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               )
                               .toList(),
                           onChanged: (val) =>
-                              setStateSheet(() => selectedGoalId = val),
+                              setStateSheet(() => selectedCategoryId = val),
                         ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
+                        const SizedBox(height: AppSpacing.md),
+                      ],
 
-                    // Account Selector
-                    Builder(
-                      builder: (context) {
-                        final eligibleAccounts =
-                            selectedType == 'expense' ? _accounts : bankAccounts;
-                        final currentAccId =
-                            eligibleAccounts.any((a) => a.id == selectedAccountId)
-                                ? selectedAccountId
-                                : eligibleAccounts.firstOrNull?.id;
-                        selectedAccountId = currentAccId;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              selectedType == 'income'
-                                  ? 'To Account'
-                                  : 'From Account',
-                              style: AppTypography.labelMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.gray300
-                                    : AppColors.gray700,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            DropdownButtonFormField<int>(
-                              initialValue: selectedAccountId,
-                              isExpanded: true,
-                              dropdownColor: isDark
-                                  ? AppColors.darkSurfaceElevated
-                                  : AppColors.white,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: isDark
-                                    ? AppColors.darkSurface
-                                    : AppColors.gray50,
-                                border: OutlineInputBorder(
-                                  borderRadius: AppBorderRadius.mediumBorder,
-                                  borderSide: BorderSide(
-                                    color: isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.gray300,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.lg,
-                                  vertical: AppSpacing.md,
-                                ),
-                              ),
-                              items: eligibleAccounts
-                                  .map(
-                                    (acc) => DropdownMenuItem(
-                                      value: acc.id,
-                                      child: Row(
-                                        children: [
-                                          if (acc.isCreditCard) ...[
-                                            const Icon(
-                                              Icons.credit_card_rounded,
-                                              size: 16,
-                                              color: AppColors.purple,
-                                            ),
-                                            const SizedBox(width: AppSpacing.xs),
-                                          ],
-                                          Expanded(
-                                            child: Text(
-                                              acc.name,
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                          ),
-                                          const SizedBox(width: AppSpacing.sm),
-                                          Text(
-                                            acc.isCreditCard
-                                                ? 'Due: ₹${acc.balance.toStringAsFixed(0)}'
-                                                : '₹${acc.balance.toStringAsFixed(0)}',
-                                            style: AppTypography.labelSmall
-                                                .copyWith(
-                                              color: acc.isCreditCard
-                                                  ? AppColors.purple
-                                                  : (isDark
-                                                      ? AppColors.gray400
-                                                      : AppColors.gray500),
-                                              fontWeight: acc.isCreditCard
-                                                  ? FontWeight.w600
-                                                  : FontWeight.normal,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                setStateSheet(() {
-                                  selectedAccountId = val;
-                                  if (val != null) {
-                                    final cc = _creditCardsMap[val];
-                                    if (cc != null) {
-                                      lockCcFunds = cc.autoLock;
-                                      if (cc.defaultLockAccountId != null &&
-                                          bankAccounts.any((b) =>
-                                              b.id == cc.defaultLockAccountId)) {
-                                        selectedLockBankAccountId =
-                                            cc.defaultLockAccountId;
-                                      } else if (selectedLockBankAccountId ==
-                                              null ||
-                                          !bankAccounts.any((b) =>
-                                              b.id ==
-                                              selectedLockBankAccountId)) {
-                                        selectedLockBankAccountId =
-                                            bankAccounts.firstOrNull?.id;
-                                      }
-                                    }
-                                  }
-                                });
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Credit Card Fund Lock Section (for CC expense)
-                    if (selectedType == 'expense' &&
-                        _accounts
-                                .where((a) => a.id == selectedAccountId)
-                                .firstOrNull
-                                ?.isCreditCard ==
-                            true) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.purple.withValues(alpha: 0.12)
-                              : AppColors.purple.withValues(alpha: 0.06),
-                          borderRadius: AppBorderRadius.mediumBorder,
-                          border: Border.all(
-                            color: AppColors.purple.withValues(alpha: 0.25),
+                      // Goal Selector (goal_lock only)
+                      if (selectedType == 'goal_lock') ...[
+                        Text(
+                          'Goal',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: isDark
+                                ? AppColors.gray300
+                                : AppColors.gray700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                'Lock Funds in Bank Account',
-                                style: AppTypography.labelMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'Reserve cash to pay this credit card bill',
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: isDark
-                                      ? AppColors.gray400
-                                      : AppColors.gray600,
-                                ),
-                              ),
-                              value: lockCcFunds,
-                              activeThumbColor: AppColors.purple,
-                              onChanged: (val) {
-                                setStateSheet(() => lockCcFunds = val);
-                              },
+                        const SizedBox(height: AppSpacing.xs),
+                        if (_goals.isEmpty)
+                          Text(
+                            'No goals available. Create a goal first.',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.danger,
                             ),
-                            if (lockCcFunds) ...[
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                'Reserve From Account',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: isDark
-                                      ? AppColors.gray400
-                                      : AppColors.gray600,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.xxs),
-                              DropdownButtonFormField<int>(
-                                initialValue: bankAccounts.any(
-                                        (b) => b.id == selectedLockBankAccountId)
-                                    ? selectedLockBankAccountId
-                                    : bankAccounts.firstOrNull?.id,
-                                isExpanded: true,
-                                dropdownColor: isDark
-                                    ? AppColors.darkSurfaceElevated
-                                    : AppColors.white,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: isDark
-                                      ? AppColors.darkSurface
-                                      : AppColors.white,
-                                  border: OutlineInputBorder(
-                                    borderRadius: AppBorderRadius.mediumBorder,
-                                    borderSide: BorderSide(
-                                      color: isDark
-                                          ? AppColors.darkBorder
-                                          : AppColors.gray300,
-                                    ),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                    vertical: AppSpacing.sm,
-                                  ),
-                                ),
-                                items: bankAccounts
-                                    .map(
-                                      (acc) => DropdownMenuItem(
-                                        value: acc.id,
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                acc.name,
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                                width: AppSpacing.sm),
-                                            Text(
-                                              '₹${acc.balance.toStringAsFixed(0)}',
-                                              style: AppTypography.labelSmall
-                                                  .copyWith(
-                                                color: isDark
-                                                    ? AppColors.gray400
-                                                    : AppColors.gray500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (val) {
-                                  setStateSheet(
-                                      () => selectedLockBankAccountId = val);
-                                },
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-
-                    if (selectedType == 'transfer') ...[
-                      Text(
-                        'To Account',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: isDark ? AppColors.gray300 : AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Builder(
-                        builder: (context) {
-                          final eligibleDestinations = bankAccounts
-                              .where((acc) => acc.id != selectedAccountId)
-                              .toList();
-                          final currentDestId = eligibleDestinations.any(
-                                  (a) => a.id == selectedDestinationAccountId)
-                              ? selectedDestinationAccountId
-                              : eligibleDestinations.firstOrNull?.id;
-                          selectedDestinationAccountId = currentDestId;
-
-                          return DropdownButtonFormField<int>(
-                            initialValue: selectedDestinationAccountId,
+                          )
+                        else
+                          DropdownButtonFormField<int>(
+                            initialValue: selectedGoalId,
                             isExpanded: true,
                             dropdownColor: isDark
                                 ? AppColors.darkSurfaceElevated
@@ -1755,272 +1472,616 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                                 vertical: AppSpacing.md,
                               ),
                             ),
-                            items: eligibleDestinations
+                            items: _goals
                                 .map(
-                                  (acc) => DropdownMenuItem(
-                                    value: acc.id,
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            acc.name,
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                          ),
-                                        ),
-                                        const SizedBox(width: AppSpacing.sm),
-                                        Text(
-                                          '₹${acc.balance.toStringAsFixed(0)}',
-                                          style:
-                                              AppTypography.labelSmall.copyWith(
-                                            color: isDark
-                                                ? AppColors.gray400
-                                                : AppColors.gray500,
-                                          ),
-                                        ),
-                                      ],
+                                  (goal) => DropdownMenuItem(
+                                    value: goal.id,
+                                    child: Text(
+                                      '${goal.name} (₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)})',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (val) => setStateSheet(
-                              () => selectedDestinationAccountId = val,
-                            ),
+                            onChanged: (val) =>
+                                setStateSheet(() => selectedGoalId = val),
+                          ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+
+                      // Account Selector
+                      Builder(
+                        builder: (context) {
+                          final eligibleAccounts = selectedType == 'expense'
+                              ? _accounts
+                              : bankAccounts;
+                          final currentAccId =
+                              eligibleAccounts.any(
+                                (a) => a.id == selectedAccountId,
+                              )
+                              ? selectedAccountId
+                              : eligibleAccounts.firstOrNull?.id;
+                          selectedAccountId = currentAccId;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectedType == 'income'
+                                    ? 'To Account'
+                                    : 'From Account',
+                                style: AppTypography.labelMedium.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray300
+                                      : AppColors.gray700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              DropdownButtonFormField<int>(
+                                initialValue: selectedAccountId,
+                                isExpanded: true,
+                                dropdownColor: isDark
+                                    ? AppColors.darkSurfaceElevated
+                                    : AppColors.white,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? AppColors.darkSurface
+                                      : AppColors.gray50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: AppBorderRadius.mediumBorder,
+                                    borderSide: BorderSide(
+                                      color: isDark
+                                          ? AppColors.darkBorder
+                                          : AppColors.gray300,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.lg,
+                                    vertical: AppSpacing.md,
+                                  ),
+                                ),
+                                items: eligibleAccounts
+                                    .map(
+                                      (acc) => DropdownMenuItem(
+                                        value: acc.id,
+                                        child: Row(
+                                          children: [
+                                            if (acc.isCreditCard) ...[
+                                              const Icon(
+                                                Icons.credit_card_rounded,
+                                                size: 16,
+                                                color: AppColors.purple,
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.xs,
+                                              ),
+                                            ],
+                                            Expanded(
+                                              child: Text(
+                                                acc.name,
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                            const SizedBox(
+                                              width: AppSpacing.sm,
+                                            ),
+                                            Text(
+                                              acc.isCreditCard
+                                                  ? 'Due: ₹${acc.balance.toStringAsFixed(0)}'
+                                                  : '₹${acc.balance.toStringAsFixed(0)}',
+                                              style: AppTypography.labelSmall
+                                                  .copyWith(
+                                                    color: acc.isCreditCard
+                                                        ? AppColors.purple
+                                                        : (isDark
+                                                              ? AppColors
+                                                                    .gray400
+                                                              : AppColors
+                                                                    .gray500),
+                                                    fontWeight: acc.isCreditCard
+                                                        ? FontWeight.w600
+                                                        : FontWeight.normal,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) {
+                                  setStateSheet(() {
+                                    selectedAccountId = val;
+                                    if (val != null) {
+                                      final cc = _creditCardsMap[val];
+                                      if (cc != null) {
+                                        lockCcFunds = cc.autoLock;
+                                        if (cc.defaultLockAccountId != null &&
+                                            bankAccounts.any(
+                                              (b) =>
+                                                  b.id ==
+                                                  cc.defaultLockAccountId,
+                                            )) {
+                                          selectedLockBankAccountId =
+                                              cc.defaultLockAccountId;
+                                        } else if (selectedLockBankAccountId ==
+                                                null ||
+                                            !bankAccounts.any(
+                                              (b) =>
+                                                  b.id ==
+                                                  selectedLockBankAccountId,
+                                            )) {
+                                          selectedLockBankAccountId =
+                                              bankAccounts.firstOrNull?.id;
+                                        }
+                                      }
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
                           );
                         },
                       ),
                       const SizedBox(height: AppSpacing.md),
-                    ],
 
-                    // Note Input
-                    CustomInputField(
-                      controller: noteController,
-                      label: 'Note (Optional)',
-                      hint: 'e.g. Weekly grocery shopping',
-                      prefixIcon: Icons.notes_rounded,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Date Selector
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      title: Text(
-                        'Date',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark ? AppColors.gray400 : AppColors.gray600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        DateFormat('EEEE, MMM dd, yyyy').format(_selectedDate),
-                        style: AppTypography.bodyLarge.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      trailing: const Icon(
-                        Icons.calendar_month_rounded,
-                        color: AppColors.emerald700,
-                      ),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2101),
-                        );
-                        if (picked != null) {
-                          setStateSheet(() => _selectedDate = picked);
-                        }
-                      },
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppBorderRadius.mediumBorder,
-                        side: BorderSide(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : AppColors.gray300,
-                        ),
-                      ),
-                      tileColor: isDark
-                          ? AppColors.darkSurface
-                          : AppColors.gray50,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: AppComponentSizes.buttonHeightLarge,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (amountController.text.isEmpty ||
-                              selectedAccountId == null) {
-                            await AppDialogs.showWarning(
-                              ctx,
-                              message: 'Select an account and amount.',
-                            );
-                            return;
-                          }
-                          final amount =
-                              double.tryParse(amountController.text) ?? 0.0;
-                          if (amount <= 0) {
-                            await AppDialogs.showWarning(
-                              ctx,
-                              message: 'Enter an amount greater than zero.',
-                            );
-                            return;
-                          }
-
-                          try {
-                            if (selectedType == 'income') {
-                              await DatabaseHelper.instance
-                                  .createIncomeTransaction(
-                                    accountId: selectedAccountId!,
-                                    amount: amount,
-                                    date: _selectedDate.toIso8601String(),
-                                    note: noteController.text.trim(),
-                                    categoryId: selectedCategoryId,
-                                  );
-                            } else if (selectedType == 'transfer') {
-                              if (selectedDestinationAccountId == null) {
-                                throw ArgumentError(
-                                  'Select a destination account.',
-                                );
-                              }
-                              final sourceAcc = _accounts.firstWhere(
-                                (acc) => acc.id == selectedAccountId,
-                                orElse: () =>
-                                    throw ArgumentError('Select an account.'),
-                              );
-                              if (sourceAcc.type != 'Credit Card' &&
-                                  amount > sourceAcc.balance) {
-                                throw ArgumentError(
-                                  'Transfer amount cannot exceed source account balance (₹${sourceAcc.balance.toStringAsFixed(0)} available).',
-                                );
-                              }
-                              await DatabaseHelper.instance
-                                  .createTransferTransaction(
-                                    sourceAccountId: selectedAccountId!,
-                                    destinationAccountId:
-                                        selectedDestinationAccountId!,
-                                    amount: amount,
-                                    date: _selectedDate.toIso8601String(),
-                                    note: noteController.text.trim(),
-                                  );
-                            } else if (selectedType == 'goal_lock') {
-                              if (selectedGoalId == null) {
-                                throw ArgumentError('Select a goal.');
-                              }
-                              final account = _accounts.firstWhere(
-                                (acc) => acc.id == selectedAccountId,
-                                orElse: () =>
-                                    throw ArgumentError('Select an account.'),
-                              );
-                              if (amount > account.balance) {
-                                throw ArgumentError(
-                                  'Lock amount cannot exceed account balance (₹${account.balance.toStringAsFixed(0)}).',
-                                );
-                              }
-                              await DatabaseHelper.instance
-                                  .createGoalLockTransaction(
-                                    goalId: selectedGoalId!,
-                                    accountId: selectedAccountId!,
-                                    amount: amount,
-                                    date: _selectedDate.toIso8601String(),
-                                    note: noteController.text.trim(),
-                                  );
-                            } else {
-                              if (selectedCategoryId == null) {
-                                throw ArgumentError('Select a category.');
-                              }
-                              final currentSelectedAcc = _accounts
+                      // Credit Card Fund Lock Section (for CC expense)
+                      if (selectedType == 'expense' &&
+                          _accounts
                                   .where((a) => a.id == selectedAccountId)
-                                  .firstOrNull;
-                              if (currentSelectedAcc?.isCreditCard == true) {
-                                final cc = _creditCardsMap[selectedAccountId];
-                                final availableCredit =
-                                    (cc?.creditLimit ?? 0) -
-                                        currentSelectedAcc!.balance;
-                                if (amount > availableCredit) {
+                                  .firstOrNull
+                                  ?.isCreditCard ==
+                              true) ...[
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.purple.withValues(alpha: 0.12)
+                                : AppColors.purple.withValues(alpha: 0.06),
+                            borderRadius: AppBorderRadius.mediumBorder,
+                            border: Border.all(
+                              color: AppColors.purple.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  'Lock Funds in Bank Account',
+                                  style: AppTypography.labelMedium.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Reserve cash to pay this credit card bill',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                  ),
+                                ),
+                                value: lockCcFunds,
+                                activeThumbColor: AppColors.purple,
+                                onChanged: (val) {
+                                  setStateSheet(() => lockCcFunds = val);
+                                },
+                              ),
+                              if (lockCcFunds) ...[
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  'Reserve From Account',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray400
+                                        : AppColors.gray600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.xxs),
+                                DropdownButtonFormField<int>(
+                                  initialValue:
+                                      bankAccounts.any(
+                                        (b) =>
+                                            b.id == selectedLockBankAccountId,
+                                      )
+                                      ? selectedLockBankAccountId
+                                      : bankAccounts.firstOrNull?.id,
+                                  isExpanded: true,
+                                  dropdownColor: isDark
+                                      ? AppColors.darkSurfaceElevated
+                                      : AppColors.white,
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: isDark
+                                        ? AppColors.darkSurface
+                                        : AppColors.white,
+                                    border: OutlineInputBorder(
+                                      borderRadius:
+                                          AppBorderRadius.mediumBorder,
+                                      borderSide: BorderSide(
+                                        color: isDark
+                                            ? AppColors.darkBorder
+                                            : AppColors.gray300,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.md,
+                                      vertical: AppSpacing.sm,
+                                    ),
+                                  ),
+                                  items: bankAccounts
+                                      .map(
+                                        (acc) => DropdownMenuItem(
+                                          value: acc.id,
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  acc.name,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.sm,
+                                              ),
+                                              Text(
+                                                '₹${acc.balance.toStringAsFixed(0)}',
+                                                style: AppTypography.labelSmall
+                                                    .copyWith(
+                                                      color: isDark
+                                                          ? AppColors.gray400
+                                                          : AppColors.gray500,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (val) {
+                                    setStateSheet(
+                                      () => selectedLockBankAccountId = val,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+
+                      if (selectedType == 'transfer') ...[
+                        Text(
+                          'To Account',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: isDark
+                                ? AppColors.gray300
+                                : AppColors.gray700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Builder(
+                          builder: (context) {
+                            final eligibleDestinations = bankAccounts
+                                .where((acc) => acc.id != selectedAccountId)
+                                .toList();
+                            final currentDestId =
+                                eligibleDestinations.any(
+                                  (a) => a.id == selectedDestinationAccountId,
+                                )
+                                ? selectedDestinationAccountId
+                                : eligibleDestinations.firstOrNull?.id;
+                            selectedDestinationAccountId = currentDestId;
+
+                            return DropdownButtonFormField<int>(
+                              initialValue: selectedDestinationAccountId,
+                              isExpanded: true,
+                              dropdownColor: isDark
+                                  ? AppColors.darkSurfaceElevated
+                                  : AppColors.white,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.darkSurface
+                                    : AppColors.gray50,
+                                border: OutlineInputBorder(
+                                  borderRadius: AppBorderRadius.mediumBorder,
+                                  borderSide: BorderSide(
+                                    color: isDark
+                                        ? AppColors.darkBorder
+                                        : AppColors.gray300,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                  vertical: AppSpacing.md,
+                                ),
+                              ),
+                              items: eligibleDestinations
+                                  .map(
+                                    (acc) => DropdownMenuItem(
+                                      value: acc.id,
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              acc.name,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                          ),
+                                          const SizedBox(width: AppSpacing.sm),
+                                          Text(
+                                            '₹${acc.balance.toStringAsFixed(0)}',
+                                            style: AppTypography.labelSmall
+                                                .copyWith(
+                                                  color: isDark
+                                                      ? AppColors.gray400
+                                                      : AppColors.gray500,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) => setStateSheet(
+                                () => selectedDestinationAccountId = val,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+
+                      // Note Input
+                      CustomInputField(
+                        controller: noteController,
+                        label: 'Note (Optional)',
+                        hint: 'e.g. Weekly grocery shopping',
+                        prefixIcon: Icons.notes_rounded,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Date Selector
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        title: Text(
+                          'Date',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          DateFormat('EEEE, MMM dd, yyyy')
+                              .format(_selectedDate),
+                          style: AppTypography.bodyLarge.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.calendar_month_rounded,
+                          color: AppColors.emerald700,
+                        ),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                          );
+                          if (picked != null) {
+                            setStateSheet(() => _selectedDate = picked);
+                          }
+                        },
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          side: BorderSide(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray300,
+                          ),
+                        ),
+                        tileColor: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.gray50,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: AppComponentSizes.buttonHeightLarge,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (amountController.text.isEmpty ||
+                                selectedAccountId == null) {
+                              await AppDialogs.showWarning(
+                                ctx,
+                                message: 'Select an account and amount.',
+                              );
+                              return;
+                            }
+                            final amount =
+                                double.tryParse(amountController.text) ?? 0.0;
+                            if (amount <= 0) {
+                              await AppDialogs.showWarning(
+                                ctx,
+                                message: 'Enter an amount greater than zero.',
+                              );
+                              return;
+                            }
+
+                            try {
+                              if (selectedType == 'income') {
+                                await DatabaseHelper.instance
+                                    .createIncomeTransaction(
+                                      accountId: selectedAccountId!,
+                                      amount: amount,
+                                      date: _selectedDate.toIso8601String(),
+                                      note: noteController.text.trim(),
+                                      categoryId: selectedCategoryId,
+                                    );
+                              } else if (selectedType == 'transfer') {
+                                if (selectedDestinationAccountId == null) {
                                   throw ArgumentError(
-                                    'Transaction amount exceeds available credit limit (₹${availableCredit.toStringAsFixed(0)} available).',
+                                    'Select a destination account.',
                                   );
                                 }
-                                if (lockCcFunds &&
-                                    selectedLockBankAccountId == null) {
+                                final sourceAcc = _accounts.firstWhere(
+                                  (acc) => acc.id == selectedAccountId,
+                                  orElse: () =>
+                                      throw ArgumentError('Select an account.'),
+                                );
+                                if (sourceAcc.type != 'Credit Card' &&
+                                    amount > sourceAcc.balance) {
                                   throw ArgumentError(
-                                    'Please select a bank account to lock funds in.',
+                                    'Transfer amount cannot exceed source account balance (₹${sourceAcc.balance.toStringAsFixed(0)} available).',
                                   );
                                 }
                                 await DatabaseHelper.instance
-                                    .createCreditCardExpenseTransaction(
-                                  ccAccountId: selectedAccountId!,
-                                  categoryId: selectedCategoryId!,
-                                  amount: amount,
-                                  date: _selectedDate.toIso8601String(),
-                                  note: noteController.text.trim(),
-                                  lockBankAccountId: lockCcFunds
-                                      ? selectedLockBankAccountId
-                                      : null,
+                                    .createTransferTransaction(
+                                      sourceAccountId: selectedAccountId!,
+                                      destinationAccountId:
+                                          selectedDestinationAccountId!,
+                                      amount: amount,
+                                      date: _selectedDate.toIso8601String(),
+                                      note: noteController.text.trim(),
+                                    );
+                              } else if (selectedType == 'goal_lock') {
+                                if (selectedGoalId == null) {
+                                  throw ArgumentError('Select a goal.');
+                                }
+                                final account = _accounts.firstWhere(
+                                  (acc) => acc.id == selectedAccountId,
+                                  orElse: () =>
+                                      throw ArgumentError('Select an account.'),
                                 );
-                              } else {
-                                if (amount > (currentSelectedAcc?.balance ?? 0)) {
+                                if (amount > account.balance) {
                                   throw ArgumentError(
-                                    'Expense amount cannot exceed account balance (₹${(currentSelectedAcc?.balance ?? 0).toStringAsFixed(0)} available).',
+                                    'Lock amount cannot exceed account balance (₹${account.balance.toStringAsFixed(0)}).',
                                   );
                                 }
-                                await DatabaseHelper.instance.insertTransaction(
-                                  TransactionModel(
-                                    accountId: selectedAccountId!,
-                                    categoryId: selectedCategoryId!,
-                                    amount: amount,
-                                    date: _selectedDate.toIso8601String(),
-                                    note: noteController.text.trim(),
-                                  ),
-                                );
-                                await DatabaseHelper.instance.subtractFromAccount(
-                                  selectedAccountId!,
-                                  amount,
+                                await DatabaseHelper.instance
+                                    .createGoalLockTransaction(
+                                      goalId: selectedGoalId!,
+                                      accountId: selectedAccountId!,
+                                      amount: amount,
+                                      date: _selectedDate.toIso8601String(),
+                                      note: noteController.text.trim(),
+                                    );
+                              } else {
+                                if (selectedCategoryId == null) {
+                                  throw ArgumentError('Select a category.');
+                                }
+                                final currentSelectedAcc = _accounts
+                                    .where((a) => a.id == selectedAccountId)
+                                    .firstOrNull;
+                                if (currentSelectedAcc?.isCreditCard == true) {
+                                  final cc = _creditCardsMap[selectedAccountId];
+                                  final availableCredit =
+                                      (cc?.creditLimit ?? 0) -
+                                      currentSelectedAcc!.balance;
+                                  if (amount > availableCredit) {
+                                    throw ArgumentError(
+                                      'Transaction amount exceeds available credit limit (₹${availableCredit.toStringAsFixed(0)} available).',
+                                    );
+                                  }
+                                  if (lockCcFunds &&
+                                      selectedLockBankAccountId == null) {
+                                    throw ArgumentError(
+                                      'Please select a bank account to lock funds in.',
+                                    );
+                                  }
+                                  await DatabaseHelper.instance
+                                      .createCreditCardExpenseTransaction(
+                                        ccAccountId: selectedAccountId!,
+                                        categoryId: selectedCategoryId!,
+                                        amount: amount,
+                                        date: _selectedDate.toIso8601String(),
+                                        note: noteController.text.trim(),
+                                        lockBankAccountId: lockCcFunds
+                                            ? selectedLockBankAccountId
+                                            : null,
+                                      );
+                                } else {
+                                  if (amount >
+                                      (currentSelectedAcc?.balance ?? 0)) {
+                                    throw ArgumentError(
+                                      'Expense amount cannot exceed account balance (₹${(currentSelectedAcc?.balance ?? 0).toStringAsFixed(0)} available).',
+                                    );
+                                  }
+                                  await DatabaseHelper.instance
+                                      .insertTransaction(
+                                        TransactionModel(
+                                          accountId: selectedAccountId!,
+                                          categoryId: selectedCategoryId!,
+                                          amount: amount,
+                                          date: _selectedDate.toIso8601String(),
+                                          note: noteController.text.trim(),
+                                        ),
+                                      );
+                                  await DatabaseHelper.instance
+                                      .subtractFromAccount(
+                                        selectedAccountId!,
+                                        amount,
+                                      );
+                                }
+                              }
+                            } catch (error) {
+                              if (ctx.mounted) {
+                                await AppDialogs.showWarning(
+                                  ctx,
+                                  message: error.toString(),
                                 );
                               }
+                              return;
                             }
-                          } catch (error) {
-                            if (ctx.mounted) {
-                              await AppDialogs.showWarning(ctx, message: error.toString());
-                            }
-                            return;
-                          }
 
-                          if (ctx.mounted) {
-                            Navigator.pop(ctx);
-                          }
-                          _loadAllData();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.emerald700,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                            }
+                            unawaited(_loadAllData());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.emerald700,
+                            foregroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AppBorderRadius.mediumBorder,
+                            ),
+                          ),
+                          child: Text(
+                            selectedType == 'income'
+                                ? 'Save Income'
+                                : selectedType == 'transfer'
+                                ? 'Save Transfer'
+                                : 'Save Expense',
+                            style: AppTypography.labelLarge,
                           ),
                         ),
-                        child: Text(
-                          selectedType == 'income'
-                              ? 'Save Income'
-                              : selectedType == 'transfer'
-                              ? 'Save Transfer'
-                              : 'Save Expense',
-                          style: AppTypography.labelLarge,
-                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                      const SizedBox(height: AppSpacing.xl),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

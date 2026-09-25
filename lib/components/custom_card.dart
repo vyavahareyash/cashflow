@@ -39,7 +39,7 @@ class CustomCard extends StatelessWidget {
         : AppColors.gray200;
     final radius = borderRadius ?? AppBorderRadius.largeBorder;
 
-    Widget cardContent = Container(
+    final Widget cardContent = Container(
       margin: margin,
       decoration: BoxDecoration(
         color: gradient == null ? (backgroundColor ?? defaultBg) : null,

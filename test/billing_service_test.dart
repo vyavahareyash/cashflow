@@ -11,11 +11,10 @@ class FakeInAppPurchase implements InAppPurchase {
   Future<bool> isAvailable() async => true;
 
   @override
-  Future<ProductDetailsResponse> queryProductDetails(Set<String> identifiers) async {
-    return ProductDetailsResponse(
-      productDetails: [],
-      notFoundIDs: [],
-    );
+  Future<ProductDetailsResponse> queryProductDetails(
+    Set<String> identifiers,
+  ) async {
+    return ProductDetailsResponse(productDetails: [], notFoundIDs: []);
   }
 
   @override
@@ -25,7 +24,8 @@ class FakeInAppPurchase implements InAppPurchase {
   }) async => true;
 
   @override
-  Future<bool> buyNonConsumable({required PurchaseParam purchaseParam}) async => true;
+  Future<bool> buyNonConsumable({required PurchaseParam purchaseParam}) async =>
+      true;
 
   @override
   Future<void> completePurchase(PurchaseDetails purchase) async {}
@@ -37,7 +37,8 @@ class FakeInAppPurchase implements InAppPurchase {
   Future<String> countryCode() async => 'IN';
 
   @override
-  T getPlatformAddition<T extends InAppPurchasePlatformAddition?>() => null as T;
+  T getPlatformAddition<T extends InAppPurchasePlatformAddition?>() =>
+      null as T;
 }
 
 void main() {
@@ -46,9 +47,7 @@ void main() {
 
   setUp(() {
     fakeIap = FakeInAppPurchase();
-    BillingService.setMockInstance(
-      BillingService.custom(iapInstance: fakeIap),
-    );
+    BillingService.setMockInstance(BillingService.custom(iapInstance: fakeIap));
   });
 
   tearDown(() {
@@ -56,31 +55,66 @@ void main() {
   });
 
   group('BillingService product definitions and initial state', () {
-    test('Product identifiers and icon asset paths are defined for coffee tiers', () {
-      expect(BillingService.productCoffeeSingle, equals('coffee_single'));
-      expect(BillingService.productCoffeeDouble, equals('coffee_double'));
-      expect(BillingService.productCoffeePot, equals('coffee_pot'));
-      expect(
-        BillingService.productIds,
-        containsAll([
-          'coffee_single',
-          'coffee_double',
-          'coffee_pot',
-        ]),
-      );
-      expect(BillingService.assetCoffeeSingle, equals('assets/icon/products/coffee_single_3d.png'));
-      expect(BillingService.assetCoffeeDouble, equals('assets/icon/products/coffee_double_3d.png'));
-      expect(BillingService.assetCoffeePot, equals('assets/icon/products/coffee_pot_3d.png'));
-      expect(BillingService.assetCoffeeSingleOriginal, equals('assets/icon/products/coffee_single.png'));
-      expect(BillingService.assetCoffeeDoubleOriginal, equals('assets/icon/products/coffee_double.png'));
-      expect(BillingService.assetCoffeePotOriginal, equals('assets/icon/products/coffee_pot.png'));
-      expect(BillingService.productIconAsset('coffee_single'), equals(BillingService.assetCoffeeSingle));
-      expect(BillingService.productIconAsset('coffee_double'), equals(BillingService.assetCoffeeDouble));
-      expect(BillingService.productIconAsset('coffee_pot'), equals(BillingService.assetCoffeePot));
-      expect(BillingService.productTagline('coffee_single'), equals('Fuel a quick bug fix or optimization'));
-      expect(BillingService.productTagline('coffee_double'), equals('Power a new feature & test cycle'));
-      expect(BillingService.productTagline('coffee_pot'), equals('Supercharge continuous development & maintenance'));
-    });
+    test(
+      'Product identifiers and icon asset paths are defined for coffee tiers',
+      () {
+        expect(BillingService.productCoffeeSingle, equals('coffee_single'));
+        expect(BillingService.productCoffeeDouble, equals('coffee_double'));
+        expect(BillingService.productCoffeePot, equals('coffee_pot'));
+        expect(
+          BillingService.productIds,
+          containsAll(['coffee_single', 'coffee_double', 'coffee_pot']),
+        );
+        expect(
+          BillingService.assetCoffeeSingle,
+          equals('assets/icon/products/coffee_single_3d.png'),
+        );
+        expect(
+          BillingService.assetCoffeeDouble,
+          equals('assets/icon/products/coffee_double_3d.png'),
+        );
+        expect(
+          BillingService.assetCoffeePot,
+          equals('assets/icon/products/coffee_pot_3d.png'),
+        );
+        expect(
+          BillingService.assetCoffeeSingleOriginal,
+          equals('assets/icon/products/coffee_single.png'),
+        );
+        expect(
+          BillingService.assetCoffeeDoubleOriginal,
+          equals('assets/icon/products/coffee_double.png'),
+        );
+        expect(
+          BillingService.assetCoffeePotOriginal,
+          equals('assets/icon/products/coffee_pot.png'),
+        );
+        expect(
+          BillingService.productIconAsset('coffee_single'),
+          equals(BillingService.assetCoffeeSingle),
+        );
+        expect(
+          BillingService.productIconAsset('coffee_double'),
+          equals(BillingService.assetCoffeeDouble),
+        );
+        expect(
+          BillingService.productIconAsset('coffee_pot'),
+          equals(BillingService.assetCoffeePot),
+        );
+        expect(
+          BillingService.productTagline('coffee_single'),
+          equals('Fuel a quick bug fix or optimization'),
+        );
+        expect(
+          BillingService.productTagline('coffee_double'),
+          equals('Power a new feature & test cycle'),
+        );
+        expect(
+          BillingService.productTagline('coffee_pot'),
+          equals('Supercharge continuous development & maintenance'),
+        );
+      },
+    );
 
     test('Initial instance state has default empty values', () {
       final billing = BillingService.instance;

@@ -7,7 +7,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
 
-  const databaseFileName = 'money_tracker.db';
+  const databaseFileName = 'database_migration.db';
+  DatabaseHelper.setTestDatabaseName(databaseFileName);
 
   setUp(() async {
     final dbPath = await getDatabasesPath();
@@ -26,9 +27,15 @@ void main() {
   test('fresh install creates v4 schema', () async {
     final db = await DatabaseHelper.instance.database;
 
-    final transactionColumns = await db.rawQuery("PRAGMA table_info('transactions')");
-    final categoryColumns = await db.rawQuery("PRAGMA table_info('categories')");
-    final lockColumns = await db.rawQuery("PRAGMA table_info('locked_allocations')");
+    final transactionColumns = await db.rawQuery(
+      "PRAGMA table_info('transactions')",
+    );
+    final categoryColumns = await db.rawQuery(
+      "PRAGMA table_info('categories')",
+    );
+    final lockColumns = await db.rawQuery(
+      "PRAGMA table_info('locked_allocations')",
+    );
     final ccColumns = await db.rawQuery("PRAGMA table_info('credit_cards')");
 
     expect(
@@ -45,7 +52,13 @@ void main() {
     );
     expect(
       ccColumns.map((column) => column['name']).toList(),
-      containsAll(['account_id', 'credit_limit', 'statement_day', 'due_day', 'auto_lock']),
+      containsAll([
+        'account_id',
+        'credit_limit',
+        'statement_day',
+        'due_day',
+        'auto_lock',
+      ]),
     );
   });
 
@@ -124,7 +137,9 @@ void main() {
     expect(groceriesCat['monthly_budget'], 1800.0);
     expect(groceriesCat['type'], 'expense');
 
-    final transactionColumns = await upgradedDb.rawQuery("PRAGMA table_info('transactions')");
+    final transactionColumns = await upgradedDb.rawQuery(
+      "PRAGMA table_info('transactions')",
+    );
     expect(
       transactionColumns.map((column) => column['name']).toList(),
       containsAll(['type', 'destination_account_id', 'goal_id']),
@@ -210,8 +225,12 @@ void main() {
     // Now open via DatabaseHelper, which triggers onUpgrade to v3
     final upgradedDb = await DatabaseHelper.instance.database;
 
-    final ccTable = await upgradedDb.rawQuery("PRAGMA table_info('credit_cards')");
-    final lockTable = await upgradedDb.rawQuery("PRAGMA table_info('locked_allocations')");
+    final ccTable = await upgradedDb.rawQuery(
+      "PRAGMA table_info('credit_cards')",
+    );
+    final lockTable = await upgradedDb.rawQuery(
+      "PRAGMA table_info('locked_allocations')",
+    );
     final locks = await upgradedDb.query('locked_allocations');
 
     expect(ccTable, isNotEmpty);
@@ -257,7 +276,9 @@ void main() {
     // Open via DatabaseHelper to trigger onUpgrade to v4
     final upgradedDb = await DatabaseHelper.instance.database;
 
-    final catCols = await upgradedDb.rawQuery("PRAGMA table_info('categories')");
+    final catCols = await upgradedDb.rawQuery(
+      "PRAGMA table_info('categories')",
+    );
     expect(catCols.any((col) => col['name'] == 'type'), isTrue);
 
     final categories = await upgradedDb.query('categories');
@@ -267,7 +288,9 @@ void main() {
     expect(existingCat['monthly_budget'], 12000.0);
 
     // Default income categories automatically seeded
-    final incomeCategories = categories.where((c) => c['type'] == 'income').toList();
+    final incomeCategories = categories
+        .where((c) => c['type'] == 'income')
+        .toList();
     expect(incomeCategories.isNotEmpty, isTrue);
     expect(incomeCategories.any((c) => c['name'] == 'Salary'), isTrue);
   });

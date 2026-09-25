@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_concept_carousel.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_constants.dart';
@@ -31,13 +33,13 @@ class WalkthroughController extends ChangeNotifier {
     await WalkthroughConceptCarousel.show(
       context,
       onTakeTour: () {
-        startScreenTour(context);
+        unawaited(startScreenTour(context));
       },
       onFinish: () {
-        finishWithoutTour(context);
+        unawaited(finishWithoutTour(context));
       },
       onSkip: () {
-        finishWithoutTour(context);
+        unawaited(finishWithoutTour(context));
       },
     );
   }
@@ -47,7 +49,7 @@ class WalkthroughController extends ChangeNotifier {
     await WalkthroughConceptCarousel.show(
       context,
       onTakeTour: () {
-        startScreenTour(context);
+        unawaited(startScreenTour(context));
       },
       onFinish: () {},
       onSkip: () {},
@@ -62,7 +64,10 @@ class WalkthroughController extends ChangeNotifier {
     _currentStepIndex = 0;
 
     final firstStep = kSpotlightSteps.first;
-    _onNavigateTab?.call(firstStep.tabIndex, subTabIndex: firstStep.subTabIndex);
+    _onNavigateTab?.call(
+      firstStep.tabIndex,
+      subTabIndex: firstStep.subTabIndex,
+    );
 
     notifyListeners();
   }
@@ -106,7 +111,9 @@ class WalkthroughController extends ChangeNotifier {
           ),
           backgroundColor: AppColors.emerald700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           duration: const Duration(seconds: 5),
           action: SnackBarAction(
             label: 'Got it',
@@ -142,7 +149,9 @@ class WalkthroughController extends ChangeNotifier {
           ),
           backgroundColor: AppColors.emerald700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           duration: const Duration(seconds: 4),
         ),
       );

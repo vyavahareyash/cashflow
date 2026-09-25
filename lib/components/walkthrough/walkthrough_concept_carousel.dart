@@ -92,7 +92,9 @@ class _WalkthroughConceptCarouselState
     final isSmallScreen = size.height < 680;
 
     final backgroundColor = isDark ? const Color(0xFF16231E) : Colors.white;
-    final cardBorderColor = isDark ? const Color(0xFF284136) : AppColors.gray200;
+    final cardBorderColor = isDark
+        ? const Color(0xFF284136)
+        : AppColors.gray200;
 
     return PopScope(
       canPop: false,
@@ -133,7 +135,9 @@ class _WalkthroughConceptCarouselState
                       child: Text(
                         'STEP ${_currentPage + 1} OF ${kWalkthroughConcepts.length}',
                         style: AppTypography.labelSmall.copyWith(
-                          color: isDark ? AppColors.emerald300 : AppColors.emerald700,
+                          color: isDark
+                              ? AppColors.emerald300
+                              : AppColors.emerald700,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8,
                           fontSize: 10,
@@ -145,7 +149,9 @@ class _WalkthroughConceptCarouselState
                       onPressed: widget.onSkip,
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        foregroundColor: isDark ? AppColors.gray400 : AppColors.gray600,
+                        foregroundColor: isDark
+                            ? AppColors.gray400
+                            : AppColors.gray600,
                       ),
                       child: const Text('Skip'),
                     ),
@@ -260,9 +266,7 @@ class _WalkthroughConceptCarouselState
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E3128)
-                    : AppColors.emerald50,
+                color: isDark ? const Color(0xFF1E3128) : AppColors.emerald50,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isDark
@@ -326,24 +330,21 @@ class _WalkthroughConceptCarouselState
         // Dots Indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            kWalkthroughConcepts.length,
-            (index) {
-              final isSelected = _currentPage == index;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: isSelected ? 20 : 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.emerald600
-                      : (isDark ? AppColors.gray700 : AppColors.gray300),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              );
-            },
-          ),
+          children: List.generate(kWalkthroughConcepts.length, (index) {
+            final isSelected = _currentPage == index;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: isSelected ? 20 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.emerald600
+                    : (isDark ? AppColors.gray700 : AppColors.gray300),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
         ),
         const SizedBox(height: 14),
 
@@ -355,7 +356,9 @@ class _WalkthroughConceptCarouselState
                 TextButton(
                   onPressed: _prevPage,
                   style: TextButton.styleFrom(
-                    foregroundColor: isDark ? AppColors.gray300 : AppColors.gray700,
+                    foregroundColor: isDark
+                        ? AppColors.gray300
+                        : AppColors.gray700,
                   ),
                   child: const Text('Back'),
                 )
@@ -371,7 +374,10 @@ class _WalkthroughConceptCarouselState
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.emerald700,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -388,7 +394,9 @@ class _WalkthroughConceptCarouselState
                   key: const Key('walkthrough_explore_button'),
                   onPressed: widget.onFinish,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? AppColors.gray300 : AppColors.gray800,
+                    foregroundColor: isDark
+                        ? AppColors.gray300
+                        : AppColors.gray800,
                     side: BorderSide(
                       color: isDark ? AppColors.gray700 : AppColors.gray300,
                     ),

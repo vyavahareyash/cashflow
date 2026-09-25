@@ -94,7 +94,9 @@ class SampleAudioRecorderClient implements AudioRecorderClient {
           if (val > maxAmpInt) maxAmpInt = val;
         }
         final double normalized = maxAmpInt / 32768.0;
-        final double dbfs = normalized > 0.0001 ? 20 * (normalized.clamp(0.0001, 1.0)) - 60 : -80.0;
+        final double dbfs = normalized > 0.0001
+            ? 20 * (normalized.clamp(0.0001, 1.0)) - 60
+            : -80.0;
         return Stream.value(Amplitude(current: dbfs, max: dbfs));
       }
     }
@@ -102,12 +104,14 @@ class SampleAudioRecorderClient implements AudioRecorderClient {
   }
 
   @override
-  Future<Amplitude> getAmplitude() async => Amplitude(current: -20.0, max: -10.0);
+  Future<Amplitude> getAmplitude() async =>
+      Amplitude(current: -20.0, max: -10.0);
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker_sample_audio_test.db';
 
   late Directory tempDir;
@@ -122,12 +126,21 @@ void main() {
     softSpeechFile = File('test/fixtures/soft_speech_16k.wav');
     silentAudioFile = File('test/fixtures/silent_16k.wav');
 
-    expect(normalSpeechFile.existsSync(), isTrue,
-        reason: 'Sample speech audio fixture must exist at test/fixtures/chai_groceries_16k.wav');
-    expect(softSpeechFile.existsSync(), isTrue,
-        reason: 'Soft speech audio fixture must exist at test/fixtures/soft_speech_16k.wav');
-    expect(silentAudioFile.existsSync(), isTrue,
-        reason: 'Silent audio fixture must exist at test/fixtures/silent_16k.wav');
+    expect(
+      normalSpeechFile.existsSync(),
+      isTrue,
+      reason: 'Sample speech audio fixture must exist at test/fixtures/chai_groceries_16k.wav',
+    );
+    expect(
+      softSpeechFile.existsSync(),
+      isTrue,
+      reason: 'Soft speech audio fixture must exist at test/fixtures/soft_speech_16k.wav',
+    );
+    expect(
+      silentAudioFile.existsSync(),
+      isTrue,
+      reason: 'Silent audio fixture must exist at test/fixtures/silent_16k.wav',
+    );
   });
 
   setUp(() async {
@@ -193,14 +206,19 @@ void main() {
       );
       await sttEngineCalibrated.initialize(modelDirPath: modelDir.path);
 
-      final transcript = await sttEngineCalibrated.transcribeFile(softSpeechFile.path);
-      expect(transcript, equals('Paid 20 rupees for chai on UPI and 450 rupees for groceries yesterday'));
+      final transcript = await sttEngineCalibrated.transcribeFile(
+        softSpeechFile.path,
+      );
+      expect(
+        transcript,
+        equals(
+          'Paid 20 rupees for chai on UPI and 450 rupees for groceries yesterday',
+        ),
+      );
     });
 
     test('3. Silent audio sample (peak ~0.0001) is correctly rejected by both thresholds', () async {
-      final sttEngineCalibrated = MockSttEngine(
-        silenceThreshold: 0.0005,
-      );
+      final sttEngineCalibrated = MockSttEngine(silenceThreshold: 0.0005);
       await sttEngineCalibrated.initialize(modelDirPath: modelDir.path);
 
       expect(
@@ -209,21 +227,27 @@ void main() {
       );
     });
 
-    test('4. Amplitude stream computes non-zero RMS from sample audio file', () async {
-      final recorderClient = SampleAudioRecorderClient(sampleAudioFile: normalSpeechFile);
-      final captureService = AudioCaptureService(
-        recorderClient: recorderClient,
-        tempDirectory: audioDir,
-      );
-      final amp = await captureService.amplitudeStream.first;
-      expect(amp, greaterThan(0.0));
-    });
+    test(
+      '4. Amplitude stream computes non-zero RMS from sample audio file',
+      () async {
+        final recorderClient = SampleAudioRecorderClient(
+          sampleAudioFile: normalSpeechFile,
+        );
+        final captureService = AudioCaptureService(
+          recorderClient: recorderClient,
+          tempDirectory: audioDir,
+        );
+        final amp = await captureService.amplitudeStream.first;
+        expect(amp, greaterThan(0.0));
+      },
+    );
   });
 
   group('Full End-to-End Test with Real Speech Sample Audio (Issue #94, US 1, 3, 11, 13)', () {
-    test('Record sample audio -> Live PCM streaming -> Coordinator processing -> SQLite Commit -> Purge Audio',
-        () async {
-      final recorderClient = SampleAudioRecorderClient(sampleAudioFile: normalSpeechFile);
+    test('Record sample audio -> Live PCM streaming -> Coordinator processing -> SQLite Commit -> Purge Audio', () async {
+      final recorderClient = SampleAudioRecorderClient(
+        sampleAudioFile: normalSpeechFile,
+      );
       final captureService = AudioCaptureService(
         recorderClient: recorderClient,
         tempDirectory: audioDir,
@@ -285,12 +309,15 @@ void main() {
       expect(File(path).existsSync(), isTrue);
 
       // 2. Verify PCM samples read directly from active recording file
-      final activeSamples = await coordinator.audioPipeline.readActiveRecordingSamples();
+      final activeSamples = await coordinator.audioPipeline
+          .readActiveRecordingSamples();
       expect(activeSamples, isNotNull);
       expect(activeSamples!.length, greaterThan(1000));
 
       // 3. Stop recording and execute full pipeline
-      final drafts = await coordinator.stopAndProcess(anchorDate: DateTime(2026, 9, 23));
+      final drafts = await coordinator.stopAndProcess(
+        anchorDate: DateTime(2026, 9, 23),
+      );
       expect(drafts.length, equals(2));
       expect(drafts[0].amount, equals(20.0));
       expect(drafts[0].note, equals('Chai on UPI'));
@@ -298,13 +325,19 @@ void main() {
       expect(drafts[1].note, equals('Groceries'));
 
       final db = await DatabaseHelper.instance.database;
-      final beforeCount = (await db.rawQuery('SELECT COUNT(*) as cnt FROM transactions')).first['cnt'] as int;
+      final beforeCount =
+          (await db.rawQuery('SELECT COUNT(*) as cnt FROM transactions'))
+                  .first['cnt']
+              as int;
 
       // 4. Commit to SQLite Database
       await DatabaseHelper.instance.commitDraftTransactions(drafts);
 
       // 5. Query SQLite to verify committed records
-      final afterCount = (await db.rawQuery('SELECT COUNT(*) as cnt FROM transactions')).first['cnt'] as int;
+      final afterCount =
+          (await db.rawQuery('SELECT COUNT(*) as cnt FROM transactions'))
+                  .first['cnt']
+              as int;
       expect(afterCount - beforeCount, equals(2));
 
       final rows = await db.query('transactions', orderBy: 'id DESC', limit: 2);

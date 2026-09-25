@@ -17,15 +17,40 @@ void main() {
     final mockAccounts = [
       Account(id: 1, name: 'Checking', balance: 5000.0, type: 'Bank'),
       Account(id: 2, name: 'Savings', balance: 12000.0, type: 'Savings'),
-      Account(id: 3, name: 'Chase Sapphire', balance: -450.0, type: 'Credit Card'),
+      Account(
+        id: 3,
+        name: 'Chase Sapphire',
+        balance: -450.0,
+        type: 'Credit Card',
+      ),
       Account(id: 4, name: 'Cash Wallet', balance: 120.0, type: 'Cash'),
     ];
 
     final mockCategories = [
-      Category(id: 10, name: 'Food & Dining', monthlyBudget: 600.0, type: 'expense'),
-      Category(id: 11, name: 'Groceries', monthlyBudget: 800.0, type: 'expense'),
-      Category(id: 12, name: 'Transportation', monthlyBudget: 300.0, type: 'expense'),
-      Category(id: 13, name: 'Utilities', monthlyBudget: 250.0, type: 'expense'),
+      Category(
+        id: 10,
+        name: 'Food & Dining',
+        monthlyBudget: 600.0,
+        type: 'expense',
+      ),
+      Category(
+        id: 11,
+        name: 'Groceries',
+        monthlyBudget: 800.0,
+        type: 'expense',
+      ),
+      Category(
+        id: 12,
+        name: 'Transportation',
+        monthlyBudget: 300.0,
+        type: 'expense',
+      ),
+      Category(
+        id: 13,
+        name: 'Utilities',
+        monthlyBudget: 250.0,
+        type: 'expense',
+      ),
     ];
 
     test('1. Headless test harness verifies deterministic parsing for Coffee on Chase', () {
@@ -131,23 +156,47 @@ void main() {
       expect(draft.isValid, isTrue);
     });
 
-    test('5. Resolves relative dates deterministically across weekdays (US 6)', () {
-      // Anchor date: Tuesday, Sep 22, 2026
-      expect(VoiceEntityParser.resolveRelativeDate('today', anchorDate), '2026-09-22');
-      expect(VoiceEntityParser.resolveRelativeDate('yesterday', anchorDate), '2026-09-21');
-      expect(
-        VoiceEntityParser.resolveRelativeDate('the day before yesterday', anchorDate),
-        '2026-09-20',
-      );
-      // Last Friday relative to Tuesday 2026-09-22 is 2026-09-18 (4 days ago)
-      expect(VoiceEntityParser.resolveRelativeDate('last Friday', anchorDate), '2026-09-18');
-      // Last Sunday is 2026-09-20 (2 days ago)
-      expect(VoiceEntityParser.resolveRelativeDate('last Sunday', anchorDate), '2026-09-20');
-      // Last Monday is 2026-09-21 (1 day ago)
-      expect(VoiceEntityParser.resolveRelativeDate('last Monday', anchorDate), '2026-09-21');
-      // Last Tuesday strictly resolves to 7 days prior: 2026-09-15
-      expect(VoiceEntityParser.resolveRelativeDate('last Tuesday', anchorDate), '2026-09-15');
-    });
+    test(
+      '5. Resolves relative dates deterministically across weekdays (US 6)',
+      () {
+        // Anchor date: Tuesday, Sep 22, 2026
+        expect(
+          VoiceEntityParser.resolveRelativeDate('today', anchorDate),
+          '2026-09-22',
+        );
+        expect(
+          VoiceEntityParser.resolveRelativeDate('yesterday', anchorDate),
+          '2026-09-21',
+        );
+        expect(
+          VoiceEntityParser.resolveRelativeDate(
+            'the day before yesterday',
+            anchorDate,
+          ),
+          '2026-09-20',
+        );
+        // Last Friday relative to Tuesday 2026-09-22 is 2026-09-18 (4 days ago)
+        expect(
+          VoiceEntityParser.resolveRelativeDate('last Friday', anchorDate),
+          '2026-09-18',
+        );
+        // Last Sunday is 2026-09-20 (2 days ago)
+        expect(
+          VoiceEntityParser.resolveRelativeDate('last Sunday', anchorDate),
+          '2026-09-20',
+        );
+        // Last Monday is 2026-09-21 (1 day ago)
+        expect(
+          VoiceEntityParser.resolveRelativeDate('last Monday', anchorDate),
+          '2026-09-21',
+        );
+        // Last Tuesday strictly resolves to 7 days prior: 2026-09-15
+        expect(
+          VoiceEntityParser.resolveRelativeDate('last Tuesday', anchorDate),
+          '2026-09-15',
+        );
+      },
+    );
 
     test('6. Dictates multiple transactions in a single continuous monologue (US 1)', () {
       const monologue =
@@ -177,22 +226,25 @@ void main() {
       expect(draft2.date, '2026-09-22');
     });
 
-    test('7. Flags unassigned category for unrecognized expense items (US 8)', () {
-      const sample = 'Random gadget 89 dollars on Checking';
+    test(
+      '7. Flags unassigned category for unrecognized expense items (US 8)',
+      () {
+        const sample = 'Random gadget 89 dollars on Checking';
 
-      final results = VoiceEntityParser.parseTranscriptionSample(
-        sample,
-        anchorDate: anchorDate,
-        accounts: mockAccounts,
-        categories: mockCategories,
-      );
+        final results = VoiceEntityParser.parseTranscriptionSample(
+          sample,
+          anchorDate: anchorDate,
+          accounts: mockAccounts,
+          categories: mockCategories,
+        );
 
-      expect(results.length, 1);
-      final draft = results.first;
-      expect(draft.amount, 89.0);
-      expect(draft.categoryId, isNull);
-      expect(draft.hasUnassignedCategory, isTrue);
-    });
+        expect(results.length, 1);
+        final draft = results.first;
+        expect(draft.amount, 89.0);
+        expect(draft.categoryId, isNull);
+        expect(draft.hasUnassignedCategory, isTrue);
+      },
+    );
   });
 
   group('DraftTransaction Model Validation & Transformations', () {
@@ -304,7 +356,10 @@ void main() {
       expect(VoiceGrammar.transactionGrammar, contains('amount'));
       expect(VoiceGrammar.transactionGrammar, contains('type'));
       expect(VoiceGrammar.transactionGrammar, contains('account_id'));
-      expect(VoiceGrammar.transactionGrammar, contains('destination_account_id'));
+      expect(
+        VoiceGrammar.transactionGrammar,
+        contains('destination_account_id'),
+      );
       expect(VoiceGrammar.transactionGrammar, contains('category_id'));
       expect(VoiceGrammar.transactionGrammar, contains('date'));
       expect(VoiceGrammar.transactionGrammar, contains('note'));
@@ -337,17 +392,31 @@ void main() {
       expect(VoiceGrammar.tryParseGrammarJson('invalid json string'), isNull);
       expect(VoiceGrammar.tryParseGrammarJson('{"not": "array"}'), isNull);
       // Missing amount
-      expect(VoiceGrammar.tryParseGrammarJson('[{"type": "expense", "date": "2026-09-22", "note": "Hi"}]'), isNull);
+      expect(
+        VoiceGrammar.tryParseGrammarJson(
+          '[{"type": "expense", "date": "2026-09-22", "note": "Hi"}]',
+        ),
+        isNull,
+      );
       // Invalid date format
-      expect(VoiceGrammar.tryParseGrammarJson('[{"amount": 10, "type": "expense", "date": "invalid", "note": "Hi"}]'), isNull);
+      expect(
+        VoiceGrammar.tryParseGrammarJson(
+          '[{"amount": 10, "type": "expense", "date": "invalid", "note": "Hi"}]',
+        ),
+        isNull,
+      );
     });
   });
 
   group('VoicePromptBuilder ChatML Generation', () {
     test('Builds properly formatted ChatML prompt with calendar anchor and SQLite entities', () {
       final anchor = DateTime(2026, 9, 22);
-      final accounts = [Account(id: 1, name: 'Checking', balance: 500.0, type: 'Bank')];
-      final categories = [Category(id: 10, name: 'Food', monthlyBudget: 100.0, type: 'expense')];
+      final accounts = [
+        Account(id: 1, name: 'Checking', balance: 500.0, type: 'Bank'),
+      ];
+      final categories = [
+        Category(id: 10, name: 'Food', monthlyBudget: 100.0, type: 'expense'),
+      ];
 
       final prompt = VoicePromptBuilder.buildPrompt(
         transcript: 'Spent 10 on Food yesterday',
@@ -361,7 +430,10 @@ void main() {
       expect(prompt, contains('"name":"Checking"'));
       expect(prompt, contains('"name":"Food"'));
       expect(prompt, contains('<|im_end|>'));
-      expect(prompt, contains('<|im_start|>user\nSpent 10 on Food yesterday\n<|im_end|>'));
+      expect(
+        prompt,
+        contains('<|im_start|>user\nSpent 10 on Food yesterday\n<|im_end|>'),
+      );
       expect(prompt, contains('<|im_start|>assistant'));
     });
   });
@@ -373,7 +445,12 @@ void main() {
       Account(id: 2, name: 'Savings', balance: 5000.0, type: 'Savings'),
     ];
     final categories = [
-      Category(id: 10, name: 'Groceries', monthlyBudget: 400.0, type: 'expense'),
+      Category(
+        id: 10,
+        name: 'Groceries',
+        monthlyBudget: 400.0,
+        type: 'expense',
+      ),
     ];
 
     test('parseJsonOutput handles valid SLM array and applies primary account fallback', () {
@@ -428,7 +505,8 @@ void main() {
     });
 
     test('parseJsonOutput extracts JSON array embedded with extraneous whitespace', () {
-      const messyOutput = '   \n\n [ {"amount": 20, "type": "expense", "account_id": 1, "destination_account_id": null, "category_id": 10, "date": "2026-09-22", "note": "Gas"} ] \n ';
+      const messyOutput =
+          '   \n\n [ {"amount": 20, "type": "expense", "account_id": 1, "destination_account_id": null, "category_id": 10, "date": "2026-09-22", "note": "Gas"} ] \n ';
 
       final drafts = VoiceEntityParser.parseJsonOutput(
         messyOutput,
@@ -444,21 +522,24 @@ void main() {
   });
 
   group('SlmInferenceService and MockSlmEngine Lifecycle', () {
-    test('MockSlmEngine initializes, generates responses, and disposes cleanly', () async {
-      final mock = MockSlmEngine(
-        onGenerate: (prompt) => '[{"amount": 15.0, "type": "expense", "account_id": 1, "destination_account_id": null, "category_id": 10, "date": "2026-09-22", "note": "Coffee"}]',
-      );
+    test(
+      'MockSlmEngine initializes, generates responses, and disposes cleanly',
+      () async {
+        final mock = MockSlmEngine(
+          onGenerate: (prompt) => '[{"amount": 15.0, "type": "expense", "account_id": 1, "destination_account_id": null, "category_id": 10, "date": "2026-09-22", "note": "Coffee"}]',
+        );
 
-      expect(mock.isInitialized, isFalse);
-      await mock.initialize(modelPath: '/dummy/path');
-      expect(mock.isInitialized, isTrue);
+        expect(mock.isInitialized, isFalse);
+        await mock.initialize(modelPath: '/dummy/path');
+        expect(mock.isInitialized, isTrue);
 
-      final res = await mock.generate(prompt: 'Test');
-      expect(res, contains('"amount": 15.0'));
+        final res = await mock.generate(prompt: 'Test');
+        expect(res, contains('"amount": 15.0'));
 
-      await mock.dispose();
-      expect(mock.isInitialized, isFalse);
-    });
+        await mock.dispose();
+        expect(mock.isInitialized, isFalse);
+      },
+    );
 
     test('SlmInferenceService integrates with ModelManagementService deallocation hook', () async {
       final mockEngine = MockSlmEngine();
@@ -478,15 +559,18 @@ void main() {
       expect(service.isInitialized, isFalse);
     });
 
-    test('Throws SlmModelNotInstalledException when model is missing', () async {
-      final mockEngine = MockSlmEngine(shouldThrowNotInstalled: true);
-      final service = SlmInferenceService(engine: mockEngine);
+    test(
+      'Throws SlmModelNotInstalledException when model is missing',
+      () async {
+        final mockEngine = MockSlmEngine(shouldThrowNotInstalled: true);
+        final service = SlmInferenceService(engine: mockEngine);
 
-      expect(
-        () => service.initialize(customModelPath: '/nonexistent/path.gguf'),
-        throwsA(isA<SlmModelNotInstalledException>()),
-      );
-    });
+        expect(
+          () => service.initialize(customModelPath: '/nonexistent/path.gguf'),
+          throwsA(isA<SlmModelNotInstalledException>()),
+        );
+      },
+    );
   });
 
   group('Context-Aware Transaction Note Generation', () {
@@ -494,12 +578,32 @@ void main() {
     final mockAccounts = [
       Account(id: 1, name: 'Checking', balance: 5000.0, type: 'Bank'),
       Account(id: 2, name: 'Savings', balance: 12000.0, type: 'Savings'),
-      Account(id: 3, name: 'Chase Sapphire', balance: -450.0, type: 'Credit Card'),
+      Account(
+        id: 3,
+        name: 'Chase Sapphire',
+        balance: -450.0,
+        type: 'Credit Card',
+      ),
     ];
     final mockCategories = [
-      Category(id: 10, name: 'Food & Dining', monthlyBudget: 600.0, type: 'expense'),
-      Category(id: 11, name: 'Groceries', monthlyBudget: 800.0, type: 'expense'),
-      Category(id: 12, name: 'Transportation', monthlyBudget: 300.0, type: 'expense'),
+      Category(
+        id: 10,
+        name: 'Food & Dining',
+        monthlyBudget: 600.0,
+        type: 'expense',
+      ),
+      Category(
+        id: 11,
+        name: 'Groceries',
+        monthlyBudget: 800.0,
+        type: 'expense',
+      ),
+      Category(
+        id: 12,
+        name: 'Transportation',
+        monthlyBudget: 300.0,
+        type: 'expense',
+      ),
     ];
 
     test('Generates contextual note isolating merchant/item and stripping amounts, dates, accounts', () {
@@ -512,7 +616,10 @@ void main() {
 
       expect(drafts.length, 1);
       expect(drafts.first.note, 'Coffee at Starbucks');
-      expect(drafts.first.rawSpeech, 'Spent 5 on coffee at Starbucks with Chase yesterday');
+      expect(
+        drafts.first.rawSpeech,
+        'Spent 5 on coffee at Starbucks with Chase yesterday',
+      );
     });
 
     test('Generates distinct contextual notes in multi-transaction monologue without bleeding', () {
@@ -560,8 +667,10 @@ void main() {
       expect(note, 'Food & Dining');
     });
 
-    test('SLM parser automatically sanitizes contaminated transcript-echo notes', () {
-      const contaminatedSlmJson = '''
+    test(
+      'SLM parser automatically sanitizes contaminated transcript-echo notes',
+      () {
+        const contaminatedSlmJson = '''
 [
   {
     "amount": 7.50,
@@ -575,18 +684,19 @@ void main() {
 ]
 ''';
 
-      final drafts = VoiceEntityParser.parseJsonOutput(
-        contaminatedSlmJson,
-        anchorDate: anchorDate,
-        accounts: mockAccounts,
-        categories: mockCategories,
-      );
+        final drafts = VoiceEntityParser.parseJsonOutput(
+          contaminatedSlmJson,
+          anchorDate: anchorDate,
+          accounts: mockAccounts,
+          categories: mockCategories,
+        );
 
-      expect(drafts.length, 1);
-      expect(drafts.first.note, 'Latte at Starbucks');
-      expect(drafts.first.amount, 7.50);
-      expect(drafts.first.accountId, 3);
-    });
+        expect(drafts.length, 1);
+        expect(drafts.first.note, 'Latte at Starbucks');
+        expect(drafts.first.amount, 7.50);
+        expect(drafts.first.accountId, 3);
+      },
+    );
 
     test('SLM parser standardizes transfer notes even if SLM returns colloquial phrase', () {
       const transferSlmJson = '''

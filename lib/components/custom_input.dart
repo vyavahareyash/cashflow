@@ -86,20 +86,17 @@ class CustomInputField extends StatelessWidget {
               borderRadius: AppBorderRadius.mediumBorder,
               borderSide: BorderSide(color: borderColor, width: 1),
             ),
-            focusedBorder: OutlineInputBorder(
+            focusedBorder: const OutlineInputBorder(
               borderRadius: AppBorderRadius.mediumBorder,
-              borderSide: const BorderSide(
-                color: AppColors.emerald500,
-                width: 2,
-              ),
+              borderSide: BorderSide(color: AppColors.emerald500, width: 2),
             ),
-            errorBorder: OutlineInputBorder(
+            errorBorder: const OutlineInputBorder(
               borderRadius: AppBorderRadius.mediumBorder,
-              borderSide: const BorderSide(color: AppColors.danger, width: 1),
+              borderSide: BorderSide(color: AppColors.danger, width: 1),
             ),
-            focusedErrorBorder: OutlineInputBorder(
+            focusedErrorBorder: const OutlineInputBorder(
               borderRadius: AppBorderRadius.mediumBorder,
-              borderSide: const BorderSide(color: AppColors.danger, width: 2),
+              borderSide: BorderSide(color: AppColors.danger, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,

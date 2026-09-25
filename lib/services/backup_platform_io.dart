@@ -48,9 +48,7 @@ Future<String?> pickBackupDirectory({String? initialDirectory}) async {
 }
 
 Future<List<int>?> pickBackupBytes() async {
-  final dynamic result = await FilePicker.pickFiles(
-    type: FileType.any,
-  );
+  final dynamic result = await FilePicker.pickFiles(type: FileType.any);
   if (result == null) return null;
 
   final files = result is List<PlatformFile>

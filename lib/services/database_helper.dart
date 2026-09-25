@@ -21,6 +21,11 @@ import 'package:cashflow/models/salary_cycle.dart';
 import 'package:cashflow/models/draft_transaction.dart';
 
 class DatabaseHelper {
+  static String _dbName = 'money_tracker.db';
+  static void setTestDatabaseName(String name) {
+    _dbName = name;
+  }
+
   // Singleton pattern: ensures only one database connection exists
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -30,7 +35,8 @@ class DatabaseHelper {
   static final ValueNotifier<int> dataRevision = ValueNotifier<int>(0);
 
   /// Notifier that broadcasts whether the app is running in walkthrough demo mode
-  static final ValueNotifier<bool> walkthroughDemoModeNotifier = ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> walkthroughDemoModeNotifier =
+      ValueNotifier<bool>(false);
 
   bool _isWalkthroughDemoMode = false;
   bool get isWalkthroughDemoMode => _isWalkthroughDemoMode;
@@ -47,7 +53,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null && _database!.isOpen) return _database!;
-    _databaseFuture ??= _initDB('money_tracker.db');
+    _databaseFuture ??= _initDB(_dbName);
     _database = await _databaseFuture;
     return _database!;
   }
@@ -76,7 +82,7 @@ class DatabaseHelper {
     }
 
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'money_tracker.db');
+    final path = join(dbPath, _dbName);
     await deleteDatabase(path);
     _database = null; // Reset the singleton instance
     _databaseFuture = null;
@@ -85,7 +91,9 @@ class DatabaseHelper {
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    final path = filePath == inMemoryDatabasePath
+        ? inMemoryDatabasePath
+        : join(dbPath, filePath);
 
     return await openDatabase(
       path,
@@ -282,8 +290,12 @@ class DatabaseHelper {
         )
       ''');
     } else {
-      final lockCols = await db.rawQuery("PRAGMA table_info('locked_allocations')");
-      final hasCreditCardId = lockCols.any((c) => c['name'] == 'credit_card_id');
+      final lockCols = await db.rawQuery(
+        "PRAGMA table_info('locked_allocations')",
+      );
+      final hasCreditCardId = lockCols.any(
+        (c) => c['name'] == 'credit_card_id',
+      );
       if (!hasCreditCardId) {
         await db.execute('''
           CREATE TABLE locked_allocations_v3 (
@@ -302,7 +314,9 @@ class DatabaseHelper {
           SELECT id, goal_id, NULL, account_id, amount FROM locked_allocations
         ''');
         await db.execute('DROP TABLE locked_allocations');
-        await db.execute('ALTER TABLE locked_allocations_v3 RENAME TO locked_allocations');
+        await db.execute(
+          'ALTER TABLE locked_allocations_v3 RENAME TO locked_allocations',
+        );
       }
     }
 
@@ -473,16 +487,12 @@ class DatabaseHelper {
   Future<List<Account>> readAllAccounts() async {
     final db = await instance.database;
     final result = await db.query('accounts');
-    return result.map((json) => Account.fromMap(json)).toList();
+    return result.map(Account.fromMap).toList();
   }
 
   Future<Account?> readAccount(int id) async {
     final db = await instance.database;
-    final result = await db.query(
-      'accounts',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final result = await db.query('accounts', where: 'id = ?', whereArgs: [id]);
     if (result.isNotEmpty) {
       return Account.fromMap(result.first);
     }
@@ -541,14 +551,15 @@ class DatabaseHelper {
 
     try {
       final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'money_tracker.db');
+      final path = join(dbPath, _dbName);
       final file = File(path);
 
       if (!await file.exists()) {
         throw Exception('Database file not found');
       }
 
-      final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
+      final targetDir =
+          destinationDirectory ?? await getEffectiveBackupDirectory();
       final name = basename(fileName ?? 'cashflow_backup.db');
       final backupDir = Directory(targetDir);
       if (!await backupDir.exists()) {
@@ -582,8 +593,22 @@ class DatabaseHelper {
 
       // Validate SQLite magic bytes: first 16 bytes must be "SQLite format 3\0"
       const sqliteHeader = [
-        0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66,
-        0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00,
+        0x53,
+        0x51,
+        0x4c,
+        0x69,
+        0x74,
+        0x65,
+        0x20,
+        0x66,
+        0x6f,
+        0x72,
+        0x6d,
+        0x61,
+        0x74,
+        0x20,
+        0x33,
+        0x00,
       ];
       if (bytes.length < 16) return false;
       for (int i = 0; i < 16; i++) {
@@ -594,9 +619,9 @@ class DatabaseHelper {
       _database = null;
 
       final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'money_tracker.db');
-      final bakPath = join(dbPath, 'money_tracker.db.bak');
-      final tmpPath = join(dbPath, 'money_tracker.db.tmp');
+      final path = join(dbPath, _dbName);
+      final bakPath = join(dbPath, '$_dbName.bak');
+      final tmpPath = join(dbPath, '$_dbName.tmp');
 
       // Create backup of current database
       final currentFile = File(path);
@@ -643,8 +668,8 @@ class DatabaseHelper {
       // Attempt rollback from backup
       try {
         final dbPath = await getDatabasesPath();
-        final path = join(dbPath, 'money_tracker.db');
-        final bakPath = join(dbPath, 'money_tracker.db.bak');
+        final path = join(dbPath, _dbName);
+        final bakPath = join(dbPath, '$_dbName.bak');
         final bakFile = File(bakPath);
         if (await bakFile.exists()) {
           await bakFile.copy(path);
@@ -697,7 +722,7 @@ class DatabaseHelper {
     final result = type != null
         ? await db.query('categories', where: 'type = ?', whereArgs: [type])
         : await db.query('categories');
-    return result.map((json) => Category.fromMap(json)).toList();
+    return result.map(Category.fromMap).toList();
   }
 
   Future<List<Category>> readCategoriesByType(String type) async {
@@ -713,7 +738,9 @@ class DatabaseHelper {
   ///
   /// If any write fails or any draft is invalid, the entire SQLite transaction rolls back.
   /// Broadcasts a single [notifyDataChanged] revision increment upon successful batch completion.
-  Future<List<int>> commitDraftTransactions(List<DraftTransaction> drafts) async {
+  Future<List<int>> commitDraftTransactions(
+    List<DraftTransaction> drafts,
+  ) async {
     if (drafts.isEmpty) return [];
 
     final db = await instance.database;
@@ -1033,7 +1060,9 @@ class DatabaseHelper {
         );
         final accountBalance = (accRes.first['balance'] as num).toDouble();
         if (accountBalance < amount) {
-          throw StateError('Insufficient account balance in account $accountId');
+          throw StateError(
+            'Insufficient account balance in account $accountId',
+          );
         }
 
         final lock = await _requireLockedAllocation(txn, goalId, accountId);
@@ -1340,15 +1369,15 @@ class DatabaseHelper {
     final db = await instance.database;
 
     // 1. Get current balance and type
-    List<Map> result = await db.query(
+    final List<Map> result = await db.query(
       'accounts',
       where: 'id = ?',
       whereArgs: [accountId],
     );
     if (result.isEmpty) return;
-    double currentBalance = (result.first['balance'] as num).toDouble();
-    String type = result.first['type'] as String? ?? 'Bank';
-    String name = result.first['name'] as String? ?? 'Account';
+    final double currentBalance = (result.first['balance'] as num).toDouble();
+    final String type = result.first['type'] as String? ?? 'Bank';
+    final String name = result.first['name'] as String? ?? 'Account';
 
     if (type != 'Credit Card' && (currentBalance - amount) < -0.0001) {
       throw StateError(
@@ -1443,8 +1472,7 @@ class DatabaseHelper {
       'SELECT SUM(amount) as total FROM locked_allocations WHERE account_id = ?',
       [accountId],
     );
-    final currentLocked =
-        (lockedResult.first['total'] as num? ?? 0).toDouble();
+    final currentLocked = (lockedResult.first['total'] as num? ?? 0).toDouble();
     if (currentLocked + requiredAmount > accountBalance) {
       throw StateError('Insufficient account funds to lock');
     }
@@ -1509,9 +1537,11 @@ class DatabaseHelper {
               where: 'account_id = ?',
               whereArgs: [destinationAccountId],
             );
-            if (ccRows.isNotEmpty && (ccRows.first['auto_lock'] as int? ?? 1) == 1) {
+            if (ccRows.isNotEmpty &&
+                (ccRows.first['auto_lock'] as int? ?? 1) == 1) {
               final ccId = ccRows.first['id'] as int;
-              final defaultLockAcc = ccRows.first['default_lock_account_id'] as int? ?? accountId;
+              final defaultLockAcc =
+                  ccRows.first['default_lock_account_id'] as int? ?? accountId;
               await txn.insert('locked_allocations', {
                 'goal_id': null,
                 'credit_card_id': ccId,
@@ -1758,7 +1788,11 @@ class DatabaseHelper {
             if (oldAccountId == accountId) {
               if (amount > oldAmount) {
                 final diff = amount - oldAmount;
-                final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+                final locked = await _getLockedAmountForGoal(
+                  txn,
+                  goalId,
+                  accountId,
+                );
                 if (locked < diff) {
                   throw StateError('Insufficient locked funds to unlock');
                 }
@@ -1783,8 +1817,17 @@ class DatabaseHelper {
               }
             } else {
               await _checkUsableFunds(txn, oldAccountId, oldAmount);
-              await _restoreLockedAllocation(txn, goalId, oldAccountId, oldAmount);
-              final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+              await _restoreLockedAllocation(
+                txn,
+                goalId,
+                oldAccountId,
+                oldAmount,
+              );
+              final locked = await _getLockedAmountForGoal(
+                txn,
+                goalId,
+                accountId,
+              );
               if (locked < amount) {
                 throw StateError('Insufficient locked funds on target account');
               }
@@ -1812,9 +1855,15 @@ class DatabaseHelper {
               await _adjustAccountBalance(txn, accountId, balanceDelta);
               if (amount > oldAmount) {
                 final diff = amount - oldAmount;
-                final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+                final locked = await _getLockedAmountForGoal(
+                  txn,
+                  goalId,
+                  accountId,
+                );
                 if (locked < diff) {
-                  throw StateError('Insufficient locked funds for goal payment');
+                  throw StateError(
+                    'Insufficient locked funds for goal payment',
+                  );
                 }
                 await _reduceLockedAllocationByGoalAndAccount(
                   txn,
@@ -1836,19 +1885,30 @@ class DatabaseHelper {
               }
             } else {
               await _adjustAccountBalance(txn, oldAccountId, oldAmount);
-              await _restoreLockedAllocation(txn, goalId, oldAccountId, oldAmount);
+              await _restoreLockedAllocation(
+                txn,
+                goalId,
+                oldAccountId,
+                oldAmount,
+              );
               final newAcc = await txn.query(
                 'accounts',
                 columns: ['balance'],
                 where: 'id = ?',
                 whereArgs: [accountId],
               );
-              if (newAcc.isEmpty) throw StateError('Account not found: $accountId');
+              if (newAcc.isEmpty) {
+                throw StateError('Account not found: $accountId');
+              }
               final newBal = (newAcc.first['balance'] as num).toDouble();
               if (newBal < amount) {
                 throw StateError('Insufficient account funds for payment');
               }
-              final locked = await _getLockedAmountForGoal(txn, goalId, accountId);
+              final locked = await _getLockedAmountForGoal(
+                txn,
+                goalId,
+                accountId,
+              );
               if (locked < amount) {
                 throw StateError('Insufficient locked funds on target account');
               }
@@ -1898,7 +1958,11 @@ class DatabaseHelper {
         Category(name: 'Dining Out', monthlyBudget: 8000, type: 'expense'),
         Category(name: 'Transport', monthlyBudget: 5000, type: 'expense'),
         Category(name: 'Entertainment', monthlyBudget: 4000, type: 'expense'),
-        Category(name: 'Utilities & Bills', monthlyBudget: 10000, type: 'expense'),
+        Category(
+          name: 'Utilities & Bills',
+          monthlyBudget: 10000,
+          type: 'expense',
+        ),
         Category(name: 'Shopping', monthlyBudget: 6000, type: 'expense'),
         Category(name: 'Salary', type: 'income'),
         Category(name: 'Freelance', type: 'income'),
@@ -1924,440 +1988,461 @@ class DatabaseHelper {
       final salaryAccId = await createAccount(
         Account(name: 'Salary Account (HDFC)', balance: 125000.0, type: 'Bank'),
       );
-    final savingsAccId = await createAccount(
-      Account(
-        name: 'Emergency Savings (SBI)',
-        balance: 180000.0,
-        type: 'Savings',
-      ),
-    );
-    final walletAccId = await createAccount(
-      Account(name: 'Cash Wallet', balance: 8500.0, type: 'Cash'),
-    );
+      final savingsAccId = await createAccount(
+        Account(
+          name: 'Emergency Savings (SBI)',
+          balance: 180000.0,
+          type: 'Savings',
+        ),
+      );
+      final walletAccId = await createAccount(
+        Account(name: 'Cash Wallet', balance: 8500.0, type: 'Cash'),
+      );
 
-    // 2. Categories
-    final catGroceries = await createCategory(
-      Category(name: 'Groceries', monthlyBudget: 15000),
-    );
-    final catDining = await createCategory(
-      Category(name: 'Dining Out', monthlyBudget: 8000),
-    );
-    final catShopping = await createCategory(
-      Category(name: 'Shopping', monthlyBudget: 7000),
-    );
-    final catUtilities = await createCategory(
-      Category(name: 'Utilities & Bills', monthlyBudget: 10000),
-    );
-    final catTransport = await createCategory(
-      Category(name: 'Transport & Fuel', monthlyBudget: 5000),
-    );
-    final catHealth = await createCategory(
-      Category(name: 'Health & Medical', monthlyBudget: 4000),
-    );
-    final catEntertainment = await createCategory(
-      Category(name: 'Entertainment & Leisure'), // Unbudgeted optional category
-    );
-    final catSalary = await createCategory(
-      Category(name: 'Salary', type: 'income'),
-    );
-    final catFreelance = await createCategory(
-      Category(name: 'Freelance & Consulting', type: 'income'),
-    );
-    final catInvestments = await createCategory(
-      Category(name: 'Investments & Dividends', type: 'income'),
-    );
+      // 2. Categories
+      final catGroceries = await createCategory(
+        Category(name: 'Groceries', monthlyBudget: 15000),
+      );
+      final catDining = await createCategory(
+        Category(name: 'Dining Out', monthlyBudget: 8000),
+      );
+      final catShopping = await createCategory(
+        Category(name: 'Shopping', monthlyBudget: 7000),
+      );
+      final catUtilities = await createCategory(
+        Category(name: 'Utilities & Bills', monthlyBudget: 10000),
+      );
+      final catTransport = await createCategory(
+        Category(name: 'Transport & Fuel', monthlyBudget: 5000),
+      );
+      final catHealth = await createCategory(
+        Category(name: 'Health & Medical', monthlyBudget: 4000),
+      );
+      final catEntertainment = await createCategory(
+        Category(
+          name: 'Entertainment & Leisure',
+        ), // Unbudgeted optional category
+      );
+      final catSalary = await createCategory(
+        Category(name: 'Salary', type: 'income'),
+      );
+      final catFreelance = await createCategory(
+        Category(name: 'Freelance & Consulting', type: 'income'),
+      );
+      final catInvestments = await createCategory(
+        Category(name: 'Investments & Dividends', type: 'income'),
+      );
 
-    // Date generation helpers
-    DateTime monthOffset(
-      DateTime base,
-      int monthsBack,
-      int day, [
-      int hour = 12,
-      int minute = 0,
-    ]) {
-      int year = base.year;
-      int month = base.month - monthsBack;
-      while (month <= 0) {
-        month += 12;
-        year -= 1;
+      // Date generation helpers
+      DateTime monthOffset(
+        DateTime base,
+        int monthsBack,
+        int day, [
+        int hour = 12,
+        int minute = 0,
+      ]) {
+        int year = base.year;
+        int month = base.month - monthsBack;
+        while (month <= 0) {
+          month += 12;
+          year -= 1;
+        }
+        while (month > 12) {
+          month -= 12;
+          year += 1;
+        }
+        final daysInMonth = DateTime(year, month + 1, 0).day;
+        final clampedDay = day > daysInMonth ? daysInMonth : day;
+        return DateTime(year, month, clampedDay, hour, minute);
       }
-      while (month > 12) {
-        month -= 12;
-        year += 1;
+
+      final now = DateTime.now();
+      final salaryDay = await getSalaryDay();
+      final currentCycle = SalaryCycle.resolve(
+        salaryDay: salaryDay,
+        today: now,
+      );
+      final cycleStart = currentCycle.cycleStart;
+
+      DateTime currentCycleDate(
+        int dayOffset, [
+        int hour = 12,
+        int minute = 0,
+      ]) {
+        final d = cycleStart.add(Duration(days: dayOffset));
+        final candidate = DateTime(d.year, d.month, d.day, hour, minute);
+        return candidate.isAfter(now) ? now : candidate;
       }
-      final daysInMonth = DateTime(year, month + 1, 0).day;
-      final clampedDay = day > daysInMonth ? daysInMonth : day;
-      return DateTime(year, month, clampedDay, hour, minute);
-    }
 
-    final now = DateTime.now();
-    final salaryDay = await getSalaryDay();
-    final currentCycle = SalaryCycle.resolve(salaryDay: salaryDay, today: now);
-    final cycleStart = currentCycle.cycleStart;
+      // 3. Sinking Funds / Goals
+      final goalInsurance = await createGoal(
+        Goal(
+          name: 'Annual Car Insurance',
+          totalTarget: 25000.0,
+          targetDate: monthOffset(
+            now,
+            -2,
+            28,
+          ).toIso8601String().substring(0, 10),
+          currentSaved: 0.0,
+        ),
+      );
+      final goalVacation = await createGoal(
+        Goal(
+          name: 'Goa Vacation Fund',
+          totalTarget: 40000.0,
+          targetDate: monthOffset(
+            now,
+            -3,
+            25,
+          ).toIso8601String().substring(0, 10),
+          currentSaved: 0.0,
+        ),
+      );
+      final goalGadget = await createGoal(
+        Goal(
+          name: 'New Laptop (M3 Pro)',
+          totalTarget: 80000.0,
+          targetDate: monthOffset(
+            now,
+            -6,
+            28,
+          ).toIso8601String().substring(0, 10),
+          currentSaved: 0.0,
+        ),
+      );
+      final goalAppliance = await createGoal(
+        Goal(
+          name: 'Home Appliance Upgrade',
+          totalTarget: 20000.0,
+          targetDate: monthOffset(
+            now,
+            -1,
+            15,
+          ).toIso8601String().substring(0, 10),
+          currentSaved: 0.0,
+        ),
+      );
 
-    DateTime currentCycleDate(int dayOffset, [int hour = 12, int minute = 0]) {
-      final d = cycleStart.add(Duration(days: dayOffset));
-      final candidate = DateTime(d.year, d.month, d.day, hour, minute);
-      return candidate.isAfter(now) ? now : candidate;
-    }
+      // 4. Historical Monthly Activity (Months M-5 through M-1)
+      // Generates realistic spending trends, recurring salaries, and transfers.
+      for (int m = 5; m >= 1; m--) {
+        // Monthly Salary Credit (Day 1)
+        await createIncomeTransaction(
+          accountId: salaryAccId,
+          categoryId: catSalary,
+          amount: 95000.0,
+          date: monthOffset(now, m, 1, 9, 30).toIso8601String(),
+          note: 'Monthly salary deposit',
+        );
 
-    // 3. Sinking Funds / Goals
-    final goalInsurance = await createGoal(
-      Goal(
-        name: 'Annual Car Insurance',
-        totalTarget: 25000.0,
-        targetDate:
-            monthOffset(now, -2, 28).toIso8601String().substring(0, 10),
-        currentSaved: 0.0,
-      ),
-    );
-    final goalVacation = await createGoal(
-      Goal(
-        name: 'Goa Vacation Fund',
-        totalTarget: 40000.0,
-        targetDate:
-            monthOffset(now, -3, 25).toIso8601String().substring(0, 10),
-        currentSaved: 0.0,
-      ),
-    );
-    final goalGadget = await createGoal(
-      Goal(
-        name: 'New Laptop (M3 Pro)',
-        totalTarget: 80000.0,
-        targetDate:
-            monthOffset(now, -6, 28).toIso8601String().substring(0, 10),
-        currentSaved: 0.0,
-      ),
-    );
-    final goalAppliance = await createGoal(
-      Goal(
-        name: 'Home Appliance Upgrade',
-        totalTarget: 20000.0,
-        targetDate:
-            monthOffset(now, -1, 15).toIso8601String().substring(0, 10),
-        currentSaved: 0.0,
-      ),
-    );
+        // Monthly Savings Transfer (Day 2)
+        await createTransferTransaction(
+          sourceAccountId: salaryAccId,
+          destinationAccountId: savingsAccId,
+          amount: 15000.0,
+          date: monthOffset(now, m, 2, 10, 0).toIso8601String(),
+          note: 'Monthly recurring savings transfer',
+        );
 
-    // 4. Historical Monthly Activity (Months M-5 through M-1)
-    // Generates realistic spending trends, recurring salaries, and transfers.
-    for (int m = 5; m >= 1; m--) {
-      // Monthly Salary Credit (Day 1)
+        // Cash Withdrawal to Wallet (Day 3)
+        await createTransferTransaction(
+          sourceAccountId: salaryAccId,
+          destinationAccountId: walletAccId,
+          amount: 4000.0,
+          date: monthOffset(now, m, 3, 11, 0).toIso8601String(),
+          note: 'ATM cash withdrawal',
+        );
+
+        // Category Expenses with natural monthly variance for realistic trend curves
+        final groceryAmounts = [12100.0, 13600.0, 11800.0, 14200.0, 12400.0];
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catGroceries,
+          amount: groceryAmounts[5 - m],
+          date: monthOffset(now, m, 7, 18, 30).toIso8601String(),
+          note: 'Supermarket bulk groceries & pantry stock',
+        );
+
+        final utilityAmounts = [8500.0, 9100.0, 8200.0, 9400.0, 8900.0];
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catUtilities,
+          amount: utilityAmounts[5 - m],
+          date: monthOffset(now, m, 10, 14, 0).toIso8601String(),
+          note: 'Electricity, water & fiber internet bill',
+        );
+
+        final transportAmounts = [3900.0, 4800.0, 3800.0, 4600.0, 4200.0];
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catTransport,
+          amount: transportAmounts[5 - m],
+          date: monthOffset(now, m, 14, 8, 45).toIso8601String(),
+          note: 'Monthly fuel fill-up & metro smart card',
+        );
+
+        final diningAmounts = [6200.0, 7400.0, 5900.0, 9100.0, 6800.0];
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catDining,
+          amount: (diningAmounts[5 - m] * 0.7).roundToDouble(),
+          date: monthOffset(now, m, 18, 20, 15).toIso8601String(),
+          note: 'Restaurants & team dinner',
+        );
+        await createExpenseTransaction(
+          accountId: walletAccId,
+          categoryId: catDining,
+          amount: (diningAmounts[5 - m] * 0.3).roundToDouble(),
+          date: monthOffset(now, m, 22, 13, 0).toIso8601String(),
+          note: 'Weekend cafe & casual lunch',
+        );
+
+        final shoppingAmounts = [5100.0, 6900.0, 4500.0, 11200.0, 5600.0];
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catShopping,
+          amount: shoppingAmounts[5 - m],
+          date: monthOffset(now, m, 24, 16, 30).toIso8601String(),
+          note: m == 2
+              ? 'Festive season electronics & apparel'
+              : 'Clothing & household essentials',
+        );
+
+        await createExpenseTransaction(
+          accountId: salaryAccId,
+          categoryId: catEntertainment,
+          amount: 5500.0,
+          date: monthOffset(now, m, 15, 15, 0).toIso8601String(),
+          note: 'Online apparel & home items',
+        );
+
+        // Cash Wallet expenses
+        await createExpenseTransaction(
+          accountId: walletAccId,
+          categoryId: catDining,
+          amount: 650.0,
+          date: monthOffset(now, m, 10, 13, 0).toIso8601String(),
+          note: 'Street food and coffee with colleagues',
+        );
+        await createExpenseTransaction(
+          accountId: walletAccId,
+          categoryId: catTransport,
+          amount: 450.0,
+          date: monthOffset(now, m, 18, 17, 30).toIso8601String(),
+          note: 'Local metro & auto rickshaw rides',
+        );
+
+        // Occasional Health & Leisure spends in select months
+        if (m == 1 || m == 3 || m == 5) {
+          await createExpenseTransaction(
+            accountId: salaryAccId,
+            categoryId: catEntertainment,
+            amount: 2200.0,
+            date: monthOffset(now, m, 24, 19, 0).toIso8601String(),
+            note: 'Movie night tickets & weekend arcade',
+          );
+        }
+        if (m == 2 || m == 4) {
+          await createExpenseTransaction(
+            accountId: walletAccId,
+            categoryId: catHealth,
+            amount: m == 4 ? 3200.0 : 2100.0,
+            date: monthOffset(now, m, 16, 11, 20).toIso8601String(),
+            note: 'Pharmacy medicines & routine health checkup',
+          );
+        }
+
+        if (m == 2) {
+          await createIncomeTransaction(
+            accountId: salaryAccId,
+            categoryId: catFreelance,
+            amount: 28000.0,
+            date: monthOffset(now, m, 12, 15, 0).toIso8601String(),
+            note: 'Freelance consulting retainer fee',
+          );
+        }
+        if (m == 3) {
+          await createIncomeTransaction(
+            accountId: salaryAccId,
+            categoryId: catInvestments,
+            amount: 6500.0,
+            date: monthOffset(now, m, 20, 14, 0).toIso8601String(),
+            note: 'Quarterly dividend payout',
+          );
+        }
+      }
+
+      // 5. Current Month Active Activity (M0)
+      // Exercises all scenario states: over-budget, full budget, on-track, untouched, unbudgeted.
+      final d1 = currentCycleDate(0, 9, 0).toIso8601String();
+      final d2 = currentCycleDate(1, 10, 0).toIso8601String();
+      final d3 = currentCycleDate(2, 11, 0).toIso8601String();
+
       await createIncomeTransaction(
         accountId: salaryAccId,
         categoryId: catSalary,
         amount: 95000.0,
-        date: monthOffset(now, m, 1, 9, 30).toIso8601String(),
+        date: d1,
         note: 'Monthly salary deposit',
       );
-
-      // Monthly Savings Transfer (Day 2)
       await createTransferTransaction(
         sourceAccountId: salaryAccId,
         destinationAccountId: savingsAccId,
-        amount: 15000.0,
-        date: monthOffset(now, m, 2, 10, 0).toIso8601String(),
-        note: 'Monthly recurring savings transfer',
+        amount: 12000.0,
+        date: d2,
+        note: 'Monthly savings transfer',
       );
-
-      // Cash Withdrawal to Wallet (Day 3)
       await createTransferTransaction(
         sourceAccountId: salaryAccId,
         destinationAccountId: walletAccId,
         amount: 4000.0,
-        date: monthOffset(now, m, 3, 11, 0).toIso8601String(),
+        date: d3,
         note: 'ATM cash withdrawal',
       );
 
-      // Category Expenses with natural monthly variance for realistic trend curves
-      final groceryAmounts = [12100.0, 13600.0, 11800.0, 14200.0, 12400.0];
+      // Scenario 1: On-Track Budget - Groceries (Cap: 15,000 | Spent: 7,850 | 52% on track)
       await createExpenseTransaction(
         accountId: salaryAccId,
         categoryId: catGroceries,
-        amount: groceryAmounts[5 - m],
-        date: monthOffset(now, m, 7, 18, 30).toIso8601String(),
-        note: 'Supermarket bulk groceries & pantry stock',
+        amount: 4250.0,
+        date: currentCycleDate(1, 17, 30).toIso8601String(),
+        note: 'Supermarket weekly grocery stock',
       );
-
-      final utilityAmounts = [8500.0, 9100.0, 8200.0, 9400.0, 8900.0];
       await createExpenseTransaction(
         accountId: salaryAccId,
-        categoryId: catUtilities,
-        amount: utilityAmounts[5 - m],
-        date: monthOffset(now, m, 10, 14, 0).toIso8601String(),
-        note: 'Electricity, water & fiber internet bill',
+        categoryId: catGroceries,
+        amount: 3600.0,
+        date: currentCycleDate(3, 11, 15).toIso8601String(),
+        note: 'Fresh produce & organic supplies',
       );
 
-      final transportAmounts = [3900.0, 4800.0, 3800.0, 4600.0, 4200.0];
-      await createExpenseTransaction(
-        accountId: salaryAccId,
-        categoryId: catTransport,
-        amount: transportAmounts[5 - m],
-        date: monthOffset(now, m, 14, 8, 45).toIso8601String(),
-        note: 'Monthly fuel fill-up & metro smart card',
-      );
-
-      final diningAmounts = [6200.0, 7400.0, 5900.0, 9100.0, 6800.0];
+      // Scenario 2: Over-Budget Category - Dining Out (Cap: 8,000 | Spent: 8,850 | Over by 850)
       await createExpenseTransaction(
         accountId: salaryAccId,
         categoryId: catDining,
-        amount: (diningAmounts[5 - m] * 0.7).roundToDouble(),
-        date: monthOffset(now, m, 18, 20, 15).toIso8601String(),
-        note: 'Restaurants & team dinner',
+        amount: 2850.0,
+        date: currentCycleDate(2, 20, 0).toIso8601String(),
+        note: 'Weekend family dinner',
+      );
+      await createExpenseTransaction(
+        accountId: salaryAccId,
+        categoryId: catDining,
+        amount: 3400.0,
+        date: currentCycleDate(4, 21, 0).toIso8601String(),
+        note: 'Team outing & dinner celebration',
       );
       await createExpenseTransaction(
         accountId: walletAccId,
         categoryId: catDining,
-        amount: (diningAmounts[5 - m] * 0.3).roundToDouble(),
-        date: monthOffset(now, m, 22, 13, 0).toIso8601String(),
-        note: 'Weekend cafe & casual lunch',
+        amount: 2600.0,
+        date: currentCycleDate(5, 13, 15).toIso8601String(),
+        note: 'Bistro cafe & artisan bakery',
       );
 
-      final shoppingAmounts = [5100.0, 6900.0, 4500.0, 11200.0, 5600.0];
+      // Scenario 3: 100% Full Budget - Shopping (Cap: 7,000 | Spent: 7,000 | 0 remaining)
       await createExpenseTransaction(
         accountId: salaryAccId,
         categoryId: catShopping,
-        amount: shoppingAmounts[5 - m],
-        date: monthOffset(now, m, 24, 16, 30).toIso8601String(),
-        note: m == 2
-            ? 'Festive season electronics & apparel'
-            : 'Clothing & household essentials',
+        amount: 4200.0,
+        date: currentCycleDate(2, 16, 0).toIso8601String(),
+        note: 'Wardrobe seasonal apparel essentials',
+      );
+      await createExpenseTransaction(
+        accountId: salaryAccId,
+        categoryId: catShopping,
+        amount: 2800.0,
+        date: currentCycleDate(4, 15, 30).toIso8601String(),
+        note: 'Home decor & organizer storage',
       );
 
+      // Scenario 4: Low-Spend Budget - Transport & Fuel (Cap: 5,000 | Spent: 1,800 | 36% used)
+      await createExpenseTransaction(
+        accountId: salaryAccId,
+        categoryId: catTransport,
+        amount: 1800.0,
+        date: currentCycleDate(3, 8, 30).toIso8601String(),
+        note: 'Fuel station refill & metro card recharge',
+      );
+
+      // Scenario 5: Active Budget - Utilities & Bills (Cap: 10,000 | Spent: 4,800 | 48% used)
+      await createExpenseTransaction(
+        accountId: salaryAccId,
+        categoryId: catUtilities,
+        amount: 4800.0,
+        date: currentCycleDate(1, 14, 0).toIso8601String(),
+        note: 'Electricity & high-speed fiber broadband bill',
+      );
+
+      // Scenario 6: Untouched Category - Health & Medical (Cap: 4,000 | Spent: 0 | 100% remaining)
+      // Intentionally 0 expenses in current cycle to showcase untouched category state.
+
+      // Scenario 7: Unbudgeted Category - Entertainment & Leisure (Cap: null | Spent: 2,399)
       await createExpenseTransaction(
         accountId: salaryAccId,
         categoryId: catEntertainment,
-        amount: 5500.0,
-        date: monthOffset(now, m, 15, 15, 0).toIso8601String(),
-        note: 'Online apparel & home items',
-      );
-
-      // Cash Wallet expenses
-      await createExpenseTransaction(
-        accountId: walletAccId,
-        categoryId: catDining,
-        amount: 650.0,
-        date: monthOffset(now, m, 10, 13, 0).toIso8601String(),
-        note: 'Street food and coffee with colleagues',
+        amount: 1499.0,
+        date: currentCycleDate(2, 19, 0).toIso8601String(),
+        note: 'Streaming video & music bundle subscription',
       );
       await createExpenseTransaction(
         accountId: walletAccId,
-        categoryId: catTransport,
-        amount: 450.0,
-        date: monthOffset(now, m, 18, 17, 30).toIso8601String(),
-        note: 'Local metro & auto rickshaw rides',
+        categoryId: catEntertainment,
+        amount: 900.0,
+        date: currentCycleDate(5, 19, 30).toIso8601String(),
+        note: 'Weekend IMAX cinema movie tickets',
       );
 
-      // Occasional Health & Leisure spends in select months
-      if (m == 1 || m == 3 || m == 5) {
-        await createExpenseTransaction(
-          accountId: salaryAccId,
-          categoryId: catEntertainment,
-          amount: 2200.0,
-          date: monthOffset(now, m, 24, 19, 0).toIso8601String(),
-          note: 'Movie night tickets & weekend arcade',
-        );
-      }
-      if (m == 2 || m == 4) {
-        await createExpenseTransaction(
-          accountId: walletAccId,
-          categoryId: catHealth,
-          amount: m == 4 ? 3200.0 : 2100.0,
-          date: monthOffset(now, m, 16, 11, 20).toIso8601String(),
-          note: 'Pharmacy medicines & routine health checkup',
-        );
-      }
+      // 6. Goal Sinking Fund Transactions
+      // Goal 1: 100% Funded / Completed - Annual Car Insurance (Target 25k, Saved 25k) 🎉
+      await createGoalLockTransaction(
+        goalId: goalInsurance,
+        accountId: savingsAccId,
+        amount: 25000.0,
+        date: currentCycleDate(1, 12, 0).toIso8601String(),
+        note: 'Reserve complete annual car insurance target',
+      );
 
-      if (m == 2) {
-        await createIncomeTransaction(
-          accountId: salaryAccId,
-          categoryId: catFreelance,
-          amount: 28000.0,
-          date: monthOffset(now, m, 12, 15, 0).toIso8601String(),
-          note: 'Freelance consulting retainer fee',
-        );
-      }
-      if (m == 3) {
-        await createIncomeTransaction(
-          accountId: salaryAccId,
-          categoryId: catInvestments,
-          amount: 6500.0,
-          date: monthOffset(now, m, 20, 14, 0).toIso8601String(),
-          note: 'Quarterly dividend payout',
-        );
-      }
-    }
+      // Goal 2: In-Progress with Unlock - Goa Vacation Fund (Target 40k | Lock 20k, Unlock 3k -> Net 17k)
+      await createGoalLockTransaction(
+        goalId: goalVacation,
+        accountId: salaryAccId,
+        amount: 20000.0,
+        date: currentCycleDate(2, 11, 0).toIso8601String(),
+        note: 'Reserve vacation flight & hotel fund',
+      );
+      await createGoalUnlockTransaction(
+        goalId: goalVacation,
+        accountId: salaryAccId,
+        amount: 3000.0,
+        date: currentCycleDate(4, 14, 0).toIso8601String(),
+        note: 'Release adjusted vacation booking buffer',
+      );
 
-    // 5. Current Month Active Activity (M0)
-    // Exercises all scenario states: over-budget, full budget, on-track, untouched, unbudgeted.
-    final d1 = currentCycleDate(0, 9, 0).toIso8601String();
-    final d2 = currentCycleDate(1, 10, 0).toIso8601String();
-    final d3 = currentCycleDate(2, 11, 0).toIso8601String();
+      // Goal 3: Long-term Goal with Pacing Advice - New Laptop (Target 80k | Locked 35k)
+      await createGoalLockTransaction(
+        goalId: goalGadget,
+        accountId: savingsAccId,
+        amount: 35000.0,
+        date: currentCycleDate(2, 10, 30).toIso8601String(),
+        note: 'Reserve laptop upgrade allocation',
+      );
 
-    await createIncomeTransaction(
-      accountId: salaryAccId,
-      categoryId: catSalary,
-      amount: 95000.0,
-      date: d1,
-      note: 'Monthly salary deposit',
-    );
-    await createTransferTransaction(
-      sourceAccountId: salaryAccId,
-      destinationAccountId: savingsAccId,
-      amount: 12000.0,
-      date: d2,
-      note: 'Monthly savings transfer',
-    );
-    await createTransferTransaction(
-      sourceAccountId: salaryAccId,
-      destinationAccountId: walletAccId,
-      amount: 4000.0,
-      date: d3,
-      note: 'ATM cash withdrawal',
-    );
-
-    // Scenario 1: On-Track Budget - Groceries (Cap: 15,000 | Spent: 7,850 | 52% on track)
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catGroceries,
-      amount: 4250.0,
-      date: currentCycleDate(1, 17, 30).toIso8601String(),
-      note: 'Supermarket weekly grocery stock',
-    );
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catGroceries,
-      amount: 3600.0,
-      date: currentCycleDate(3, 11, 15).toIso8601String(),
-      note: 'Fresh produce & organic supplies',
-    );
-
-    // Scenario 2: Over-Budget Category - Dining Out (Cap: 8,000 | Spent: 8,850 | Over by 850)
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catDining,
-      amount: 2850.0,
-      date: currentCycleDate(2, 20, 0).toIso8601String(),
-      note: 'Weekend family dinner',
-    );
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catDining,
-      amount: 3400.0,
-      date: currentCycleDate(4, 21, 0).toIso8601String(),
-      note: 'Team outing & dinner celebration',
-    );
-    await createExpenseTransaction(
-      accountId: walletAccId,
-      categoryId: catDining,
-      amount: 2600.0,
-      date: currentCycleDate(5, 13, 15).toIso8601String(),
-      note: 'Bistro cafe & artisan bakery',
-    );
-
-    // Scenario 3: 100% Full Budget - Shopping (Cap: 7,000 | Spent: 7,000 | 0 remaining)
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catShopping,
-      amount: 4200.0,
-      date: currentCycleDate(2, 16, 0).toIso8601String(),
-      note: 'Wardrobe seasonal apparel essentials',
-    );
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catShopping,
-      amount: 2800.0,
-      date: currentCycleDate(4, 15, 30).toIso8601String(),
-      note: 'Home decor & organizer storage',
-    );
-
-    // Scenario 4: Low-Spend Budget - Transport & Fuel (Cap: 5,000 | Spent: 1,800 | 36% used)
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catTransport,
-      amount: 1800.0,
-      date: currentCycleDate(3, 8, 30).toIso8601String(),
-      note: 'Fuel station refill & metro card recharge',
-    );
-
-    // Scenario 5: Active Budget - Utilities & Bills (Cap: 10,000 | Spent: 4,800 | 48% used)
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catUtilities,
-      amount: 4800.0,
-      date: currentCycleDate(1, 14, 0).toIso8601String(),
-      note: 'Electricity & high-speed fiber broadband bill',
-    );
-
-    // Scenario 6: Untouched Category - Health & Medical (Cap: 4,000 | Spent: 0 | 100% remaining)
-    // Intentionally 0 expenses in current cycle to showcase untouched category state.
-
-    // Scenario 7: Unbudgeted Category - Entertainment & Leisure (Cap: null | Spent: 2,399)
-    await createExpenseTransaction(
-      accountId: salaryAccId,
-      categoryId: catEntertainment,
-      amount: 1499.0,
-      date: currentCycleDate(2, 19, 0).toIso8601String(),
-      note: 'Streaming video & music bundle subscription',
-    );
-    await createExpenseTransaction(
-      accountId: walletAccId,
-      categoryId: catEntertainment,
-      amount: 900.0,
-      date: currentCycleDate(5, 19, 30).toIso8601String(),
-      note: 'Weekend IMAX cinema movie tickets',
-    );
-
-    // 6. Goal Sinking Fund Transactions
-    // Goal 1: 100% Funded / Completed - Annual Car Insurance (Target 25k, Saved 25k) 🎉
-    await createGoalLockTransaction(
-      goalId: goalInsurance,
-      accountId: savingsAccId,
-      amount: 25000.0,
-      date: currentCycleDate(1, 12, 0).toIso8601String(),
-      note: 'Reserve complete annual car insurance target',
-    );
-
-    // Goal 2: In-Progress with Unlock - Goa Vacation Fund (Target 40k | Lock 20k, Unlock 3k -> Net 17k)
-    await createGoalLockTransaction(
-      goalId: goalVacation,
-      accountId: salaryAccId,
-      amount: 20000.0,
-      date: currentCycleDate(2, 11, 0).toIso8601String(),
-      note: 'Reserve vacation flight & hotel fund',
-    );
-    await createGoalUnlockTransaction(
-      goalId: goalVacation,
-      accountId: salaryAccId,
-      amount: 3000.0,
-      date: currentCycleDate(4, 14, 0).toIso8601String(),
-      note: 'Release adjusted vacation booking buffer',
-    );
-
-    // Goal 3: Long-term Goal with Pacing Advice - New Laptop (Target 80k | Locked 35k)
-    await createGoalLockTransaction(
-      goalId: goalGadget,
-      accountId: savingsAccId,
-      amount: 35000.0,
-      date: currentCycleDate(2, 10, 30).toIso8601String(),
-      note: 'Reserve laptop upgrade allocation',
-    );
-
-    // Goal 4: Goal with Payment Executed - Home Appliance Upgrade (Target 20k | Lock 14k, Pay 5k -> Net 9k)
-    await createGoalLockTransaction(
-      goalId: goalAppliance,
-      accountId: salaryAccId,
-      amount: 14000.0,
-      date: currentCycleDate(1, 11, 30).toIso8601String(),
-      note: 'Reserve kitchen appliance installation fund',
-    );
-    await createGoalPaymentTransaction(
-      goalId: goalAppliance,
-      accountId: salaryAccId,
-      amount: 5000.0,
-      date: currentCycleDate(3, 16, 0).toIso8601String(),
-      note: 'Pay advance appliance installation invoice',
-    );
+      // Goal 4: Goal with Payment Executed - Home Appliance Upgrade (Target 20k | Lock 14k, Pay 5k -> Net 9k)
+      await createGoalLockTransaction(
+        goalId: goalAppliance,
+        accountId: salaryAccId,
+        amount: 14000.0,
+        date: currentCycleDate(1, 11, 30).toIso8601String(),
+        note: 'Reserve kitchen appliance installation fund',
+      );
+      await createGoalPaymentTransaction(
+        goalId: goalAppliance,
+        accountId: salaryAccId,
+        amount: 5000.0,
+        date: currentCycleDate(3, 16, 0).toIso8601String(),
+        note: 'Pay advance appliance installation invoice',
+      );
     } finally {
       _suppressNotifications = false;
       notifyDataChanged();
@@ -2424,7 +2509,7 @@ class DatabaseHelper {
   Future<List<Goal>> readAllGoals() async {
     final db = await instance.database;
     final result = await db.query('goals');
-    return result.map((json) => Goal.fromMap(json)).toList();
+    return result.map(Goal.fromMap).toList();
   }
 
   // Lock funds: This does TWO things:
@@ -2441,12 +2526,12 @@ class DatabaseHelper {
     });
 
     // 2. Update the goal's total saved amount
-    List<Map> goalResult = await db.query(
+    final List<Map> goalResult = await db.query(
       'goals',
       where: 'id = ?',
       whereArgs: [goalId],
     );
-    double currentSaved = goalResult.first['current_saved'];
+    final double currentSaved = goalResult.first['current_saved'];
 
     await db.update(
       'goals',
@@ -2516,7 +2601,7 @@ class DatabaseHelper {
       [accountId],
     );
 
-    return result.map((json) => LockedAllocation.fromMap(json)).toList();
+    return result.map(LockedAllocation.fromMap).toList();
   }
 
   // --- CREDIT CARD OPERATIONS ---
@@ -2543,7 +2628,7 @@ class DatabaseHelper {
   Future<List<CreditCard>> readAllCreditCards() async {
     final db = await instance.database;
     final result = await db.query('credit_cards');
-    return result.map((m) => CreditCard.fromMap(m)).toList();
+    return result.map(CreditCard.fromMap).toList();
   }
 
   Future<int> updateCreditCard(CreditCard card) async {
@@ -2681,7 +2766,9 @@ class DatabaseHelper {
         'goal_id': null,
         'amount': amount,
         'date': date ?? DateTime.now().toIso8601String(),
-        'note': note != null && note.isNotEmpty ? note : 'Credit Card Bill Payment',
+        'note': note != null && note.isNotEmpty
+            ? note
+            : 'Credit Card Bill Payment',
         'type': 'cc_payment',
       });
     });
@@ -2735,14 +2822,15 @@ class DatabaseHelper {
     final accountResult = await db.rawQuery(
       "SELECT SUM(balance) as total FROM accounts WHERE type != 'Credit Card'",
     );
-    double totalPhysical = (accountResult.first['total'] as num? ?? 0)
+    final double totalPhysical = (accountResult.first['total'] as num? ?? 0)
         .toDouble();
 
     // 2. Total locked for goals and CC bills
     final lockedResult = await db.rawQuery(
       'SELECT SUM(amount) as total FROM locked_allocations',
     );
-    double totalLocked = (lockedResult.first['total'] as num? ?? 0).toDouble();
+    final double totalLocked = (lockedResult.first['total'] as num? ?? 0)
+        .toDouble();
 
     return (totalPhysical - totalLocked).clamp(0.0, double.infinity);
   }
@@ -2780,16 +2868,14 @@ class DatabaseHelper {
     List<dynamic> whereArgs;
 
     if (cycle != null) {
-      whereClause =
-          "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
+      whereClause = "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
       whereArgs = [categoryId, cycle.startDateString, cycle.endDateString];
     } else {
       final now = DateTime.now();
       final targetYear = year ?? now.year;
       final targetMonth = month ?? now.month;
       final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
-      whereClause =
-          "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 7) = ?";
+      whereClause = "WHERE category_id = ? AND type = 'expense' AND SUBSTR(date, 1, 7) = ?";
       whereArgs = [categoryId, monthStr];
     }
 
@@ -2824,16 +2910,14 @@ class DatabaseHelper {
     List<dynamic> whereArgs;
 
     if (cycle != null) {
-      whereClause =
-          "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
+      whereClause = "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
       whereArgs = [cycle.startDateString, cycle.endDateString];
     } else {
       final now = DateTime.now();
       final targetYear = year ?? now.year;
       final targetMonth = month ?? now.month;
       final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
-      whereClause =
-          "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 7) = ?";
+      whereClause = "WHERE category_id IS NOT NULL AND type = 'expense' AND SUBSTR(date, 1, 7) = ?";
       whereArgs = [monthStr];
     }
 
@@ -2865,16 +2949,14 @@ class DatabaseHelper {
     List<dynamic> whereArgs;
 
     if (cycle != null) {
-      whereClause =
-          "WHERE category_id IS NOT NULL AND type = 'income' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
+      whereClause = "WHERE category_id IS NOT NULL AND type = 'income' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?";
       whereArgs = [cycle.startDateString, cycle.endDateString];
     } else {
       final now = DateTime.now();
       final targetYear = year ?? now.year;
       final targetMonth = month ?? now.month;
       final monthStr = '$targetYear-${targetMonth.toString().padLeft(2, '0')}';
-      whereClause =
-          "WHERE category_id IS NOT NULL AND type = 'income' AND SUBSTR(date, 1, 7) = ?";
+      whereClause = "WHERE category_id IS NOT NULL AND type = 'income' AND SUBSTR(date, 1, 7) = ?";
       whereArgs = [monthStr];
     }
 
@@ -2899,7 +2981,7 @@ class DatabaseHelper {
   Future<double> getTotalSpendingForSalaryCycle(SalaryCycle cycle) async {
     final db = await instance.database;
     final result = await db.rawQuery(
-      "SELECT SUM(amount) as total FROM transactions "
+      'SELECT SUM(amount) as total FROM transactions '
       "WHERE type = 'expense' AND SUBSTR(date, 1, 10) >= ? AND SUBSTR(date, 1, 10) <= ?",
       [cycle.startDateString, cycle.endDateString],
     );
@@ -2930,12 +3012,11 @@ class DatabaseHelper {
         lockedAllocations: lockedAllocations
             .map(Map<String, dynamic>.from)
             .toList(),
-        creditCards: creditCards
-            .map(Map<String, dynamic>.from)
-            .toList(),
+        creditCards: creditCards.map(Map<String, dynamic>.from).toList(),
       );
 
-      final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
+      final targetDir =
+          destinationDirectory ?? await getEffectiveBackupDirectory();
       final name = basename(fileName ?? 'cashflow_backup.json');
 
       final path = await saveBackupBytes(
@@ -3054,7 +3135,8 @@ class DatabaseHelper {
       final transactions = await getTransactionHistory();
 
       final csv = BackupCodec.transactionsCsv(transactions);
-      final targetDir = destinationDirectory ?? await getEffectiveBackupDirectory();
+      final targetDir =
+          destinationDirectory ?? await getEffectiveBackupDirectory();
       final name = basename(fileName ?? 'cashflow_transactions.csv');
 
       return await saveBackupBytes(
@@ -3205,7 +3287,7 @@ class DatabaseHelper {
     final yearPrefix = '$targetYear-';
 
     final result = await db.rawQuery(
-      "SELECT SUM(amount) as total FROM transactions "
+      'SELECT SUM(amount) as total FROM transactions '
       "WHERE type = 'expense' AND SUBSTR(date, 1, 5) = ?",
       [yearPrefix],
     );
@@ -3278,9 +3360,12 @@ class DatabaseHelper {
     );
 
     final totalIncome = (incomeResult.first['total'] as num? ?? 0.0).toDouble();
-    final totalExpense = (expenseResult.first['total'] as num? ?? 0.0).toDouble();
+    final totalExpense = (expenseResult.first['total'] as num? ?? 0.0)
+        .toDouble();
     final netSavings = totalIncome - totalExpense;
-    final savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100.0 : 0.0;
+    final savingsRate = totalIncome > 0
+        ? (netSavings / totalIncome) * 100.0
+        : 0.0;
 
     return {
       'inflow': totalIncome,
@@ -3314,16 +3399,18 @@ class DatabaseHelper {
   /// Persists a string setting by key using upsert semantics.
   Future<void> setSetting(String key, String value) async {
     final db = await instance.database;
-    await db.insert(
-      'app_settings',
-      {'key': key, 'value': value},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('app_settings', {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// Retrieves dashboard privacy mode (defaults to false).
   Future<bool> getPrivacyMode() async {
-    final val = await getSetting('dashboard_privacy_mode', defaultValue: 'false');
+    final val = await getSetting(
+      'dashboard_privacy_mode',
+      defaultValue: 'false',
+    );
     return val == 'true';
   }
 
@@ -3334,7 +3421,10 @@ class DatabaseHelper {
 
   /// Retrieves configured startup privacy mode preference (defaults to false).
   Future<bool> getStartInPrivacyMode() async {
-    final val = await getSetting('start_in_privacy_mode', defaultValue: 'false');
+    final val = await getSetting(
+      'start_in_privacy_mode',
+      defaultValue: 'false',
+    );
     return val == 'true';
   }
 
@@ -3428,7 +3518,10 @@ class DatabaseHelper {
 
   /// Retrieves configured preference for downloading Voice AI models over Wi-Fi only (defaults to true).
   Future<bool> getVoiceModelsWifiOnly() async {
-    final val = await getSetting('voice_models_wifi_only', defaultValue: 'true');
+    final val = await getSetting(
+      'voice_models_wifi_only',
+      defaultValue: 'true',
+    );
     return val != 'false';
   }
 
@@ -3442,7 +3535,10 @@ class DatabaseHelper {
 
   /// Checks if the user has completed or skipped the first-install walkthrough.
   Future<bool> getWalkthroughCompleted() async {
-    final val = await getSetting('walkthrough_completed', defaultValue: 'false');
+    final val = await getSetting(
+      'walkthrough_completed',
+      defaultValue: 'false',
+    );
     return val == 'true';
   }
 
@@ -3469,9 +3565,7 @@ class DatabaseHelper {
       lockedAllocations: lockedAllocations
           .map(Map<String, dynamic>.from)
           .toList(),
-      creditCards: creditCards
-          .map(Map<String, dynamic>.from)
-          .toList(),
+      creditCards: creditCards.map(Map<String, dynamic>.from).toList(),
     );
   }
 

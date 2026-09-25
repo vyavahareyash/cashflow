@@ -15,8 +15,8 @@ class VoiceAudioPipeline {
   VoiceAudioPipeline({
     AudioCaptureService? captureService,
     SpeechToTextService? sttService,
-  })  : audioCaptureService = captureService ?? AudioCaptureService(),
-        speechToTextService = sttService ?? SpeechToTextService.instance;
+  }) : audioCaptureService = captureService ?? AudioCaptureService(),
+       speechToTextService = sttService ?? SpeechToTextService.instance;
 
   bool get isRecording => audioCaptureService.isRecording;
 
@@ -39,7 +39,9 @@ class VoiceAudioPipeline {
   Future<String> stopAndTranscribe() async {
     final String? wavPath = await audioCaptureService.stopRecording();
     if (wavPath == null) {
-      throw const SttSilentAudioException('No audio file was produced by recording session.');
+      throw const SttSilentAudioException(
+        'No audio file was produced by recording session.',
+      );
     }
 
     try {

@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
@@ -8,8 +9,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 /// zero telemetry: purchases are completed directly on the device with
 /// Google Play Services.
 class BillingService extends ChangeNotifier {
-  BillingService._({InAppPurchase? iapInstance})
-      : _customIap = iapInstance;
+  BillingService._({InAppPurchase? iapInstance}) : _customIap = iapInstance;
 
   static BillingService? _defaultInstance;
   static BillingService? _mockInstance;
@@ -35,13 +35,18 @@ class BillingService extends ChangeNotifier {
   static const String productCoffeeDouble = 'coffee_double';
   static const String productCoffeePot = 'coffee_pot';
 
-  static const String assetCoffeeSingle = 'assets/icon/products/coffee_single_3d.png';
-  static const String assetCoffeeDouble = 'assets/icon/products/coffee_double_3d.png';
+  static const String assetCoffeeSingle =
+      'assets/icon/products/coffee_single_3d.png';
+  static const String assetCoffeeDouble =
+      'assets/icon/products/coffee_double_3d.png';
   static const String assetCoffeePot = 'assets/icon/products/coffee_pot_3d.png';
 
-  static const String assetCoffeeSingleOriginal = 'assets/icon/products/coffee_single.png';
-  static const String assetCoffeeDoubleOriginal = 'assets/icon/products/coffee_double.png';
-  static const String assetCoffeePotOriginal = 'assets/icon/products/coffee_pot.png';
+  static const String assetCoffeeSingleOriginal =
+      'assets/icon/products/coffee_single.png';
+  static const String assetCoffeeDoubleOriginal =
+      'assets/icon/products/coffee_double.png';
+  static const String assetCoffeePotOriginal =
+      'assets/icon/products/coffee_pot.png';
 
   /// Resolves the asset image path corresponding to a coffee tip product identifier.
   static String productIconAsset(String productId) {
@@ -162,7 +167,9 @@ class BillingService extends ChangeNotifier {
     }
   }
 
-  Future<void> _onPurchaseStream(List<PurchaseDetails> purchaseDetailsList) async {
+  Future<void> _onPurchaseStream(
+    List<PurchaseDetails> purchaseDetailsList,
+  ) async {
     for (final purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
         _purchasePending = true;
@@ -188,7 +195,7 @@ class BillingService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    unawaited(_subscription?.cancel());
     _subscription = null;
     super.dispose();
   }

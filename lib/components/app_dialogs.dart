@@ -17,7 +17,7 @@ class AppDialogs {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: AppBorderRadius.largeBorder,
         ),
         titlePadding: const EdgeInsets.fromLTRB(

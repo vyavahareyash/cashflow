@@ -87,7 +87,7 @@ class FakeModelDownloadClient implements ModelDownloadClient {
     } else {
       if (chunk1.isNotEmpty) controller.add(chunk1);
       if (chunk2.isNotEmpty) controller.add(chunk2);
-      controller.close();
+      unawaited(controller.close());
     }
 
     return DownloadStreamResponse(
@@ -99,15 +99,15 @@ class FakeModelDownloadClient implements ModelDownloadClient {
   }
 
   @override
-  void abort() {
+  Future<void> abort() async {
     isAborted = true;
-    _activeController?.close();
+    unawaited(_activeController?.close());
   }
 
   @override
-  void close() {
+  Future<void> close() async {
     isClosed = true;
-    _activeController?.close();
+    unawaited(_activeController?.close());
   }
 }
 
@@ -123,8 +123,8 @@ class MockModelManagementService extends ModelManagementService {
     super.connectivityChecker,
     ModelPackStatus initialStatus = ModelPackStatus.notInstalled,
     int initialDiskUsage = 0,
-  })  : _mockStatus = initialStatus,
-        _mockDiskUsage = initialDiskUsage;
+  }) : _mockStatus = initialStatus,
+       _mockDiskUsage = initialDiskUsage;
 
   @override
   ModelPackStatus get status => _mockStatus;
@@ -133,7 +133,9 @@ class MockModelManagementService extends ModelManagementService {
   bool get isInstalled => _mockStatus == ModelPackStatus.installed;
 
   @override
-  Future<ModelPackStatus> checkInstalledStatus({bool verifyChecksums = false}) async {
+  Future<ModelPackStatus> checkInstalledStatus({
+    bool verifyChecksums = false,
+  }) async {
     return _mockStatus;
   }
 
@@ -165,6 +167,7 @@ class MockModelManagementService extends ModelManagementService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker.db';
 
   late Directory tempDir;
@@ -257,95 +260,115 @@ void main() {
       expect(await service.getModelsDiskUsage(), 0);
     });
 
-    test('successful download verifies SHA-256 and installs model pack', () async {
-      final fakeClient = FakeModelDownloadClient(fileData: sampleBytes);
-      final fakeChecker = FakeNetworkConnectivityChecker(NetworkType.wifi);
+    test(
+      'successful download verifies SHA-256 and installs model pack',
+      () async {
+        final fakeClient = FakeModelDownloadClient(fileData: sampleBytes);
+        final fakeChecker = FakeNetworkConnectivityChecker(NetworkType.wifi);
 
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
-        connectivityChecker: fakeChecker,
-        downloadClient: fakeClient,
-      );
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+          connectivityChecker: fakeChecker,
+          downloadClient: fakeClient,
+        );
 
-      final statusHistory = <ModelPackStatus>[];
-      service.addListener(() => statusHistory.add(service.status));
+        final statusHistory = <ModelPackStatus>[];
+        service.addListener(() => statusHistory.add(service.status));
 
-      final success = await service.downloadModelPack();
-      expect(success, isTrue);
-      expect(service.isInstalled, isTrue);
-      expect(service.progress, 1.0);
-      expect(service.errorMessage, isNull);
+        final success = await service.downloadModelPack();
+        expect(success, isTrue);
+        expect(service.isInstalled, isTrue);
+        expect(service.progress, 1.0);
+        expect(service.errorMessage, isNull);
 
-      // Verify files exist in directory
-      final modelDir = await service.getModelDirectory();
-      final encFile = File(p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx'));
-      final decFile = File(p.join(modelDir.path, 'moonshine', 'decoder.int8.onnx'));
-      expect(await encFile.exists(), isTrue);
-      expect(await decFile.exists(), isTrue);
+        // Verify files exist in directory
+        final modelDir = await service.getModelDirectory();
+        final encFile = File(
+          p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx'),
+        );
+        final decFile = File(
+          p.join(modelDir.path, 'moonshine', 'decoder.int8.onnx'),
+        );
+        expect(await encFile.exists(), isTrue);
+        expect(await decFile.exists(), isTrue);
 
-      // Verify disk usage
-      final usage = await service.getModelsDiskUsage();
-      expect(usage, testManifest.totalSizeBytes);
+        // Verify disk usage
+        final usage = await service.getModelsDiskUsage();
+        expect(usage, testManifest.totalSizeBytes);
 
-      // Status check should report installed
-      final check = await service.checkInstalledStatus(verifyChecksums: true);
-      expect(check, ModelPackStatus.installed);
-    });
+        // Status check should report installed
+        final check = await service.checkInstalledStatus(verifyChecksums: true);
+        expect(check, ModelPackStatus.installed);
+      },
+    );
 
-    test('corrupted download triggers SHA-256 error and purges file (US 15)', () async {
-      final fakeClient = FakeModelDownloadClient(
-        fileData: sampleBytes,
-        failChecksum: true,
-      );
-      final fakeChecker = FakeNetworkConnectivityChecker(NetworkType.wifi);
+    test(
+      'corrupted download triggers SHA-256 error and purges file (US 15)',
+      () async {
+        final fakeClient = FakeModelDownloadClient(
+          fileData: sampleBytes,
+          failChecksum: true,
+        );
+        final fakeChecker = FakeNetworkConnectivityChecker(NetworkType.wifi);
 
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
-        connectivityChecker: fakeChecker,
-        downloadClient: fakeClient,
-      );
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+          connectivityChecker: fakeChecker,
+          downloadClient: fakeClient,
+        );
 
-      final success = await service.downloadModelPack();
-      expect(success, isFalse);
-      expect(service.status, ModelPackStatus.error);
-      expect(service.errorMessage, contains('SHA-256 integrity check failed'));
+        final success = await service.downloadModelPack();
+        expect(success, isFalse);
+        expect(service.status, ModelPackStatus.error);
+        expect(
+          service.errorMessage,
+          contains('SHA-256 integrity check failed'),
+        );
 
-      // Ensure partial/corrupted file was removed
-      final modelDir = await service.getModelDirectory();
-      final partFile =
-          File(p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx.part'));
-      final targetFile =
-          File(p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx'));
-      expect(await partFile.exists(), isFalse);
-      expect(await targetFile.exists(), isFalse);
-    });
+        // Ensure partial/corrupted file was removed
+        final modelDir = await service.getModelDirectory();
+        final partFile = File(
+          p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx.part'),
+        );
+        final targetFile = File(
+          p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx'),
+        );
+        expect(await partFile.exists(), isFalse);
+        expect(await targetFile.exists(), isFalse);
+      },
+    );
 
-    test('resumes download using HTTP range header when partial file exists', () async {
-      final modelDir = Directory(p.join(tempDir.path, 'models', 'voice'));
-      await modelDir.create(recursive: true);
+    test(
+      'resumes download using HTTP range header when partial file exists',
+      () async {
+        final modelDir = Directory(p.join(tempDir.path, 'models', 'voice'));
+        await modelDir.create(recursive: true);
 
-      final encPart = File(p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx.part'));
-      await encPart.parent.create(recursive: true);
-      // Pre-write half the bytes for encoder
-      final fullBytes = sampleBytes['encoder.int8.onnx']!;
-      final halfLength = fullBytes.length ~/ 2;
-      await encPart.writeAsBytes(fullBytes.sublist(0, halfLength));
+        final encPart = File(
+          p.join(modelDir.path, 'moonshine', 'encoder.int8.onnx.part'),
+        );
+        await encPart.parent.create(recursive: true);
+        // Pre-write half the bytes for encoder
+        final fullBytes = sampleBytes['encoder.int8.onnx']!;
+        final halfLength = fullBytes.length ~/ 2;
+        await encPart.writeAsBytes(fullBytes.sublist(0, halfLength));
 
-      final fakeClient = FakeModelDownloadClient(fileData: sampleBytes);
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: modelDir,
-        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
-        downloadClient: fakeClient,
-      );
+        final fakeClient = FakeModelDownloadClient(fileData: sampleBytes);
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: modelDir,
+          connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+          downloadClient: fakeClient,
+        );
 
-      final success = await service.downloadModelPack();
-      expect(success, isTrue);
-      expect(fakeClient.startBytesRequested['encoder.int8.onnx'], halfLength);
-      expect(fakeClient.startBytesRequested['decoder.int8.onnx'], 0);
-    });
+        final success = await service.downloadModelPack();
+        expect(success, isTrue);
+        expect(fakeClient.startBytesRequested['encoder.int8.onnx'], halfLength);
+        expect(fakeClient.startBytesRequested['decoder.int8.onnx'], 0);
+      },
+    );
 
     test('cancelling download aborts stream and resets status', () async {
       final fakeClient = FakeModelDownloadClient(
@@ -401,55 +424,64 @@ void main() {
       await future;
     });
 
-    test('concurrent downloadModelPack calls share the active download future', () async {
-      final fakeClient = FakeModelDownloadClient(
-        fileData: sampleBytes,
-        simulateSlowDownload: true,
-      );
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
-        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
-        downloadClient: fakeClient,
-      );
+    test(
+      'concurrent downloadModelPack calls share the active download future',
+      () async {
+        final fakeClient = FakeModelDownloadClient(
+          fileData: sampleBytes,
+          simulateSlowDownload: true,
+        );
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+          connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+          downloadClient: fakeClient,
+        );
 
-      final f1 = service.downloadModelPack();
-      final f2 = service.downloadModelPack();
+        final f1 = service.downloadModelPack();
+        final f2 = service.downloadModelPack();
 
-      expect(identical(f1, f2), isTrue);
+        expect(identical(f1, f2), isTrue);
 
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      service.cancelDownload();
-      await f1;
-    });
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        service.cancelDownload();
+        await f1;
+      },
+    );
 
-    test('transient network drop triggers retry and successfully completes', () async {
-      final fakeClient = FakeModelDownloadClient(
-        fileData: sampleBytes,
-        failTimes: 1, // fails once with SocketException then succeeds
-      );
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
-        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
-        downloadClient: fakeClient,
-      );
+    test(
+      'transient network drop triggers retry and successfully completes',
+      () async {
+        final fakeClient = FakeModelDownloadClient(
+          fileData: sampleBytes,
+          failTimes: 1, // fails once with SocketException then succeeds
+        );
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+          connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+          downloadClient: fakeClient,
+        );
 
-      final success = await service.downloadModelPack();
-      expect(success, isTrue);
-      expect(service.isInstalled, isTrue);
-      expect(fakeClient.callCount, greaterThan(1));
-    });
+        final success = await service.downloadModelPack();
+        expect(success, isTrue);
+        expect(service.isInstalled, isTrue);
+        expect(fakeClient.callCount, greaterThan(1));
+      },
+    );
 
-    test('app lifecycle transitions track background state and resume cleanly', () async {
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
-      );
+    test(
+      'app lifecycle transitions track background state and resume cleanly',
+      () async {
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+        );
 
-      service.didChangeAppLifecycleState(AppLifecycleState.paused);
-      service.didChangeAppLifecycleState(AppLifecycleState.resumed);
-    });
+        service.didChangeAppLifecycleState(AppLifecycleState.paused);
+        service.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      },
+    );
   });
 
   group('Wi-Fi and Cellular Gating (US 14)', () {
@@ -457,8 +489,7 @@ void main() {
       final db = DatabaseHelper.instance;
       await db.setVoiceModelsWifiOnly(true);
 
-      final fakeChecker =
-          FakeNetworkConnectivityChecker(NetworkType.cellular);
+      final fakeChecker = FakeNetworkConnectivityChecker(NetworkType.cellular);
       final service = ModelManagementService(
         manifest: testManifest,
         baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
@@ -470,24 +501,28 @@ void main() {
       expect(service.errorMessage, contains('Cellular connection detected'));
     });
 
-    test('proceeds on cellular when allowCellular is explicitly true', () async {
-      final db = DatabaseHelper.instance;
-      await db.setVoiceModelsWifiOnly(true);
+    test(
+      'proceeds on cellular when allowCellular is explicitly true',
+      () async {
+        final db = DatabaseHelper.instance;
+        await db.setVoiceModelsWifiOnly(true);
 
-      final fakeClient = FakeModelDownloadClient(fileData: sampleBytes);
-      final fakeChecker =
-          FakeNetworkConnectivityChecker(NetworkType.cellular);
-      final service = ModelManagementService(
-        manifest: testManifest,
-        baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
-        connectivityChecker: fakeChecker,
-        downloadClient: fakeClient,
-      );
+        final fakeClient = FakeModelDownloadClient(fileData: sampleBytes);
+        final fakeChecker = FakeNetworkConnectivityChecker(
+          NetworkType.cellular,
+        );
+        final service = ModelManagementService(
+          manifest: testManifest,
+          baseDirectory: Directory(p.join(tempDir.path, 'models', 'voice')),
+          connectivityChecker: fakeChecker,
+          downloadClient: fakeClient,
+        );
 
-      final success = await service.downloadModelPack(allowCellular: true);
-      expect(success, isTrue);
-      expect(service.isInstalled, isTrue);
-    });
+        final success = await service.downloadModelPack(allowCellular: true);
+        expect(success, isTrue);
+        expect(service.isInstalled, isTrue);
+      },
+    );
 
     test('fails immediately when device is offline', () async {
       final fakeChecker = FakeNetworkConnectivityChecker(NetworkType.none);
@@ -555,8 +590,9 @@ void main() {
   });
 
   group('BackupRestoreScreen Voice AI Model Pack UI', () {
-    testWidgets('renders Voice AI Model Pack card with Not Installed status',
-        (tester) async {
+    testWidgets('renders Voice AI Model Pack card with Not Installed status', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -568,9 +604,7 @@ void main() {
       );
       ModelManagementService.setMockInstance(service);
 
-      await tester.pumpWidget(
-        const MaterialApp(home: BackupRestoreScreen()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       });
@@ -582,26 +616,32 @@ void main() {
       expect(cardFinder, findsOneWidget);
       expect(find.byKey(const Key('voice_model_status_badge')), findsOneWidget);
       expect(find.text('Not Installed'), findsOneWidget);
-      expect(find.byKey(const Key('voice_model_download_button')), findsOneWidget);
-      expect(find.byKey(const Key('voice_models_wifi_only_switch')), findsOneWidget);
+      expect(
+        find.byKey(const Key('voice_model_download_button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('voice_models_wifi_only_switch')),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('triggers cellular warning gate dialog when on cellular',
-        (tester) async {
+    testWidgets('triggers cellular warning gate dialog when on cellular', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
       final service = MockModelManagementService(
         manifest: testManifest,
-        connectivityChecker:
-            FakeNetworkConnectivityChecker(NetworkType.cellular),
+        connectivityChecker: FakeNetworkConnectivityChecker(
+          NetworkType.cellular,
+        ),
       );
       ModelManagementService.setMockInstance(service);
 
-      await tester.pumpWidget(
-        const MaterialApp(home: BackupRestoreScreen()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       });
@@ -627,7 +667,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('cellular_warning_dialog')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('cellular_warning_proceed_button')));
+      await tester.tap(
+        find.byKey(const Key('cellular_warning_proceed_button')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cellular_warning_dialog')), findsNothing);
@@ -635,52 +677,55 @@ void main() {
       expect(service.lastAllowCellular, isTrue);
       expect(service.isInstalled, isTrue);
       expect(find.text('Installed & Ready'), findsOneWidget);
-      expect(find.byKey(const Key('voice_model_delete_button')), findsOneWidget);
+      expect(
+        find.byKey(const Key('voice_model_delete_button')),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('delete models button triggers confirmation and deletes files',
-        (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'delete models button triggers confirmation and deletes files',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      final service = MockModelManagementService(
-        manifest: testManifest,
-        connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
-        initialStatus: ModelPackStatus.installed,
-        initialDiskUsage: 260 * 1024 * 1024,
-      );
-      ModelManagementService.setMockInstance(service);
+        final service = MockModelManagementService(
+          manifest: testManifest,
+          connectivityChecker: FakeNetworkConnectivityChecker(NetworkType.wifi),
+          initialStatus: ModelPackStatus.installed,
+          initialDiskUsage: 260 * 1024 * 1024,
+        );
+        ModelManagementService.setMockInstance(service);
 
-      await tester.pumpWidget(
-        const MaterialApp(home: BackupRestoreScreen()),
-      );
-      await tester.runAsync(() async {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-      });
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        });
+        await tester.pumpAndSettle();
 
-      final cardFinder = find.byKey(const Key('voice_model_card'));
-      await tester.ensureVisible(cardFinder);
+        final cardFinder = find.byKey(const Key('voice_model_card'));
+        await tester.ensureVisible(cardFinder);
 
-      expect(find.text('Installed & Ready'), findsOneWidget);
-      final deleteBtn = find.byKey(const Key('voice_model_delete_button'));
-      expect(deleteBtn, findsOneWidget);
+        expect(find.text('Installed & Ready'), findsOneWidget);
+        final deleteBtn = find.byKey(const Key('voice_model_delete_button'));
+        expect(deleteBtn, findsOneWidget);
 
-      await tester.ensureVisible(deleteBtn);
-      await tester.tap(deleteBtn);
-      await tester.pumpAndSettle();
+        await tester.ensureVisible(deleteBtn);
+        await tester.tap(deleteBtn);
+        await tester.pumpAndSettle();
 
-      // Verify dialog
-      expect(find.byKey(const Key('delete_models_dialog')), findsOneWidget);
+        // Verify dialog
+        expect(find.byKey(const Key('delete_models_dialog')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('delete_models_confirm_button')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('delete_models_confirm_button')));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('delete_models_dialog')), findsNothing);
-      expect(service.deleteCalled, isTrue);
-      expect(service.isInstalled, isFalse);
-      expect(find.text('Not Installed'), findsOneWidget);
-    });
+        expect(find.byKey(const Key('delete_models_dialog')), findsNothing);
+        expect(service.deleteCalled, isTrue);
+        expect(service.isInstalled, isFalse);
+        expect(find.text('Not Installed'), findsOneWidget);
+      },
+    );
   });
 }

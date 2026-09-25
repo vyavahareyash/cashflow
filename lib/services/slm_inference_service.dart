@@ -11,8 +11,7 @@ import 'voice_grammar.dart';
 class SlmModelNotInstalledException implements Exception {
   final String message;
   const SlmModelNotInstalledException([
-    this.message =
-        'SmolLM2 model files are not installed. Download the Offline AI Model Pack in Settings.',
+    this.message = 'SmolLM2 model files are not installed. Download the Offline AI Model Pack in Settings.',
   ]);
 
   @override
@@ -39,9 +38,7 @@ abstract class SlmEngine {
     String? grammarRoot,
   });
 
-  Future<String> generate({
-    required String prompt,
-  });
+  Future<String> generate({required String prompt});
 
   Future<void> dispose();
 
@@ -107,7 +104,9 @@ class LlamaCppSlmEngine implements SlmEngine {
   @override
   Future<String> generate({required String prompt}) async {
     if (!isInitialized || _parent == null) {
-      throw const SlmEngineException('SLM inference engine is not initialized.');
+      throw const SlmEngineException(
+        'SLM inference engine is not initialized.',
+      );
     }
 
     try {
@@ -186,13 +185,9 @@ class SlmInferenceService {
   final SlmEngine _engine;
   final ModelManagementService? modelService;
 
-  SlmInferenceService({
-    SlmEngine? engine,
-    this.modelService,
-  })  : _engine = engine ?? LlamaCppSlmEngine() {
-    modelService?.registerLifecycleHooks(
-      onUnload: () async => await dispose(),
-    );
+  SlmInferenceService({SlmEngine? engine, this.modelService})
+    : _engine = engine ?? LlamaCppSlmEngine() {
+    modelService?.registerLifecycleHooks(onUnload: () async => await dispose());
   }
 
   SlmEngine get engine => _engine;

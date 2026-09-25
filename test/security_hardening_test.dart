@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:cashflow/main.dart';
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
@@ -13,6 +14,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
   const databaseFileName = 'money_tracker.db';
 
   setUp(() async {
@@ -56,7 +58,9 @@ void main() {
       );
 
       // Verify state before deletion
-      final accBefore = (await db.readAllAccounts()).firstWhere((a) => a.id == accountId);
+      final accBefore = (await db.readAllAccounts()).firstWhere(
+        (a) => a.id == accountId,
+      );
       expect(accBefore.balance, equals(1000.0)); // Physical balance unchanged
       final usableBefore = await db.getUsableBalanceForAccount(accountId);
       expect(usableBefore, equals(700.0)); // $1000 - $300 locked
@@ -65,7 +69,9 @@ void main() {
       await db.deleteGoal(goalId);
 
       // 5. Verify physical balance was NOT credited (no phantom money!)
-      final accAfter = (await db.readAllAccounts()).firstWhere((a) => a.id == accountId);
+      final accAfter = (await db.readAllAccounts()).firstWhere(
+        (a) => a.id == accountId,
+      );
       expect(accAfter.balance, equals(1000.0)); // Still 1000.0, NOT 1300.0!
 
       // 6. Usable balance is restored to 1000.0 because lock is removed
@@ -74,7 +80,11 @@ void main() {
 
       // 7. Verify transaction still exists and goal_id is nullified
       final rawDb = await db.database;
-      final txRows = await rawDb.query('transactions', where: 'id = ?', whereArgs: [txId]);
+      final txRows = await rawDb.query(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [txId],
+      );
       expect(txRows.length, equals(1));
       expect(txRows.first['goal_id'], isNull);
 
@@ -111,35 +121,44 @@ void main() {
       expect(categories.any((c) => c.id == catId), isFalse);
 
       // Verify transaction still exists with category_id set to null
-      final txRows = await rawDb.query('transactions', where: 'id = ?', whereArgs: [txId]);
+      final txRows = await rawDb.query(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [txId],
+      );
       expect(txRows.length, equals(1));
       expect(txRows.first['category_id'], isNull);
     });
 
-    test('importDatabase rejects non-SQLite files and preserves existing database', () async {
-      final db = DatabaseHelper.instance;
+    test(
+      'importDatabase rejects non-SQLite files and preserves existing database',
+      () async {
+        final db = DatabaseHelper.instance;
 
-      // Seed something in the database
-      await db.createAccount(
-        Account(name: 'SeedAccount', balance: 250.0, type: 'Bank'),
-      );
-      expect((await db.readAllAccounts()).length, equals(1));
+        // Seed something in the database
+        await db.createAccount(
+          Account(name: 'SeedAccount', balance: 250.0, type: 'Bank'),
+        );
+        expect((await db.readAllAccounts()).length, equals(1));
 
-      // 1. Reject too short bytes (<16 bytes)
-      final shortBytes = [1, 2, 3];
-      final resShort = await db.importDatabase(bytesForTesting: shortBytes);
-      expect(resShort, isFalse);
+        // 1. Reject too short bytes (<16 bytes)
+        final shortBytes = [1, 2, 3];
+        final resShort = await db.importDatabase(bytesForTesting: shortBytes);
+        expect(resShort, isFalse);
 
-      // 2. Reject non-SQLite header
-      final textBytes = utf8.encode('This is just a random text file, not a SQLite db!');
-      final resText = await db.importDatabase(bytesForTesting: textBytes);
-      expect(resText, isFalse);
+        // 2. Reject non-SQLite header
+        final textBytes = utf8.encode(
+          'This is just a random text file, not a SQLite db!',
+        );
+        final resText = await db.importDatabase(bytesForTesting: textBytes);
+        expect(resText, isFalse);
 
-      // Verify original database remains intact
-      final accounts = await db.readAllAccounts();
-      expect(accounts.length, equals(1));
-      expect(accounts.first.name, equals('SeedAccount'));
-    });
+        // Verify original database remains intact
+        final accounts = await db.readAllAccounts();
+        expect(accounts.length, equals(1));
+        expect(accounts.first.name, equals('SeedAccount'));
+      },
+    );
 
     test('createCreditCardExpenseTransaction rejects locking when usable funds are insufficient', () async {
       final db = DatabaseHelper.instance;
@@ -191,45 +210,52 @@ void main() {
       expect(usable, equals(50.0));
     });
 
-    test('createExpenseTransaction rejects expense greater than account balance', () async {
-      final db = DatabaseHelper.instance;
+    test(
+      'createExpenseTransaction rejects expense greater than account balance',
+      () async {
+        final db = DatabaseHelper.instance;
 
-      final accountId = await db.createAccount(
-        Account(name: 'Checking', balance: 100.0, type: 'Bank'),
-      );
-      final catId = await db.createCategory(
-        Category(name: 'Food', monthlyBudget: 200.0, type: 'expense'),
-      );
+        final accountId = await db.createAccount(
+          Account(name: 'Checking', balance: 100.0, type: 'Bank'),
+        );
+        final catId = await db.createCategory(
+          Category(name: 'Food', monthlyBudget: 200.0, type: 'expense'),
+        );
 
-      // Attempting to spend $150 from $100 balance should fail
-      expect(
-        () => db.createExpenseTransaction(
+        // Attempting to spend $150 from $100 balance should fail
+        expect(
+          () => db.createExpenseTransaction(
+            accountId: accountId,
+            categoryId: catId,
+            amount: 150.0,
+            date: '2026-09-23',
+            note: 'Overdraft attempt',
+          ),
+          throwsA(isA<StateError>()),
+        );
+
+        // Account balance remains unchanged
+        final accBefore = (await db.readAllAccounts()).firstWhere(
+          (a) => a.id == accountId,
+        );
+        expect(accBefore.balance, equals(100.0));
+
+        // Spending $60 should succeed
+        final txId = await db.createExpenseTransaction(
           accountId: accountId,
           categoryId: catId,
-          amount: 150.0,
+          amount: 60.0,
           date: '2026-09-23',
-          note: 'Overdraft attempt',
-        ),
-        throwsA(isA<StateError>()),
-      );
+          note: 'Valid expense',
+        );
+        expect(txId, isPositive);
 
-      // Account balance remains unchanged
-      final accBefore = (await db.readAllAccounts()).firstWhere((a) => a.id == accountId);
-      expect(accBefore.balance, equals(100.0));
-
-      // Spending $60 should succeed
-      final txId = await db.createExpenseTransaction(
-        accountId: accountId,
-        categoryId: catId,
-        amount: 60.0,
-        date: '2026-09-23',
-        note: 'Valid expense',
-      );
-      expect(txId, isPositive);
-
-      final accAfter = (await db.readAllAccounts()).firstWhere((a) => a.id == accountId);
-      expect(accAfter.balance, equals(40.0));
-    });
+        final accAfter = (await db.readAllAccounts()).firstWhere(
+          (a) => a.id == accountId,
+        );
+        expect(accAfter.balance, equals(40.0));
+      },
+    );
 
     test('createTransferTransaction rejects transfer greater than source account balance', () async {
       final db = DatabaseHelper.instance;
@@ -254,8 +280,16 @@ void main() {
       );
 
       // Balances remain intact
-      expect((await db.readAllAccounts()).firstWhere((a) => a.id == sourceId).balance, equals(75.0));
-      expect((await db.readAllAccounts()).firstWhere((a) => a.id == destId).balance, equals(50.0));
+      expect(
+        (await db.readAllAccounts())
+            .firstWhere((a) => a.id == sourceId)
+            .balance,
+        equals(75.0),
+      );
+      expect(
+        (await db.readAllAccounts()).firstWhere((a) => a.id == destId).balance,
+        equals(50.0),
+      );
 
       // Transferring $30 should succeed
       final txId = await db.createTransferTransaction(
@@ -267,8 +301,16 @@ void main() {
       );
       expect(txId, isPositive);
 
-      expect((await db.readAllAccounts()).firstWhere((a) => a.id == sourceId).balance, equals(45.0));
-      expect((await db.readAllAccounts()).firstWhere((a) => a.id == destId).balance, equals(80.0));
+      expect(
+        (await db.readAllAccounts())
+            .firstWhere((a) => a.id == sourceId)
+            .balance,
+        equals(45.0),
+      );
+      expect(
+        (await db.readAllAccounts()).firstWhere((a) => a.id == destId).balance,
+        equals(80.0),
+      );
     });
 
     test('commitDraftTransactions atomically rolls back if any draft exceeds account balance', () async {
@@ -308,77 +350,92 @@ void main() {
       );
 
       // Verify atomic rollback: balance is still 50.0 and no transactions were created
-      final acc = (await db.readAllAccounts()).firstWhere((a) => a.id == accountId);
+      final acc = (await db.readAllAccounts()).firstWhere(
+        (a) => a.id == accountId,
+      );
       expect(acc.balance, equals(50.0));
       final txs = await db.getTransactionHistory();
       expect(txs, isEmpty);
     });
 
-    test('updateTransaction rejects increasing expense beyond account balance', () async {
-      final db = DatabaseHelper.instance;
+    test(
+      'updateTransaction rejects increasing expense beyond account balance',
+      () async {
+        final db = DatabaseHelper.instance;
 
-      final accountId = await db.createAccount(
-        Account(name: 'Savings', balance: 100.0, type: 'Bank'),
-      );
-      final catId = await db.createCategory(
-        Category(name: 'Repairs', monthlyBudget: 200.0, type: 'expense'),
-      );
+        final accountId = await db.createAccount(
+          Account(name: 'Savings', balance: 100.0, type: 'Bank'),
+        );
+        final catId = await db.createCategory(
+          Category(name: 'Repairs', monthlyBudget: 200.0, type: 'expense'),
+        );
 
-      final txId = await db.createExpenseTransaction(
-        accountId: accountId,
-        categoryId: catId,
-        amount: 40.0,
-        date: '2026-09-23',
-        note: 'Small repair',
-      );
-      // Balance is now 60.0
-
-      // Updating from 40 to 120 (delta = 80 > 60 available) should fail
-      expect(
-        () => db.updateTransaction(
-          id: txId,
+        final txId = await db.createExpenseTransaction(
           accountId: accountId,
           categoryId: catId,
-          amount: 120.0,
+          amount: 40.0,
           date: '2026-09-23',
-          note: 'Expensive repair attempt',
-        ),
-        throwsA(isA<StateError>()),
-      );
+          note: 'Small repair',
+        );
+        // Balance is now 60.0
 
-      // Balance remains 60.0 and transaction amount remains 40.0
-      expect((await db.readAllAccounts()).firstWhere((a) => a.id == accountId).balance, equals(60.0));
-      final tx = (await db.getTransactionHistory()).firstWhere((t) => t['id'] == txId);
-      expect(tx['amount'], equals(40.0));
-    });
+        // Updating from 40 to 120 (delta = 80 > 60 available) should fail
+        expect(
+          () => db.updateTransaction(
+            id: txId,
+            accountId: accountId,
+            categoryId: catId,
+            amount: 120.0,
+            date: '2026-09-23',
+            note: 'Expensive repair attempt',
+          ),
+          throwsA(isA<StateError>()),
+        );
 
-    testWidgets('App lock staging screen places logo above biometric overlay and lock in center', (tester) async {
-      await tester.pumpWidget(
-        const MoneyTrackerApp(initialAppLockEnabled: true),
-      );
-      await tester.pump();
+        // Balance remains 60.0 and transaction amount remains 40.0
+        expect(
+          (await db.readAllAccounts())
+              .firstWhere((a) => a.id == accountId)
+              .balance,
+          equals(60.0),
+        );
+        final tx = (await db.getTransactionHistory()).firstWhere(
+          (t) => t['id'] == txId,
+        );
+        expect(tx['amount'], equals(40.0));
+      },
+    );
 
-      // Lock icon is displayed in center
-      expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    testWidgets(
+      'App lock staging screen places logo above biometric overlay and lock in center',
+      (tester) async {
+        await tester.pumpWidget(
+          const MoneyTrackerApp(initialAppLockEnabled: true),
+        );
+        await tester.pump();
 
-      // App logo is rendered
-      expect(find.byType(Image), findsOneWidget);
+        // Lock icon is displayed in center
+        expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
 
-      // Verify Align with negative y-alignment (elevated above center)
-      final alignFinder = find.ancestor(
-        of: find.byType(ClipRRect),
-        matching: find.byType(Align),
-      );
-      expect(alignFinder, findsOneWidget);
-      final alignWidget = tester.widget<Align>(alignFinder);
-      expect(alignWidget.alignment, equals(const Alignment(0, -0.6)));
+        // App logo is rendered
+        expect(find.byType(Image), findsOneWidget);
 
-      // Verify Center contains lock icon container
-      final centerFinder = find.ancestor(
-        of: find.byIcon(Icons.lock_rounded),
-        matching: find.byType(Center),
-      );
-      expect(centerFinder, findsOneWidget);
-    });
+        // Verify Align with negative y-alignment (elevated above center)
+        final alignFinder = find.ancestor(
+          of: find.byType(ClipRRect),
+          matching: find.byType(Align),
+        );
+        expect(alignFinder, findsOneWidget);
+        final alignWidget = tester.widget<Align>(alignFinder);
+        expect(alignWidget.alignment, equals(const Alignment(0, -0.6)));
+
+        // Verify Center contains lock icon container
+        final centerFinder = find.ancestor(
+          of: find.byIcon(Icons.lock_rounded),
+          matching: find.byType(Center),
+        );
+        expect(centerFinder, findsOneWidget);
+      },
+    );
   });
 }

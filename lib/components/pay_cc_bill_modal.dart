@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../models/account_model.dart';
 import '../models/credit_card_model.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import 'app_dialogs.dart';
+
+// ignore_for_file: deprecated_member_use
 
 class PayCcBillModal extends StatefulWidget {
   final Account ccAccount;
@@ -65,7 +68,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
     final hasDefault = widget.bankAccounts.any((a) => a.id == defaultId);
     _selectedBankAccountId = hasDefault
         ? defaultId
-        : (widget.bankAccounts.isNotEmpty ? widget.bankAccounts.first.id : null);
+        : (widget.bankAccounts.isNotEmpty
+              ? widget.bankAccounts.first.id
+              : null);
 
     final initialAmount = widget.lockedAmount > 0
         ? widget.lockedAmount
@@ -84,7 +89,8 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
   double _computeAmount() {
     if (_selectedOption == 0 && widget.lockedAmount > 0) {
       return widget.lockedAmount;
-    } else if (_selectedOption == 1 || (_selectedOption == 0 && widget.lockedAmount <= 0)) {
+    } else if (_selectedOption == 1 ||
+        (_selectedOption == 0 && widget.lockedAmount <= 0)) {
       return widget.ccAccount.balance;
     } else {
       return double.tryParse(_amountController.text) ?? 0.0;
@@ -226,7 +232,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceElevated : AppColors.gray50,
+                color: isDark
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.gray50,
                 borderRadius: AppBorderRadius.mediumBorder,
                 border: Border.all(
                   color: isDark ? AppColors.darkBorder : AppColors.gray200,
@@ -241,7 +249,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
                         Text(
                           'Current Due',
                           style: AppTypography.labelSmall.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -305,7 +315,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
                 activeColor: AppColors.emerald700,
                 title: Text(
                   'Pay Locked Amount (${AppFormatters.currency(locked)})',
-                  style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 subtitle: Text(
                   'Releases locked cash reserves from linked bank account',
@@ -328,7 +340,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
               activeColor: AppColors.emerald700,
               title: Text(
                 'Pay Full Outstanding (${AppFormatters.currency(totalDue)})',
-                style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               onChanged: (val) {
                 setState(() {
@@ -345,7 +359,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
               activeColor: AppColors.emerald700,
               title: Text(
                 'Custom Amount',
-                style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               onChanged: (val) {
                 setState(() {
@@ -358,7 +374,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
               const SizedBox(height: AppSpacing.xs),
               TextField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   prefixText: '₹ ',
                   hintText: 'Enter amount to pay',
@@ -393,7 +411,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
             DropdownButtonFormField<int>(
               initialValue: _selectedBankAccountId,
               isExpanded: true,
-              dropdownColor: isDark ? AppColors.darkSurfaceElevated : AppColors.white,
+              dropdownColor: isDark
+                  ? AppColors.darkSurfaceElevated
+                  : AppColors.white,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
@@ -425,7 +445,9 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
                           Text(
                             AppFormatters.currency(acc.balance),
                             style: AppTypography.labelSmall.copyWith(
-                              color: isDark ? AppColors.gray400 : AppColors.gray500,
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray500,
                             ),
                           ),
                         ],
@@ -446,7 +468,7 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.emerald700,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: AppBorderRadius.mediumBorder,
                   ),
                 ),

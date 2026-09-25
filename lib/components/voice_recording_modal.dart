@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../services/audio_capture_service.dart';
@@ -10,12 +11,7 @@ import '../theme/theme_constants.dart';
 import 'voice_transaction_staging_sheet.dart';
 
 /// Modal state representing the active recording and processing lifecycle.
-enum VoiceModalState {
-  initiating,
-  recording,
-  processing,
-  error,
-}
+enum VoiceModalState { initiating, recording, processing, error }
 
 /// Interactive modal bottom sheet for voice recording and AI pipeline orchestration (US 1, 3, 13, 16).
 ///
@@ -80,7 +76,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     _coordinator.isMicActiveListenable.addListener(_handleMicActiveChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initSession();
+      unawaited(_initSession());
     });
   }
 
@@ -88,9 +84,9 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   void dispose() {
     _coordinator.isMicActiveListenable.removeListener(_handleMicActiveChanged);
     _transcriptTextController.dispose();
-    _amplitudeSubscription?.cancel();
+    unawaited(_amplitudeSubscription?.cancel());
     if (_coordinator.isRecording) {
-      _coordinator.cancelRecording();
+      unawaited(_coordinator.cancelRecording());
     }
     super.dispose();
   }
@@ -192,7 +188,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   }
 
   Future<void> _stopAndProcess() async {
-    _amplitudeSubscription?.cancel();
+    unawaited(_amplitudeSubscription?.cancel());
     final editedTranscript = _transcriptTextController.text.trim();
     if (editedTranscript.isNotEmpty) {
       _coordinator.updateTranscript(editedTranscript);
@@ -207,7 +203,9 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     try {
       final drafts = await _coordinator.stopAndProcess(
         anchorDate: widget.anchorDate,
-        overrideTranscript: editedTranscript.isNotEmpty ? editedTranscript : null,
+        overrideTranscript: editedTranscript.isNotEmpty
+            ? editedTranscript
+            : null,
       );
 
       if (!mounted) return;
@@ -239,7 +237,9 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                 ),
               ],
             ),
-            backgroundColor: isDark ? AppColors.darkSurfaceElevated : AppColors.gray900,
+            backgroundColor: isDark
+                ? AppColors.darkSurfaceElevated
+                : AppColors.gray900,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -270,8 +270,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
       if (!mounted) return;
       setState(() {
         _state = VoiceModalState.error;
-        _errorMessage =
-            'No decipherable speech detected. Please speak clearly into the microphone.';
+        _errorMessage = 'No decipherable speech detected. Please speak clearly into the microphone.';
       });
     } on AudioCapturePermissionException catch (e) {
       if (!mounted) return;
@@ -289,7 +288,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   }
 
   Future<void> _cancel() async {
-    _amplitudeSubscription?.cancel();
+    unawaited(_amplitudeSubscription?.cancel());
     try {
       await _coordinator.cancelRecording();
       await _coordinator.endSession();
@@ -344,16 +343,14 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                 container: true,
                 liveRegion: true,
                 child: Text(
-                  _state == VoiceModalState.error
-                      ? 'Error'
-                      : _statusMessage,
+                  _state == VoiceModalState.error ? 'Error' : _statusMessage,
                   key: const Key('voice_recording_status_text'),
                   style: AppTypography.bodyMedium.copyWith(
                     color: _state == VoiceModalState.error
                         ? AppColors.danger
                         : isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.gray600,
+                        ? AppColors.darkTextSecondary
+                        : AppColors.gray600,
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
@@ -431,10 +428,10 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
               color: !_isMicActive
                   ? (isDark ? AppColors.darkBorder : AppColors.gray200)
                   : isHearingVoice
-                      ? AppColors.emerald500.withValues(alpha: 0.5)
-                      : isDark
-                          ? AppColors.darkBorder
-                          : AppColors.gray200,
+                  ? AppColors.emerald500.withValues(alpha: 0.5)
+                  : isDark
+                  ? AppColors.darkBorder
+                  : AppColors.gray200,
               width: 1.5,
             ),
           ),
@@ -462,8 +459,8 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : (_isMicActive
-                                  ? AppColors.emerald700
-                                  : AppColors.gray600),
+                                    ? AppColors.emerald700
+                                    : AppColors.gray600),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -479,8 +476,10 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                           color: !_isMicActive
                               ? (isDark ? AppColors.gray600 : AppColors.gray400)
                               : isHearingVoice
-                                  ? AppColors.emerald500
-                                  : (isDark ? AppColors.gray600 : AppColors.gray400),
+                              ? AppColors.emerald500
+                              : (isDark
+                                    ? AppColors.gray600
+                                    : AppColors.gray400),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -492,13 +491,13 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                         style: AppTypography.labelSmall.copyWith(
                           color: !_isMicActive
                               ? (isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.gray500)
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.gray500)
                               : isHearingVoice
-                                  ? AppColors.emerald500
-                                  : (isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.gray500),
+                              ? AppColors.emerald500
+                              : (isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.gray500),
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
                         ),
@@ -524,11 +523,15 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                             children: [
                               TextFormField(
                                 controller: _transcriptTextController,
-                                key: const Key('voice_recording_live_transcript_edit_field'),
+                                key: const Key(
+                                  'voice_recording_live_transcript_edit_field',
+                                ),
                                 maxLines: null,
                                 keyboardType: TextInputType.multiline,
                                 style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark ? AppColors.darkText : AppColors.gray900,
+                                  color: isDark
+                                      ? AppColors.darkText
+                                      : AppColors.gray900,
                                   fontWeight: FontWeight.w600,
                                   height: 1.4,
                                 ),
@@ -576,18 +579,24 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                             ],
                           )
                         : Text(
-                            hasText
-                                ? transcript
-                                : 'e.g., "Chai 20 rupees on UPI, 450 rupees groceries yesterday"',
-                            key: const Key('voice_recording_live_transcript_text'),
+                            hasText ? transcript : 'e.g., "Chai 20 rupees on UPI, 450 rupees groceries yesterday"',
+                            key: const Key(
+                              'voice_recording_live_transcript_text',
+                            ),
                             style: AppTypography.bodyMedium.copyWith(
                               color: hasText
-                                  ? (isDark ? AppColors.darkText : AppColors.gray900)
+                                  ? (isDark
+                                        ? AppColors.darkText
+                                        : AppColors.gray900)
                                   : (isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.gray500),
-                              fontStyle: hasText ? FontStyle.normal : FontStyle.italic,
-                              fontWeight: hasText ? FontWeight.w600 : FontWeight.normal,
+                                        ? AppColors.darkTextSecondary
+                                        : AppColors.gray500),
+                              fontStyle: hasText
+                                  ? FontStyle.normal
+                                  : FontStyle.italic,
+                              fontWeight: hasText
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                               height: 1.4,
                             ),
                           ),
@@ -603,7 +612,10 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
 
   Widget _buildWaveformView(bool isDark) {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: _isMicActive ? _currentAmplitude : 0.0),
+      tween: Tween<double>(
+        begin: 0.0,
+        end: _isMicActive ? _currentAmplitude : 0.0,
+      ),
       duration: const Duration(milliseconds: 120),
       curve: Curves.easeOutQuad,
       builder: (context, animatedAmp, child) {
@@ -657,8 +669,8 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                   color: _isMicActive
                       ? AppColors.emerald600
                       : (isDark
-                          ? AppColors.darkSurfaceElevated
-                          : AppColors.gray300),
+                            ? AppColors.darkSurfaceElevated
+                            : AppColors.gray300),
                   shape: const CircleBorder(),
                   elevation: _isMicActive ? 6 : 2,
                   shadowColor: _isMicActive
@@ -681,8 +693,8 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                         color: _isMicActive
                             ? AppColors.white
                             : (isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.gray700),
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.gray700),
                       ),
                     ),
                   ),
@@ -694,11 +706,16 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                 bottom: 4,
                 child: Container(
                   key: const Key('voice_recording_mic_badge'),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: _isMicActive
                         ? AppColors.emerald600
-                        : (isDark ? AppColors.darkSurfaceElevated : AppColors.gray600),
+                        : (isDark
+                              ? AppColors.darkSurfaceElevated
+                              : AppColors.gray600),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _isMicActive
@@ -816,17 +833,16 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
               icon: const Icon(Icons.close_rounded, size: 18),
               label: const Text('Cancel'),
               style: OutlinedButton.styleFrom(
-                foregroundColor:
-                    isDark ? AppColors.darkTextSecondary : AppColors.gray700,
+                foregroundColor: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.gray700,
                 side: BorderSide(
                   color: isDark ? AppColors.darkBorder : AppColors.gray300,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               ),
             ),
           ),
@@ -849,9 +865,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                 elevation: 0,
               ),
             ),
@@ -890,10 +904,7 @@ class _VoiceReactiveWavePainter extends CustomPainter {
   final double amplitude;
   final bool isDark;
 
-  _VoiceReactiveWavePainter({
-    required this.amplitude,
-    required this.isDark,
-  });
+  _VoiceReactiveWavePainter({required this.amplitude, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -911,7 +922,8 @@ class _VoiceReactiveWavePainter extends CustomPainter {
     for (double x = 0; x <= width; x += 3) {
       final normX = (x / width) * 2 - 1;
       final envelope = (1 - normX * normX).clamp(0.0, 1.0);
-      final y = centerY +
+      final y =
+          centerY +
           math.sin((x / width) * 3 * math.pi * 2) * waveHeight * envelope;
       path1.lineTo(x, y);
     }
@@ -928,7 +940,8 @@ class _VoiceReactiveWavePainter extends CustomPainter {
     for (double x = 0; x <= width; x += 3) {
       final normX = (x / width) * 2 - 1;
       final envelope = (1 - normX * normX).clamp(0.0, 1.0);
-      final y = centerY +
+      final y =
+          centerY +
           math.sin((x / width) * 4 * math.pi * 2 + math.pi / 3) *
               (waveHeight * 0.8) *
               envelope;
@@ -947,7 +960,8 @@ class _VoiceReactiveWavePainter extends CustomPainter {
     for (double x = 0; x <= width; x += 3) {
       final normX = (x / width) * 2 - 1;
       final envelope = (1 - normX * normX).clamp(0.0, 1.0);
-      final y = centerY -
+      final y =
+          centerY -
           math.sin((x / width) * 2.5 * math.pi * 2 + math.pi / 4) *
               (waveHeight * 0.6) *
               envelope;
@@ -955,9 +969,7 @@ class _VoiceReactiveWavePainter extends CustomPainter {
     }
     final paint3 = Paint()
       ..color = (isDark ? AppColors.emerald400 : AppColors.emerald600)
-          .withValues(
-            alpha: (0.25 + activeAmp * 0.4).clamp(0.0, 1.0),
-          )
+          .withValues(alpha: (0.25 + activeAmp * 0.4).clamp(0.0, 1.0))
       ..strokeWidth = 1.8 + activeAmp * 1.5
       ..style = PaintingStyle.stroke;
     canvas.drawPath(path3, paint3);

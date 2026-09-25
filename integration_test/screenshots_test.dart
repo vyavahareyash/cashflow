@@ -10,8 +10,9 @@ import 'package:integration_test/integration_test.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('capture all app screens exhaustively in light and dark modes',
-      (tester) async {
+  testWidgets('capture all app screens exhaustively in light and dark modes', (
+    tester,
+  ) async {
     await app.main();
     await _waitForScreen(tester, 'Cashflow');
 
@@ -25,7 +26,11 @@ void main() {
     );
     await tester.drag(backupScrollable, const Offset(0, -500));
     await tester.pumpAndSettle();
-    await _ensureVisibleAndSettled(tester, populateButton, scrollable: backupScrollable);
+    await _ensureVisibleAndSettled(
+      tester,
+      populateButton,
+      scrollable: backupScrollable,
+    );
     await tester.tap(populateButton);
     await _waitForText(tester, 'Populate Sample Demo Finances?');
     final loadDemoButton = find.widgetWithText(
@@ -202,7 +207,8 @@ void main() {
     await _markScreen('15c-modal-export-csv-light');
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first))
+        .clearSnackBars();
     await tester.pumpAndSettle();
 
     // 16: Spending Analytics Screen (accessed via bottom navigation)
@@ -223,12 +229,14 @@ void main() {
     await tester.pumpAndSettle();
     await _waitForText(tester, 'Offline AI Models Required');
     await _markScreen('17-voice-ai-modal-light');
-    await tester.tap(find.byKey(const Key('voice_model_download_cancel_button')));
+    await tester.tap(
+      find.byKey(const Key('voice_model_download_cancel_button')),
+    );
     await tester.pumpAndSettle();
 
     // 17b: Active Voice Listening Modal (preview bypass)
     final rootContext = tester.element(find.byType(Scaffold).first);
-    VoiceRecordingModal.show(rootContext, previewMode: true);
+    await VoiceRecordingModal.show(rootContext, previewMode: true);
     await tester.pumpAndSettle();
     await _waitForText(tester, 'Offline AI Voice Engine');
     await _markScreen('17b-voice-listening-light');
@@ -259,7 +267,7 @@ void main() {
       ),
     ];
     final sheetContext = tester.element(find.byType(Scaffold).first);
-    VoiceTransactionStagingSheet.show(sheetContext, drafts: sampleDrafts);
+    await VoiceTransactionStagingSheet.show(sheetContext, drafts: sampleDrafts);
     await tester.pumpAndSettle();
     await _waitForText(tester, 'Staged Transactions');
     await _markScreen('17c-voice-staging-light');
@@ -380,12 +388,14 @@ void main() {
     await tester.pumpAndSettle();
     await _waitForText(tester, 'Offline AI Models Required');
     await _markScreen('28-voice-ai-modal-dark');
-    await tester.tap(find.byKey(const Key('voice_model_download_cancel_button')));
+    await tester.tap(
+      find.byKey(const Key('voice_model_download_cancel_button')),
+    );
     await tester.pumpAndSettle();
 
     // 28b: Active Voice Listening Modal (Dark preview bypass)
     final rootContextDark = tester.element(find.byType(Scaffold).first);
-    VoiceRecordingModal.show(rootContextDark, previewMode: true);
+    await VoiceRecordingModal.show(rootContextDark, previewMode: true);
     await tester.pumpAndSettle();
     await _waitForText(tester, 'Offline AI Voice Engine');
     await _markScreen('28b-voice-listening-dark');
@@ -394,7 +404,10 @@ void main() {
 
     // 28c: Voice Transaction Staging Sheet (Dark multi-draft review)
     final sheetContextDark = tester.element(find.byType(Scaffold).first);
-    VoiceTransactionStagingSheet.show(sheetContextDark, drafts: sampleDrafts);
+    await VoiceTransactionStagingSheet.show(
+      sheetContextDark,
+      drafts: sampleDrafts,
+    );
     await tester.pumpAndSettle();
     await _waitForText(tester, 'Staged Transactions');
     await _markScreen('28c-voice-staging-dark');

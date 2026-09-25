@@ -28,6 +28,7 @@ class FakePathProviderPlatform extends Fake
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
+  DatabaseHelper.setTestDatabaseName(inMemoryDatabasePath);
 
   const databaseFileName = 'money_tracker.db';
   late Directory tempDir;
@@ -37,7 +38,9 @@ void main() {
     final path = join(dbPath, databaseFileName);
     await DatabaseHelper.instance.close();
     await deleteDatabase(path);
-    tempDir = await Directory.systemTemp.createTemp('cashflow_accounts_tab_test_');
+    tempDir = await Directory.systemTemp.createTemp(
+      'cashflow_accounts_tab_test_',
+    );
     PathProviderPlatform.instance = FakePathProviderPlatform(tempDir);
   });
 
@@ -65,37 +68,40 @@ void main() {
   }
 
   group('AccountsScreen Tabs and Header Action Pill Tests', () {
-    testWidgets('renders segmented tabs, empty state action pill, and no FloatingActionButton', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: AccountsScreen(),
-        ),
-      );
-      await pumpUntilLoaded(tester);
+    testWidgets(
+      'renders segmented tabs, empty state action pill, and no FloatingActionButton',
+      (tester) async {
+        await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
+        await pumpUntilLoaded(tester);
 
-      expect(find.byKey(const Key('accounts_page_segmented_tabs')), findsOneWidget);
-      expect(find.text('Accounts'), findsOneWidget);
-      expect(find.text('Budgets'), findsOneWidget);
-      expect(find.text('Goals'), findsOneWidget);
-      expect(find.byType(FloatingActionButton), findsNothing);
-      expect(find.byKey(const Key('accounts_empty_add_pill_btn')), findsOneWidget);
+        expect(
+          find.byKey(const Key('accounts_page_segmented_tabs')),
+          findsOneWidget,
+        );
+        expect(find.text('Accounts'), findsOneWidget);
+        expect(find.text('Budgets'), findsOneWidget);
+        expect(find.text('Goals'), findsOneWidget);
+        expect(find.byType(FloatingActionButton), findsNothing);
+        expect(
+          find.byKey(const Key('accounts_empty_add_pill_btn')),
+          findsOneWidget,
+        );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
-    testWidgets('renders section header action pill when accounts exist', (tester) async {
+    testWidgets('renders section header action pill when accounts exist', (
+      tester,
+    ) async {
       await tester.runAsync(() async {
         await DatabaseHelper.instance.createAccount(
           Account(name: 'Main Bank', balance: 5000.0, type: 'Bank'),
         );
       });
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: AccountsScreen(),
-        ),
-      );
+      await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
       await pumpUntilLoaded(tester);
 
       expect(find.byKey(const Key('accounts_add_pill_btn')), findsOneWidget);
@@ -105,17 +111,18 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('respects initialTabIndex and shows budget tab without FAB', (tester) async {
+    testWidgets('respects initialTabIndex and shows budget tab without FAB', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: AccountsScreen(
-            initialTabIndex: 1,
-          ),
-        ),
+        const MaterialApp(home: AccountsScreen(initialTabIndex: 1)),
       );
       await pumpUntilLoaded(tester);
 
-      expect(find.byKey(const Key('budget_tab_segmented_button')), findsOneWidget);
+      expect(
+        find.byKey(const Key('budget_tab_segmented_button')),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('budget_add_pill_btn')), findsOneWidget);
       expect(find.byType(FloatingActionButton), findsNothing);
 
@@ -123,13 +130,11 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('respects initialTabIndex and shows goals tab without FAB', (tester) async {
+    testWidgets('respects initialTabIndex and shows goals tab without FAB', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: AccountsScreen(
-            initialTabIndex: 2,
-          ),
-        ),
+        const MaterialApp(home: AccountsScreen(initialTabIndex: 2)),
       );
       await pumpUntilLoaded(tester);
 
@@ -140,12 +145,10 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('BudgetScreen embedded and standalone does not show FAB', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: BudgetScreen(),
-        ),
-      );
+    testWidgets('BudgetScreen embedded and standalone does not show FAB', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: BudgetScreen()));
       await pumpUntilLoaded(tester);
 
       expect(find.byType(FloatingActionButton), findsNothing);
@@ -155,12 +158,10 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('GoalsScreen embedded and standalone does not show FAB', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: GoalsScreen(),
-        ),
-      );
+    testWidgets('GoalsScreen embedded and standalone does not show FAB', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: GoalsScreen()));
       await pumpUntilLoaded(tester);
 
       expect(find.byType(FloatingActionButton), findsNothing);

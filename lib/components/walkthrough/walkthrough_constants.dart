@@ -27,8 +27,7 @@ const List<WalkthroughConcept> kWalkthroughConcepts = [
   WalkthroughConcept(
     title: '100% Offline & Private',
     tag: 'OFFLINE-FIRST PRIVACY',
-    description:
-        'Your financial data never leaves your device. Cashflow has zero cloud servers, zero trackers, and zero network dependencies.',
+    description: 'Your financial data never leaves your device. Cashflow has zero cloud servers, zero trackers, and zero network dependencies.',
     formula: 'Zero Cloud Sync • Local SQLite Storage',
     icon: Icons.shield_outlined,
     iconColor: AppColors.emerald500,
@@ -41,8 +40,7 @@ const List<WalkthroughConcept> kWalkthroughConcepts = [
   WalkthroughConcept(
     title: 'Safe-to-Spend Usable Balance',
     tag: 'TRULY DISPOSABLE CASH',
-    description:
-        'Never accidentally spend money earmarked for savings. Cashflow isolates your actual disposable cash from locked goal funds.',
+    description: 'Never accidentally spend money earmarked for savings. Cashflow isolates your actual disposable cash from locked goal funds.',
     formula: 'Safe-to-Spend = Physical Balance − Goal Locks',
     icon: Icons.account_balance_wallet_outlined,
     iconColor: AppColors.emerald600,
@@ -55,8 +53,7 @@ const List<WalkthroughConcept> kWalkthroughConcepts = [
   WalkthroughConcept(
     title: 'Virtual Goal Locks',
     tag: 'VIRTUAL SINKING FUNDS',
-    description:
-        'Reserve funds inside your existing bank accounts for specific goals without opening new accounts or transferring between banks.',
+    description: 'Reserve funds inside your existing bank accounts for specific goals without opening new accounts or transferring between banks.',
     formula: 'Earmark Funds Within Any Account',
     icon: Icons.lock_outline_rounded,
     iconColor: AppColors.warning,
@@ -69,8 +66,7 @@ const List<WalkthroughConcept> kWalkthroughConcepts = [
   WalkthroughConcept(
     title: 'Payday Cycle & Daily Burn',
     tag: 'SALARY-ANCHORED PACING',
-    description:
-        'Budget along your real income rhythm. Anchor your monthly spending period to your actual payday rather than calendar month boundaries.',
+    description: 'Budget along your real income rhythm. Anchor your monthly spending period to your actual payday rather than calendar month boundaries.',
     formula: 'Daily Burn Pace = Allowable / Actual Spend Rate',
     icon: Icons.calendar_month_outlined,
     iconColor: AppColors.info,
@@ -83,8 +79,7 @@ const List<WalkthroughConcept> kWalkthroughConcepts = [
   WalkthroughConcept(
     title: 'Private Voice Journaling',
     tag: 'ON-DEVICE AI LOGGING',
-    description:
-        'Speak naturally to log expenses in seconds. On-device Whisper and local SLM models parse spoken sentences into draft transactions with zero server calls.',
+    description: 'Speak naturally to log expenses in seconds. On-device Whisper and local SLM models parse spoken sentences into draft transactions with zero server calls.',
     formula: 'Spoken Voice → Local SLM → Draft Transaction',
     icon: Icons.mic_none_rounded,
     iconColor: AppColors.purple,
@@ -129,32 +124,28 @@ const List<SpotlightStep> kSpotlightSteps = [
   SpotlightStep(
     targetId: SpotlightTargetId.balanceCard,
     title: 'Safe-to-Spend Balance Card',
-    description:
-        'This is your real disposable cash after deducting all active goal locks. It shows your Physical Cash minus Locked Allocations.',
+    description: 'This is your real disposable cash after deducting all active goal locks. It shows your Physical Cash minus Locked Allocations.',
     tabIndex: 0,
     badgeText: 'Dashboard',
   ),
   SpotlightStep(
     targetId: SpotlightTargetId.privacyToggle,
     title: 'Privacy Mode Toggle',
-    description:
-        'Tap this eye icon anytime to mask your balances and transaction amounts with bullet points when you are in public.',
+    description: 'Tap this eye icon anytime to mask your balances and transaction amounts with bullet points when you are in public.',
     tabIndex: 0,
     badgeText: 'Privacy',
   ),
   SpotlightStep(
     targetId: SpotlightTargetId.voiceFab,
     title: 'AI Voice Journaling & Quick Add',
-    description:
-        'Tap the center microphone button to speak your expenses naturally. Cashflow transcribes and drafts transactions 100% offline.',
+    description: 'Tap the center microphone button to speak your expenses naturally. Cashflow transcribes and drafts transactions 100% offline.',
     tabIndex: 0,
     badgeText: 'Quick Entry',
   ),
   SpotlightStep(
     targetId: SpotlightTargetId.goalsTab,
     title: 'Sinking Funds & Goal Locks',
-    description:
-        'Goals let you earmark savings for emergency funds, vacations, or gadgets directly inside your existing bank accounts.',
+    description: 'Goals let you earmark savings for emergency funds, vacations, or gadgets directly inside your existing bank accounts.',
     tabIndex: 3,
     subTabIndex: 2,
     badgeText: 'Sinking Funds',
@@ -162,8 +153,7 @@ const List<SpotlightStep> kSpotlightSteps = [
   SpotlightStep(
     targetId: SpotlightTargetId.accountsTab,
     title: 'Accounts & Physical Cash',
-    description:
-        'Track balances across your bank accounts, cash wallets, and credit cards. Your total physical cash aggregates right here.',
+    description: 'Track balances across your bank accounts, cash wallets, and credit cards. Your total physical cash aggregates right here.',
     tabIndex: 3,
     subTabIndex: 0,
     badgeText: 'Accounts',

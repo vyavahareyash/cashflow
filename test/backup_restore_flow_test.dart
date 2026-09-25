@@ -12,7 +12,9 @@ import 'package:cashflow/services/database_helper.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   databaseFactory = databaseFactoryFfi;
-  const databaseFileName = 'money_tracker.db';
+
+  const databaseFileName = 'backup_flow.db';
+  DatabaseHelper.setTestDatabaseName(databaseFileName);
 
   setUp(() async {
     final dbPath = await getDatabasesPath();
@@ -87,7 +89,9 @@ void main() {
         categories: categories.map(Map<String, dynamic>.from).toList(),
         transactions: transactions.map(Map<String, dynamic>.from).toList(),
         goals: goals.map(Map<String, dynamic>.from).toList(),
-        lockedAllocations: lockedAllocations.map(Map<String, dynamic>.from).toList(),
+        lockedAllocations: lockedAllocations
+            .map(Map<String, dynamic>.from)
+            .toList(),
       );
 
       // Simulate restore by decoding and writing into a fresh transaction
@@ -108,16 +112,19 @@ void main() {
         for (final account in data['accounts'] as List<Map<String, dynamic>>) {
           await txn.insert('accounts', account);
         }
-        for (final category in data['categories'] as List<Map<String, dynamic>>) {
+        for (final category
+            in data['categories'] as List<Map<String, dynamic>>) {
           await txn.insert('categories', category);
         }
         for (final goal in data['goals'] as List<Map<String, dynamic>>) {
           await txn.insert('goals', goal);
         }
-        for (final transaction in data['transactions'] as List<Map<String, dynamic>>) {
+        for (final transaction
+            in data['transactions'] as List<Map<String, dynamic>>) {
           await txn.insert('transactions', transaction);
         }
-        for (final lock in data['locked_allocations'] as List<Map<String, dynamic>>) {
+        for (final lock
+            in data['locked_allocations'] as List<Map<String, dynamic>>) {
           await txn.insert('locked_allocations', lock);
         }
       });
@@ -175,43 +182,56 @@ void main() {
   });
 
   group('BackupRestoreScreen UI Feedback & Progress Tests', () {
-    testWidgets('renders backup freshness header and linear progress bar when processing', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.cloud_done_rounded),
-                      Text('Backup Status'),
-                    ],
+    testWidgets(
+      'renders backup freshness header and linear progress bar when processing',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.cloud_done_rounded),
+                        Text('Backup Status'),
+                      ],
+                    ),
                   ),
-                ),
-                const LinearProgressIndicator(
-                  minHeight: 3,
-                  color: Color(0xFF047857),
-                ),
-                Container(
-                  key: const Key('backup_status_message_banner'),
-                  child: const Text('Backup exported successfully to: /path/backup.json'),
-                ),
-              ],
+                  const LinearProgressIndicator(
+                    minHeight: 3,
+                    color: Color(0xFF047857),
+                  ),
+                  Container(
+                    key: const Key('backup_status_message_banner'),
+                    child: const Text(
+                      'Backup exported successfully to: /path/backup.json',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      expect(find.text('Backup Status'), findsOneWidget);
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      expect(find.byKey(const Key('backup_status_message_banner')), findsOneWidget);
-      expect(find.textContaining('Backup exported successfully'), findsOneWidget);
-    });
+        expect(find.text('Backup Status'), findsOneWidget);
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+        expect(
+          find.byKey(const Key('backup_status_message_banner')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('Backup exported successfully'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('displays status banner and SnackBar on feedback triggers', (tester) async {
+    testWidgets('displays status banner and SnackBar on feedback triggers', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
