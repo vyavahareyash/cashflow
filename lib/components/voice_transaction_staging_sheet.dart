@@ -107,6 +107,10 @@ class _VoiceTransactionStagingSheetState
       _categories = await DatabaseHelper.instance.readAllCategories();
     }
 
+    _drafts = _drafts
+        .map((d) => d.validateAgainstCategories(_categories))
+        .toList();
+
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -254,9 +258,7 @@ class _VoiceTransactionStagingSheetState
   }
 
   Future<void> _selectCategory(int index, DraftTransaction draft) async {
-    final availableCats = draft.isIncome
-        ? _categories.where((c) => c.isIncome).toList()
-        : _categories.where((c) => c.isExpense).toList();
+    final availableCats = _categories;
 
     final selectedCategory = await showModalBottomSheet<Category>(
       context: context,
@@ -283,17 +285,43 @@ class _VoiceTransactionStagingSheetState
                   itemCount: availableCats.length,
                   itemBuilder: (ctx, i) {
                     final cat = availableCats[i];
+                    final isInc = cat.isIncome;
                     return ListTile(
-                      leading: const CircleAvatar(
+                      leading: CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.emerald100,
+                        backgroundColor:
+                            (isInc ? AppColors.emerald700 : AppColors.danger)
+                                .withValues(alpha: 0.15),
                         child: Icon(
                           Icons.category_rounded,
                           size: 16,
-                          color: AppColors.emerald700,
+                          color: isInc
+                              ? AppColors.emerald700
+                              : AppColors.danger,
                         ),
                       ),
                       title: Text(cat.name, style: AppTypography.bodyMedium),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              (isInc ? AppColors.emerald700 : AppColors.danger)
+                                  .withValues(alpha: 0.1),
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
+                        child: Text(
+                          cat.type.toUpperCase(),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isInc
+                                ? AppColors.emerald700
+                                : AppColors.danger,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                       onTap: () => Navigator.of(sheetCtx).pop(cat),
                     );
                   },
@@ -307,9 +335,12 @@ class _VoiceTransactionStagingSheetState
 
     if (selectedCategory != null && mounted) {
       setState(() {
+        final newType = selectedCategory.isIncome ? 'income' : 'expense';
         _drafts[index] = draft.copyWith(
           categoryId: selectedCategory.id,
+          type: newType,
           hasUnassignedCategory: false,
+          hasCategoryMismatch: false,
         );
       });
     }
@@ -394,10 +425,22 @@ class _VoiceTransactionStagingSheetState
 
     if (selectedType != null && mounted) {
       setState(() {
+        int? newCatId = draft.categoryId;
+        if (newCatId != null) {
+          final cat = _categories.where((c) => c.id == newCatId).firstOrNull;
+          if (cat != null) {
+            if (selectedType == 'transfer' ||
+                (selectedType == 'income' && cat.isExpense) ||
+                (selectedType == 'expense' && cat.isIncome)) {
+              newCatId = null;
+            }
+          }
+        }
         _drafts[index] = draft.copyWith(
           type: selectedType,
-          hasUnassignedCategory:
-              selectedType == 'expense' && draft.categoryId == null,
+          categoryId: newCatId,
+          hasUnassignedCategory: selectedType == 'expense' && newCatId == null,
+          hasCategoryMismatch: false,
         );
       });
     }
@@ -835,9 +878,17 @@ class _VoiceTransactionStagingSheetState
       category = _categories.where((c) => c.id == draft.categoryId).firstOrNull;
     }
 
+    final isCategoryTypeMismatch =
+        category != null &&
+        ((draft.isIncome && category.isExpense) ||
+            (draft.isExpense && category.isIncome) ||
+            (draft.isTransfer));
+
     final hasWarnings =
         draft.hasUnassignedAccount ||
         draft.hasUnassignedCategory ||
+        draft.hasCategoryMismatch ||
+        isCategoryTypeMismatch ||
         !draft.isValid;
 
     Color typeColor;
@@ -972,6 +1023,16 @@ class _VoiceTransactionStagingSheetState
           if (draft.isTransfer && draft.destinationAccountId == null) ...[
             const SizedBox(height: AppSpacing.xs),
             _buildWarningBadge('Select Destination Account', isDark),
+          ],
+          if (isCategoryTypeMismatch || draft.hasCategoryMismatch) ...[
+            const SizedBox(height: AppSpacing.xs),
+            _buildWarningBadge(
+              category != null
+                  ? 'Category "${category.name}" (${category.type}) does not match ${draft.type} type'
+                  : 'Invalid category for ${draft.type} transaction',
+              isDark,
+              isError: true,
+            ),
           ],
 
           const SizedBox(height: AppSpacing.md),

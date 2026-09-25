@@ -75,6 +75,13 @@ Run a specific test file:
 flutter test test/screens/dashboard_screen_test.dart
 ```
 
+### Pre-Commit Hooks
+Pre-commit hook validates formatting, static analysis, secrets, tests, and coverage before committing:
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
 ---
 
 ## Android Emulator Workflow

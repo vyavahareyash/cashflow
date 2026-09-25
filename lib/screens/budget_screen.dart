@@ -131,10 +131,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 title: Text(
                   isEditing
                       ? (isExpense
-                            ? 'Edit Expense Budget'
+                            ? 'Edit Expense Category'
                             : 'Edit Income Category')
                       : (isExpense
-                            ? 'Add Expense Budget'
+                            ? 'Add Expense Category'
                             : 'Add Income Category'),
                   style: AppTypography.titleLarge.copyWith(
                     fontWeight: FontWeight.bold,
@@ -185,7 +185,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             items: const [
                               DropdownMenuItem(
                                 value: 'expense',
-                                child: Text('Expense Budget'),
+                                child: Text('Expense Category'),
                               ),
                               DropdownMenuItem(
                                 value: 'income',
@@ -379,7 +379,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   120,
                 ),
                 children: [
-                  // SEGMENTED CONTROL: EXPENSE BUDGETS vs INCOME CATEGORIES
+                  // SEGMENTED CONTROL: EXPENSE CATEGORIES vs INCOME CATEGORIES
                   Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -388,7 +388,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       segments: const [
                         ButtonSegment<String>(
                           value: 'expense',
-                          label: Text('Expense Budgets'),
+                          label: Text('Expense Categories'),
                           icon: Icon(Icons.pie_chart_outline_rounded),
                         ),
                         ButtonSegment<String>(
@@ -442,7 +442,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           onPressed: _showCategoryDialog,
                           icon: const Icon(Icons.add_rounded, size: 18),
                           label: const Text(
-                            'Add Budget',
+                            'Add Category',
                             style: AppTypography.labelMedium,
                           ),
                           style: FilledButton.styleFrom(
@@ -479,14 +479,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 Text(
-                                  'No expense budgets configured yet',
+                                  'No expense categories configured yet',
                                   style: AppTypography.titleMedium.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.xs),
                                 Text(
-                                  'Add categories like Groceries, Rent, or Transport to track limits.',
+                                  'Add categories like Groceries, Rent, or Transport. You can optionally set monthly budgets to track spending limits.',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.bodyMedium.copyWith(
                                     color: isDark
@@ -498,7 +498,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 FilledButton.icon(
                                   onPressed: _showCategoryDialog,
                                   icon: const Icon(Icons.add_rounded, size: 18),
-                                  label: const Text('Add Budget'),
+                                  label: const Text('Add Category'),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: AppColors.emerald700,
                                     foregroundColor: Colors.white,
