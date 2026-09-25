@@ -100,35 +100,35 @@ class _WalkthroughConceptCarouselState
         if (!didPop) widget.onSkip();
       },
       child: Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: cardBorderColor, width: 1.5),
         ),
         backgroundColor: backgroundColor,
         elevation: 16,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
+          constraints: BoxConstraints(
             maxWidth: 420,
-            maxHeight: 640,
+            maxHeight: isSmallScreen ? 430 : 470,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Header Row: Tagline + Step counter + Skip Button
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+                padding: const EdgeInsets.fromLTRB(16, 12, 10, 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: 8,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.emerald500.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         'STEP ${_currentPage + 1} OF ${kWalkthroughConcepts.length}',
@@ -177,7 +177,7 @@ class _WalkthroughConceptCarouselState
 
               // Footer Controls: Dots + Back / Next / Action Buttons
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                 child: _buildFooterControls(isDark),
               ),
             ],
@@ -194,16 +194,14 @@ class _WalkthroughConceptCarouselState
   }) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 4),
-
           // Glowing Icon Container
           Container(
-            width: isSmallScreen ? 56 : 64,
-            height: isSmallScreen ? 56 : 64,
+            width: isSmallScreen ? 46 : 52,
+            height: isSmallScreen ? 46 : 52,
             decoration: BoxDecoration(
               color: concept.iconColor.withValues(alpha: isDark ? 0.20 : 0.12),
               shape: BoxShape.circle,
@@ -214,11 +212,11 @@ class _WalkthroughConceptCarouselState
             ),
             child: Icon(
               concept.icon,
-              size: isSmallScreen ? 28 : 32,
+              size: isSmallScreen ? 24 : 26,
               color: concept.iconColor,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // Concept Tag
           Text(
@@ -226,11 +224,11 @@ class _WalkthroughConceptCarouselState
             style: AppTypography.labelSmall.copyWith(
               color: concept.iconColor,
               fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
-              fontSize: 11,
+              letterSpacing: 0.8,
+              fontSize: 10.5,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
           // Title
           Text(
@@ -238,11 +236,11 @@ class _WalkthroughConceptCarouselState
             textAlign: TextAlign.center,
             style: AppTypography.headlineMedium.copyWith(
               fontWeight: FontWeight.bold,
-              fontSize: isSmallScreen ? 19 : 21,
+              fontSize: isSmallScreen ? 17 : 18.5,
               color: isDark ? Colors.white : AppColors.gray900,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Description
           Text(
@@ -250,22 +248,22 @@ class _WalkthroughConceptCarouselState
             textAlign: TextAlign.center,
             style: AppTypography.bodyMedium.copyWith(
               color: isDark ? AppColors.gray300 : AppColors.gray700,
-              fontSize: 13,
-              height: 1.45,
+              fontSize: 12.5,
+              height: 1.35,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // Formula or Badge Pill (if provided)
           if (concept.formula != null) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xFF1E3128)
                     : AppColors.emerald50,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isDark
                       ? AppColors.emerald600.withValues(alpha: 0.35)
@@ -278,11 +276,11 @@ class _WalkthroughConceptCarouselState
                 style: AppTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.w700,
                   color: isDark ? AppColors.emerald300 : AppColors.emerald800,
-                  fontSize: 11.5,
+                  fontSize: 11,
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
           ],
 
           // Key Bullet Points
