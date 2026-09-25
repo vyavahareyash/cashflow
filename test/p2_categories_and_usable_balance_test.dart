@@ -238,7 +238,7 @@ void main() {
 
   group('P2 Issue #70: BudgetScreen Segmented Tab and Income Categories', () {
     testWidgets(
-      'SegmentedButton toggles between Expense Budgets and Income Categories',
+      'SegmentedButton toggles between Expense Categories and Income Categories',
       (tester) async {
         String selectedTab = 'expense';
 
@@ -254,7 +254,7 @@ void main() {
                         segments: const [
                           ButtonSegment<String>(
                             value: 'expense',
-                            label: Text('Expense Budgets'),
+                            label: Text('Expense Categories'),
                             icon: Icon(Icons.pie_chart_outline_rounded),
                           ),
                           ButtonSegment<String>(
@@ -270,7 +270,7 @@ void main() {
                       ),
                       if (selectedTab == 'expense') ...[
                         const Text('Category Allocations'),
-                        const Text('Add Budget'),
+                        const Text('Add Category'),
                       ] else ...[
                         const Text('Income Streams'),
                         const Text('Add Category'),
@@ -287,9 +287,9 @@ void main() {
           find.byKey(const Key('budget_tab_segmented_button')),
           findsOneWidget,
         );
-        expect(find.text('Expense Budgets'), findsOneWidget);
+        expect(find.text('Expense Categories'), findsOneWidget);
         expect(find.text('Income Categories'), findsOneWidget);
-        expect(find.text('Add Budget'), findsOneWidget);
+        expect(find.text('Add Category'), findsOneWidget);
         expect(find.text('Category Allocations'), findsOneWidget);
 
         // Switch to Income Categories tab

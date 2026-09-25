@@ -724,4 +724,158 @@ void main() {
       expect(drafts.first.note, 'Transfer: Checking → Savings');
     });
   });
+
+  group('Draft Validation and Cashback Income Categorization', () {
+    final anchorDate = DateTime(2026, 9, 22);
+    final accounts = [
+      Account(id: 1, name: 'Checking', balance: 5000.0, type: 'Bank'),
+      Account(
+        id: 3,
+        name: 'Chase Sapphire',
+        balance: -450.0,
+        type: 'Credit Card',
+      ),
+    ];
+    final categories = [
+      Category(
+        id: 10,
+        name: 'Food & Dining',
+        monthlyBudget: 600.0,
+        type: 'expense',
+      ),
+      Category(
+        id: 11,
+        name: 'Groceries',
+        monthlyBudget: 800.0,
+        type: 'expense',
+      ),
+      Category(id: 20, name: 'Cashback', type: 'income'),
+      Category(id: 21, name: 'Refund', type: 'income'),
+    ];
+
+    test('Recognizes cashback as income and links cashback category', () {
+      final results = VoiceEntityParser.parseTranscriptionSample(
+        'Cashback 50 on Chase Sapphire',
+        anchorDate: anchorDate,
+        accounts: accounts,
+        categories: categories,
+      );
+
+      expect(results.length, 1);
+      final draft = results.first;
+      expect(draft.amount, 50.0);
+      expect(draft.type, 'income');
+      expect(draft.categoryId, 20);
+      expect(draft.hasCategoryMismatch, isFalse);
+      expect(draft.hasUnassignedCategory, isFalse);
+      expect(draft.isValid, isTrue);
+
+      final model = draft.toTransactionModel();
+      expect(model.type, 'income');
+      expect(model.categoryId, 20);
+    });
+
+    test('Auto-reconciles SLM expense classification to income when category is income', () {
+      const slmJson = '''
+[
+  {
+    "amount": 35.0,
+    "type": "expense",
+    "account_id": 3,
+    "destination_account_id": null,
+    "category_id": 20,
+    "date": "2026-09-22",
+    "note": "Credit Card Cashback"
+  }
+]
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        slmJson,
+        anchorDate: anchorDate,
+        accounts: accounts,
+        categories: categories,
+      );
+
+      expect(drafts.length, 1);
+      final draft = drafts.first;
+      expect(draft.amount, 35.0);
+      expect(draft.type, 'income');
+      expect(draft.categoryId, 20);
+      expect(draft.hasCategoryMismatch, isFalse);
+      expect(draft.isValid, isTrue);
+    });
+
+    test('DraftTransaction.validateAgainstCategories auto-reconciles income category', () {
+      final mismatchedDraft = DraftTransaction(
+        amount: 25.0,
+        type: 'expense',
+        accountId: 1,
+        categoryId: 20, // Cashback (income category)
+        date: '2026-09-22',
+        note: 'Cashback',
+      );
+
+      final reconciled = mismatchedDraft.validateAgainstCategories(categories);
+      expect(reconciled.type, 'income');
+      expect(reconciled.categoryId, 20);
+      expect(reconciled.hasCategoryMismatch, isFalse);
+      expect(reconciled.isValid, isTrue);
+    });
+
+    test('DraftTransaction flags category mismatch when expense category is assigned to income', () {
+      final mismatchedDraft = DraftTransaction(
+        amount: 25.0,
+        type: 'income',
+        accountId: 1,
+        categoryId: 10, // Food & Dining (expense category)
+        date: '2026-09-22',
+        note: 'Income with food category',
+      );
+
+      final checked = mismatchedDraft.validateAgainstCategories(categories);
+      expect(checked.hasCategoryMismatch, isTrue);
+      expect(checked.isValid, isFalse);
+    });
+
+    test('VoicePromptBuilder uses dynamic account and category details and hardens product/service note instructions', () {
+      final customAccounts = [
+        Account(id: 101, name: 'HDFC Bank', balance: 10000.0, type: 'Bank'),
+        Account(
+          id: 102,
+          name: 'ICICI Card',
+          balance: -2000.0,
+          type: 'Credit Card',
+        ),
+      ];
+      final customCategories = [
+        Category(
+          id: 201,
+          name: 'Groceries',
+          monthlyBudget: 5000.0,
+          type: 'expense',
+        ),
+        Category(id: 202, name: 'Cashback Rewards', type: 'income'),
+      ];
+
+      final prompt = VoicePromptBuilder.buildPrompt(
+        transcript: 'Bought milk for 40',
+        anchorDate: anchorDate,
+        accounts: customAccounts,
+        categories: customCategories,
+      );
+
+      // Verifies prompt dynamically references user account and income category
+      expect(prompt, contains('HDFC Bank'));
+      expect(prompt, contains('ICICI Card'));
+      expect(prompt, contains('Cashback Rewards'));
+      expect(prompt, contains('Transfer: HDFC Bank -> ICICI Card'));
+      expect(
+        prompt,
+        contains(
+          'ALWAYS include the specific product name, service name, or merchant purchased',
+        ),
+      );
+    });
+  });
 }

@@ -548,5 +548,83 @@ void main() {
         expect(find.text('Electric Bill'), findsOneWidget);
       },
     );
+
+    test('7. commitDraftTransactions commits income draft with income category and preserves categoryId', () async {
+      final db = DatabaseHelper.instance;
+      final accId = await db.createAccount(
+        Account(name: 'Checking Acc', balance: 1000.0, type: 'Bank'),
+      );
+      final incCatId = await db.createCategory(
+        Category(name: 'Cashback', type: 'income'),
+      );
+
+      final ids = await db.commitDraftTransactions([
+        DraftTransaction(
+          amount: 50.0,
+          type: 'income',
+          accountId: accId,
+          categoryId: incCatId,
+          date: '2026-09-22',
+          note: 'Cashback Reward',
+        ),
+      ]);
+
+      expect(ids.length, 1);
+      final txns = await db.getTransactionHistory();
+      expect(txns.length, 1);
+      expect(txns.first['type'], 'income');
+      expect(txns.first['amount'], 50.0);
+      expect(txns.first['category_id'], incCatId);
+      expect(txns.first['category_name'], 'Cashback');
+
+      final updatedAcc = await db.readAccount(accId);
+      expect(updatedAcc?.balance, 1050.0);
+    });
+
+    test(
+      '8. commitDraftTransactions rejects draft with mismatched category type',
+      () async {
+        final db = DatabaseHelper.instance;
+        final accId = await db.createAccount(
+          Account(name: 'Checking Acc 2', balance: 1000.0, type: 'Bank'),
+        );
+        final expenseCatId = await db.createCategory(
+          Category(name: 'Dining', monthlyBudget: 200.0, type: 'expense'),
+        );
+        final incomeCatId = await db.createCategory(
+          Category(name: 'Refund', type: 'income'),
+        );
+
+        // Income draft with expense category -> throws ArgumentError
+        expect(
+          () => db.commitDraftTransactions([
+            DraftTransaction(
+              amount: 30.0,
+              type: 'income',
+              accountId: accId,
+              categoryId: expenseCatId,
+              date: '2026-09-22',
+              note: 'Invalid Income',
+            ),
+          ]),
+          throwsArgumentError,
+        );
+
+        // Expense draft with income category -> throws ArgumentError
+        expect(
+          () => db.commitDraftTransactions([
+            DraftTransaction(
+              amount: 30.0,
+              type: 'expense',
+              accountId: accId,
+              categoryId: incomeCatId,
+              date: '2026-09-22',
+              note: 'Invalid Expense',
+            ),
+          ]),
+          throwsArgumentError,
+        );
+      },
+    );
   });
 }

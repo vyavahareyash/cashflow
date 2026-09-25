@@ -1,11 +1,13 @@
+import 'category_model.dart';
 import 'transaction_model.dart';
 
 /// Ephemeral in-memory representation of an uncommitted transaction parsed
 /// from voice audio or text monologue (US 1, ADR-0005, CONTEXT.md).
 ///
 /// Holds parsed parameters along with audit flags ([hasUnassignedAccount],
-/// [hasUnassignedCategory]) indicating inferred or missing fields requiring
-/// user review in the staging sheet before atomic database commit.
+/// [hasUnassignedCategory], [hasCategoryMismatch]) indicating inferred or
+/// missing fields requiring user review in the staging sheet before atomic
+/// database commit.
 class DraftTransaction {
   final String id;
   final double amount;
@@ -18,6 +20,7 @@ class DraftTransaction {
   final String? rawSpeech;
   final bool hasUnassignedAccount;
   final bool hasUnassignedCategory;
+  final bool hasCategoryMismatch;
 
   DraftTransaction({
     String? id,
@@ -31,6 +34,7 @@ class DraftTransaction {
     this.rawSpeech,
     this.hasUnassignedAccount = false,
     this.hasUnassignedCategory = false,
+    this.hasCategoryMismatch = false,
   }) : id = id ?? DateTime.now().microsecondsSinceEpoch.toString();
 
   bool get isExpense => type == 'expense';
@@ -46,9 +50,49 @@ class DraftTransaction {
     if (isTransfer) {
       if (destinationAccountId == null) return false;
       if (destinationAccountId == accountId) return false;
+      if (categoryId != null) return false;
     }
 
+    if (hasCategoryMismatch) return false;
+
     return true;
+  }
+
+  /// Evaluates whether a given [category] is logically compatible with this draft's type.
+  bool isCategoryCompatible(Category? category) {
+    if (category == null) return !hasCategoryMismatch;
+    if (isTransfer) return categoryId == null;
+    if (isExpense) return category.isExpense;
+    if (isIncome) return category.isIncome;
+    return true;
+  }
+
+  /// Reconciles or flags this draft against active [categories].
+  DraftTransaction validateAgainstCategories(List<Category> categories) {
+    if (isTransfer) {
+      if (categoryId != null) {
+        return copyWith(categoryId: null, hasCategoryMismatch: false);
+      }
+      return this;
+    }
+
+    if (categoryId != null) {
+      final cat = categories.where((c) => c.id == categoryId).firstOrNull;
+      if (cat != null) {
+        if (cat.isIncome && isExpense) {
+          return copyWith(
+            type: 'income',
+            hasCategoryMismatch: false,
+            hasUnassignedCategory: false,
+          );
+        } else if (cat.isExpense && isIncome) {
+          return copyWith(hasCategoryMismatch: true);
+        } else {
+          return copyWith(hasCategoryMismatch: false);
+        }
+      }
+    }
+    return this;
   }
 
   /// Converts this validated draft into a persistent [TransactionModel] for SQLite insertion.
@@ -61,7 +105,7 @@ class DraftTransaction {
     return TransactionModel(
       accountId: accountId!,
       destinationAccountId: isTransfer ? destinationAccountId : null,
-      categoryId: isExpense ? categoryId : null,
+      categoryId: isTransfer ? null : categoryId,
       amount: amount,
       date: date,
       note: note,
@@ -81,6 +125,7 @@ class DraftTransaction {
     String? rawSpeech,
     bool? hasUnassignedAccount,
     bool? hasUnassignedCategory,
+    bool? hasCategoryMismatch,
   }) {
     return DraftTransaction(
       id: id ?? this.id,
@@ -95,6 +140,7 @@ class DraftTransaction {
       hasUnassignedAccount: hasUnassignedAccount ?? this.hasUnassignedAccount,
       hasUnassignedCategory:
           hasUnassignedCategory ?? this.hasUnassignedCategory,
+      hasCategoryMismatch: hasCategoryMismatch ?? this.hasCategoryMismatch,
     );
   }
 
@@ -111,6 +157,7 @@ class DraftTransaction {
       rawSpeech: map['raw_speech'] as String?,
       hasUnassignedAccount: map['has_unassigned_account'] as bool? ?? false,
       hasUnassignedCategory: map['has_unassigned_category'] as bool? ?? false,
+      hasCategoryMismatch: map['has_category_mismatch'] as bool? ?? false,
     );
   }
 
@@ -127,6 +174,7 @@ class DraftTransaction {
       'raw_speech': rawSpeech,
       'has_unassigned_account': hasUnassignedAccount,
       'has_unassigned_category': hasUnassignedCategory,
+      'has_category_mismatch': hasCategoryMismatch,
     };
   }
 
@@ -148,7 +196,8 @@ class DraftTransaction {
           date == other.date &&
           note == other.note &&
           hasUnassignedAccount == other.hasUnassignedAccount &&
-          hasUnassignedCategory == other.hasUnassignedCategory;
+          hasUnassignedCategory == other.hasUnassignedCategory &&
+          hasCategoryMismatch == other.hasCategoryMismatch;
 
   @override
   int get hashCode =>
@@ -161,5 +210,6 @@ class DraftTransaction {
       date.hashCode ^
       note.hashCode ^
       hasUnassignedAccount.hashCode ^
-      hasUnassignedCategory.hashCode;
+      hasUnassignedCategory.hashCode ^
+      hasCategoryMismatch.hashCode;
 }

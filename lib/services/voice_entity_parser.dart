@@ -286,6 +286,47 @@ class VoiceEntityParser {
       if (cat != null) return cat;
     }
 
+    final cashbackKeywords = [
+      'cashback',
+      'cash back',
+      'refund',
+      'reimbursement',
+      'reward',
+      'rewards',
+    ];
+    final incomeKeywords = [
+      'salary',
+      'paycheck',
+      'dividend',
+      'interest',
+      'freelance',
+      'stipend',
+      'bonus',
+    ];
+
+    if (containsAny(cashbackKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('cashback') ||
+            n.contains('cash back') ||
+            n.contains('refund') ||
+            n.contains('reward');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
+    if (containsAny(incomeKeywords)) {
+      final cat = categories.where((c) {
+        final n = c.name.toLowerCase();
+        return n.contains('salary') ||
+            n.contains('income') ||
+            n.contains('dividend') ||
+            n.contains('freelance') ||
+            n.contains('bonus');
+      }).firstOrNull;
+      if (cat != null) return cat;
+    }
+
     return null;
   }
 
@@ -335,7 +376,7 @@ class VoiceEntityParser {
       final map = Map<String, dynamic>.from(raw);
 
       final double amount = (map['amount'] as num?)?.toDouble() ?? 0.0;
-      final String type = (map['type'] as String?)?.toLowerCase() ?? 'expense';
+      String type = (map['type'] as String?)?.toLowerCase() ?? 'expense';
       final String rawNote = (map['note'] as String?)?.trim() ?? '';
 
       // Date resolution
@@ -366,13 +407,35 @@ class VoiceEntityParser {
         }
       }
 
-      // Category resolution (US 5, US 8)
+      // Category resolution & validation (US 5, US 8)
       int? categoryId;
       bool hasUnassignedCategory = false;
-      if (type == 'expense') {
-        categoryId = map['category_id'] as int?;
-        if (categoryId == null || !categories.any((c) => c.id == categoryId)) {
-          categoryId = null;
+      bool hasCategoryMismatch = false;
+
+      if (type != 'transfer') {
+        final rawCatId = map['category_id'] as int?;
+        Category? resolvedCat;
+        if (rawCatId != null) {
+          resolvedCat = categories.where((c) => c.id == rawCatId).firstOrNull;
+        }
+
+        // Fallback: match category from raw speech or note if not emitted
+        if (resolvedCat == null) {
+          final speechOrNote = ((map['raw_speech'] as String?) ?? rawNote)
+              .toLowerCase();
+          if (speechOrNote.isNotEmpty) {
+            resolvedCat = matchCategory(speechOrNote, categories);
+          }
+        }
+
+        if (resolvedCat != null) {
+          categoryId = resolvedCat.id;
+          if (resolvedCat.isIncome && type == 'expense') {
+            type = 'income';
+          } else if (resolvedCat.isExpense && type == 'income') {
+            hasCategoryMismatch = true;
+          }
+        } else if (type == 'expense') {
           hasUnassignedCategory = true;
         }
       }
@@ -409,6 +472,7 @@ class VoiceEntityParser {
               (rawNote.isNotEmpty ? rawNote : null),
           hasUnassignedAccount: hasUnassignedAccount,
           hasUnassignedCategory: hasUnassignedCategory,
+          hasCategoryMismatch: hasCategoryMismatch,
         ),
       );
     }
@@ -498,23 +562,37 @@ class VoiceEntityParser {
 
     if (amount == null || amount <= 0) return null;
 
-    // 2. Classify Transaction Type (US 17)
-    String type = 'expense';
-    int? sourceAccountId;
-    int? destAccountId;
+    // 2. Classify Transaction Type (US 17) & Match Category
+    final matchedCat = matchCategory(lower, categories);
 
     final isIncome =
         lower.contains('salary') ||
         lower.contains('paycheck') ||
         lower.contains('deposited') ||
+        lower.contains('deposit') ||
         lower.contains('earned') ||
-        lower.contains('income');
+        lower.contains('income') ||
+        lower.contains('cashback') ||
+        lower.contains('cash back') ||
+        lower.contains('refund') ||
+        lower.contains('reimbursement') ||
+        lower.contains('reimbursed') ||
+        lower.contains('bonus') ||
+        lower.contains('dividend') ||
+        lower.contains('interest') ||
+        lower.contains('reward') ||
+        lower.contains('credited') ||
+        (lower.contains('received') && !lower.contains('received from'));
 
     final isTransfer =
         lower.contains('transfer') ||
         lower.contains('moved') ||
         lower.contains('move') ||
         (lower.contains('from') && lower.contains('to'));
+
+    String type = 'expense';
+    int? sourceAccountId;
+    int? destAccountId;
 
     if (isTransfer) {
       type = 'transfer';
@@ -530,7 +608,7 @@ class VoiceEntityParser {
         sourceAccountId = matchAccount(srcStr, accounts)?.id;
         destAccountId = matchAccount(dstStr, accounts)?.id;
       }
-    } else if (isIncome) {
+    } else if (isIncome || (matchedCat != null && matchedCat.isIncome)) {
       type = 'income';
     }
 
@@ -551,14 +629,31 @@ class VoiceEntityParser {
       }
     }
 
-    // 4. Match Category (expenses only)
+    // 4. Match Category (expenses and income)
     int? categoryId;
     bool hasUnassignedCategory = false;
-    if (type == 'expense') {
-      final matchedCat = matchCategory(lower, categories);
+    bool hasCategoryMismatch = false;
+
+    if (type != 'transfer') {
       if (matchedCat != null) {
-        categoryId = matchedCat.id;
-      } else {
+        if (type == 'income') {
+          if (matchedCat.isIncome) {
+            categoryId = matchedCat.id;
+          } else {
+            hasCategoryMismatch = true;
+            categoryId = matchedCat.id;
+          }
+        } else {
+          // type == 'expense'
+          if (matchedCat.isExpense) {
+            categoryId = matchedCat.id;
+          } else {
+            // Category matched an income category -> reconcile type to income
+            type = 'income';
+            categoryId = matchedCat.id;
+          }
+        }
+      } else if (type == 'expense') {
         hasUnassignedCategory = true;
       }
     }
@@ -585,7 +680,7 @@ class VoiceEntityParser {
     final matchedDestAcc = destAccountId != null
         ? accounts.where((a) => a.id == destAccountId).firstOrNull
         : null;
-    final matchedCat = categoryId != null
+    final matchedCatFinal = categoryId != null
         ? categories.where((c) => c.id == categoryId).firstOrNull
         : null;
 
@@ -594,7 +689,7 @@ class VoiceEntityParser {
       type: type,
       sourceAccount: matchedSourceAcc,
       destinationAccount: matchedDestAcc,
-      category: matchedCat,
+      category: matchedCatFinal,
     );
 
     return DraftTransaction(
@@ -608,6 +703,7 @@ class VoiceEntityParser {
       rawSpeech: clause,
       hasUnassignedAccount: hasUnassignedAccount,
       hasUnassignedCategory: hasUnassignedCategory,
+      hasCategoryMismatch: hasCategoryMismatch,
     );
   }
 

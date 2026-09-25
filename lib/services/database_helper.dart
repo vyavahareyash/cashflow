@@ -759,6 +759,11 @@ class DatabaseHelper {
         await _requireAccount(txn, accountId);
 
         if (draft.isTransfer) {
+          if (draft.categoryId != null) {
+            throw ArgumentError(
+              'Transfer drafts cannot have a category assigned',
+            );
+          }
           final destAccountId = draft.destinationAccountId!;
           if (accountId == destAccountId) {
             throw ArgumentError('Transfer accounts must be different');
@@ -780,7 +785,13 @@ class DatabaseHelper {
           insertedIds.add(id);
         } else if (draft.isIncome) {
           if (draft.categoryId != null) {
-            await _requireCategory(txn, draft.categoryId!);
+            final cat = await _requireCategory(txn, draft.categoryId!);
+            final catType = (cat['type'] as String?) ?? 'expense';
+            if (catType != 'income') {
+              throw ArgumentError(
+                'Cannot commit income transaction with non-income category: ${cat['name']}',
+              );
+            }
           }
           await _adjustAccountBalance(txn, accountId, draft.amount);
 
@@ -797,7 +808,13 @@ class DatabaseHelper {
           insertedIds.add(id);
         } else {
           if (draft.categoryId != null) {
-            await _requireCategory(txn, draft.categoryId!);
+            final cat = await _requireCategory(txn, draft.categoryId!);
+            final catType = (cat['type'] as String?) ?? 'expense';
+            if (catType != 'expense') {
+              throw ArgumentError(
+                'Cannot commit expense transaction with non-expense category: ${cat['name']}',
+              );
+            }
           }
           await _adjustAccountBalance(txn, accountId, -draft.amount);
 
@@ -1165,14 +1182,18 @@ class DatabaseHelper {
     if (result.isEmpty) throw StateError('Account not found: $accountId');
   }
 
-  Future<void> _requireCategory(Transaction txn, int categoryId) async {
+  Future<Map<String, dynamic>> _requireCategory(
+    Transaction txn,
+    int categoryId,
+  ) async {
     final result = await txn.query(
       'categories',
-      columns: ['id'],
+      columns: ['id', 'name', 'type', 'monthly_budget'],
       where: 'id = ?',
       whereArgs: [categoryId],
     );
     if (result.isEmpty) throw StateError('Category not found: $categoryId');
+    return result.first;
   }
 
   Future<void> _requireGoal(Transaction txn, int goalId) async {
