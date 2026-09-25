@@ -11,7 +11,8 @@ import '../components/custom_button.dart';
 import '../components/app_dialogs.dart';
 
 class GoalsScreen extends StatefulWidget {
-  const GoalsScreen({super.key});
+  final bool isEmbedded;
+  const GoalsScreen({super.key, this.isEmbedded = false});
 
   @override
   State<GoalsScreen> createState() => _GoalsScreenState();
@@ -2543,7 +2544,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
         : 0.0;
 
     return Scaffold(
-      appBar: Navigator.canPop(context)
+      backgroundColor: widget.isEmbedded ? Colors.transparent : null,
+      appBar: (!widget.isEmbedded && Navigator.canPop(context))
           ? AppBar(
               title: const Text('Sinking Funds'),
               actions: [
@@ -2564,26 +2566,51 @@ class _GoalsScreenState extends State<GoalsScreen> {
               color: AppColors.emerald700,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  120,
+                ),
                 children: [
                   // 1. TOP SINKING FUNDS OVERVIEW
                   _buildHeaderCard(isDark, totalProgress),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // 2. SECTION TITLE
+                  // 2. SECTION TITLE WITH ACTION PILL
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Active Sinking Funds',
-                        style: AppTypography.titleLarge.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Active Sinking Funds',
+                            style: AppTypography.titleLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${_goals.length} Goals',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        '${_goals.length} Goals',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      FilledButton.icon(
+                        key: const Key('goals_add_pill_btn'),
+                        onPressed: _showAddGoalDialog,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('New Goal', style: AppTypography.labelMedium),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.emerald700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          visualDensity: VisualDensity.compact,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                         ),
                       ),
                     ],
@@ -2614,12 +2641,22 @@ class _GoalsScreenState extends State<GoalsScreen> {
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(
-                                'Create sinking funds for future goalned expenses like insurance, repairs, or vacations.',
+                                'Create sinking funds for future planned expenses like insurance, repairs, or vacations.',
                                 textAlign: TextAlign.center,
                                 style: AppTypography.bodyMedium.copyWith(
                                   color: isDark
                                       ? AppColors.gray400
                                       : AppColors.gray600,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              FilledButton.icon(
+                                onPressed: _showAddGoalDialog,
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('New Goal'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.emerald700,
+                                  foregroundColor: Colors.white,
                                 ),
                               ),
                             ],
@@ -2634,19 +2671,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 ],
               ),
             ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: Navigator.canPop(context) ? 20 : 88,
-        ),
-        child: FloatingActionButton.extended(
-          heroTag: 'goals-add-fab',
-          onPressed: _showAddGoalDialog,
-          backgroundColor: AppColors.emerald700,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('New Goal', style: AppTypography.labelLarge),
-        ),
-      ),
     );
   }
 
