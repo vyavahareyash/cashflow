@@ -9,7 +9,8 @@ import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 
 class BudgetScreen extends StatefulWidget {
-  const BudgetScreen({super.key});
+  final bool isEmbedded;
+  const BudgetScreen({super.key, this.isEmbedded = false});
 
   @override
   State<BudgetScreen> createState() => _BudgetScreenState();
@@ -335,7 +336,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final incomeCategories = _categories.where((c) => c.isIncome).toList();
 
     return Scaffold(
-      appBar: Navigator.canPop(context)
+      backgroundColor: widget.isEmbedded ? Colors.transparent : null,
+      appBar: (!widget.isEmbedded && Navigator.canPop(context))
           ? AppBar(
               title: const Text('Monthly Budgets'),
               actions: [
@@ -356,7 +358,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
               color: AppColors.emerald700,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  120,
+                ),
                 children: [
                   // SEGMENTED CONTROL: EXPENSE BUDGETS vs INCOME CATEGORIES
                   Container(
@@ -393,20 +400,40 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // 2. SECTION TITLE
+                    // 2. SECTION TITLE WITH ACTION PILL
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Category Allocations',
-                          style: AppTypography.titleLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Category Allocations',
+                              style: AppTypography.titleLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${expenseCategories.length} Categories',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark ? AppColors.gray400 : AppColors.gray600,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          '${expenseCategories.length} Categories',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        FilledButton.icon(
+                          key: const Key('budget_add_pill_btn'),
+                          onPressed: () => _showCategoryDialog(),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Add Budget', style: AppTypography.labelMedium),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.emerald700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                         ),
                       ],
@@ -437,12 +464,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.xs),
                                 Text(
-                                  'Tap + below to add categories like Groceries, Rent, or Transport.',
+                                  'Add categories like Groceries, Rent, or Transport to track limits.',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.bodyMedium.copyWith(
                                     color: isDark
                                         ? AppColors.gray400
                                         : AppColors.gray600,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                FilledButton.icon(
+                                  onPressed: () => _showCategoryDialog(),
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: const Text('Add Budget'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.emerald700,
+                                    foregroundColor: Colors.white,
                                   ),
                                 ),
                               ],
@@ -460,20 +497,40 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     _buildIncomeHeaderCard(isDark, cycle),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // 2. SECTION TITLE
+                    // 2. SECTION TITLE WITH ACTION PILL
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Income Streams',
-                          style: AppTypography.titleLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Income Streams',
+                              style: AppTypography.titleLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${incomeCategories.length} Categories',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark ? AppColors.gray400 : AppColors.gray600,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          '${incomeCategories.length} Categories',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        FilledButton.icon(
+                          key: const Key('income_add_pill_btn'),
+                          onPressed: () => _showCategoryDialog(),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Add Category', style: AppTypography.labelMedium),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.emerald700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                         ),
                       ],
@@ -504,12 +561,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.xs),
                                 Text(
-                                  'Tap + below to add income sources like Salary, Freelance, or Rental.',
+                                  'Add income sources like Salary, Freelance, or Rental.',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.bodyMedium.copyWith(
                                     color: isDark
                                         ? AppColors.gray400
                                         : AppColors.gray600,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                FilledButton.icon(
+                                  onPressed: () => _showCategoryDialog(),
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: const Text('Add Category'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppColors.emerald700,
+                                    foregroundColor: Colors.white,
                                   ),
                                 ),
                               ],
@@ -528,22 +595,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ],
               ),
             ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: Navigator.canPop(context) ? 20 : 88,
-        ),
-        child: FloatingActionButton.extended(
-          heroTag: 'budget-add-fab',
-          onPressed: () => _showCategoryDialog(),
-          backgroundColor: AppColors.emerald700,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_rounded),
-          label: Text(
-            _selectedTab == 'expense' ? 'Add Budget' : 'Add Category',
-            style: AppTypography.labelLarge,
-          ),
-        ),
-      ),
     );
   }
 

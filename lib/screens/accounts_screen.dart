@@ -10,9 +10,18 @@ import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 import '../components/pay_cc_bill_modal.dart';
 import '../components/app_dialogs.dart';
+import 'budget_screen.dart';
+import 'goals_screen.dart';
 
 class AccountsScreen extends StatefulWidget {
-  const AccountsScreen({super.key});
+  final int initialTabIndex;
+  final ValueChanged<int>? onTabChanged;
+
+  const AccountsScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.onTabChanged,
+  });
 
   @override
   State<AccountsScreen> createState() => _AccountsScreenState();
@@ -28,12 +37,33 @@ class _AccountsScreenState extends State<AccountsScreen> {
   double _totalLocked = 0.0;
   bool _isLoading = true;
   final Set<int> _expandedAccountIds = {};
+  late int _selectedTab;
+  final Set<int> _loadedTabs = {};
 
   @override
   void initState() {
     super.initState();
-    _refreshAccounts();
+    _selectedTab = widget.initialTabIndex.clamp(0, 2);
+    _loadedTabs.add(_selectedTab);
+    if (_selectedTab == 0) {
+      _refreshAccounts();
+    }
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
+  }
+
+  @override
+  void didUpdateWidget(AccountsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTabIndex != widget.initialTabIndex) {
+      final newIndex = widget.initialTabIndex.clamp(0, 2);
+      setState(() {
+        _selectedTab = newIndex;
+        if (!_loadedTabs.contains(0) && newIndex == 0) {
+          _refreshAccounts();
+        }
+        _loadedTabs.add(newIndex);
+      });
+    }
   }
 
   @override
@@ -465,205 +495,318 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final creditAccounts = _accounts.where((a) => a.isCreditCard).toList();
 
     return Scaffold(
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.emerald700),
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: Text(
+                _selectedTab == 1
+                    ? 'Monthly Budgets'
+                    : _selectedTab == 2
+                        ? 'Sinking Funds'
+                        : 'My Accounts',
+              ),
             )
-          : RefreshIndicator(
-              onRefresh: _refreshAccounts,
-              color: AppColors.emerald700,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  100,
-                ),
-                children: [
-                  // 1. TOP SUMMARY CARD
-                  _buildHeaderCard(isDark, availableLiquidity),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  if (_accounts.isEmpty)
-                    CustomCard(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.account_balance_outlined,
-                                size: 48,
-                                color: isDark
-                                    ? AppColors.gray600
-                                    : AppColors.gray400,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              Text(
-                                'No accounts added yet',
-                                style: AppTypography.titleMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                'Add your physical bank accounts, cash wallets, or credit cards below.',
-                                textAlign: TextAlign.center,
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark
-                                      ? AppColors.gray400
-                                      : AppColors.gray600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                  else ...[
-                    // 2. BANK & CASH ACCOUNTS SECTION
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Bank & Cash Accounts',
-                          style: AppTypography.titleLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${physicalAccounts.length} Total',
-                          style: AppTypography.labelSmall.copyWith(
-                            color:
-                                isDark ? AppColors.gray400 : AppColors.gray600,
-                          ),
-                        ),
-                      ],
+          : null,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.xs,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<int>(
+                  key: const Key('accounts_page_segmented_tabs'),
+                  style: SegmentedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  segments: const [
+                    ButtonSegment<int>(
+                      value: 0,
+                      label: Text('Accounts'),
+                      icon: Icon(Icons.account_balance_rounded, size: 18),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    if (physicalAccounts.isEmpty)
-                      CustomCard(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Text(
-                              'No bank or cash accounts added yet.',
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.gray400
-                                    : AppColors.gray600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ...physicalAccounts.map(
-                        (acc) => AccountCard(
-                          account: acc,
-                          locks: _accountLocks[acc.id] ?? [],
-                          isExpanded: acc.id != null &&
-                              _expandedAccountIds.contains(acc.id),
-                          onExpansionChanged: (expanded) {
-                            if (acc.id != null) {
-                              setState(() {
-                                if (expanded) {
-                                  _expandedAccountIds.add(acc.id!);
-                                } else {
-                                  _expandedAccountIds.remove(acc.id!);
-                                }
-                              });
-                            }
-                          },
-                          onTransfer: physicalAccounts.length > 1
-                              ? () => _showTransferDialog(acc)
-                              : null,
-                          onEdit: () => _showEditAccountDialog(acc),
-                        ),
-                      ),
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 3. CREDIT CARDS SECTION
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Credit Cards',
-                          style: AppTypography.titleLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${creditAccounts.length} Total',
-                          style: AppTypography.labelSmall.copyWith(
-                            color:
-                                isDark ? AppColors.gray400 : AppColors.gray600,
-                          ),
-                        ),
-                      ],
+                    ButtonSegment<int>(
+                      value: 1,
+                      label: Text('Budgets'),
+                      icon: Icon(Icons.pie_chart_rounded, size: 18),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    if (creditAccounts.isEmpty)
-                      CustomCard(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Text(
-                              'No credit cards added. Tap Add Account to add a card.',
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.gray400
-                                    : AppColors.gray600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ...creditAccounts.map((acc) {
-                        final cc = _creditCardsMap[acc.id];
-                        final lockedAmount = cc?.id != null
-                            ? (_ccLockedMap[cc!.id!] ?? 0.0)
-                            : 0.0;
-                        return CreditCardAccountCard(
-                          account: acc,
-                          creditCard: cc,
-                          lockedAmount: lockedAmount,
-                          onEdit: () => _showEditAccountDialog(acc),
-                          onPayBill: cc != null
-                              ? () => PayCcBillModal.show(
-                                    context,
-                                    ccAccount: acc,
-                                    creditCard: cc,
-                                    lockedAmount: lockedAmount,
-                                    bankAccounts: physicalAccounts,
-                                    onPaymentCompleted: _refreshAccounts,
-                                  )
-                              : null,
-                        );
-                      }),
+                    ButtonSegment<int>(
+                      value: 2,
+                      label: Text('Goals'),
+                      icon: Icon(Icons.savings_rounded, size: 18),
+                    ),
                   ],
-
-                  const SizedBox(height: AppSpacing.huge),
+                  selected: {_selectedTab},
+                  onSelectionChanged: (newSelection) {
+                    final newIndex = newSelection.first;
+                    setState(() {
+                      _selectedTab = newIndex;
+                      if (!_loadedTabs.contains(0) && newIndex == 0) {
+                        _refreshAccounts();
+                      }
+                      _loadedTabs.add(_selectedTab);
+                    });
+                    widget.onTabChanged?.call(_selectedTab);
+                  },
+                ),
+              ),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _selectedTab,
+                children: [
+                  _loadedTabs.contains(0)
+                      ? _buildAccountsView(
+                          isDark,
+                          availableLiquidity,
+                          physicalAccounts,
+                          creditAccounts,
+                        )
+                      : const SizedBox.shrink(),
+                  _loadedTabs.contains(1)
+                      ? const BudgetScreen(isEmbedded: true)
+                      : const SizedBox.shrink(),
+                  _loadedTabs.contains(2)
+                      ? const GoalsScreen(isEmbedded: true)
+                      : const SizedBox.shrink(),
                 ],
               ),
             ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: Navigator.canPop(context) ? 20 : 88,
+          ],
         ),
-        child: FloatingActionButton.extended(
-          heroTag: 'accounts-add-fab',
-          onPressed: _showAddAccountDialog,
-          backgroundColor: AppColors.emerald700,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Add Account', style: AppTypography.labelLarge),
+      ),
+    );
+  }
+
+  Widget _buildAccountsView(
+    bool isDark,
+    double availableLiquidity,
+    List<Account> physicalAccounts,
+    List<Account> creditAccounts,
+  ) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.emerald700),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _refreshAccounts,
+      color: AppColors.emerald700,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          120,
         ),
+        children: [
+          // 1. TOP SUMMARY CARD
+          _buildHeaderCard(isDark, availableLiquidity),
+          const SizedBox(height: AppSpacing.xl),
+
+          if (_accounts.isEmpty)
+            CustomCard(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.account_balance_outlined,
+                        size: 48,
+                        color: isDark
+                            ? AppColors.gray600
+                            : AppColors.gray400,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'No accounts added yet',
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Add your physical bank accounts, cash wallets, or credit cards below.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: isDark
+                              ? AppColors.gray400
+                              : AppColors.gray600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton.icon(
+                        key: const Key('accounts_empty_add_pill_btn'),
+                        onPressed: _showAddAccountDialog,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Add Account'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.emerald700,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            // 2. BANK & CASH ACCOUNTS SECTION WITH ACTION PILL
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bank & Cash Accounts',
+                      style: AppTypography.titleLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${physicalAccounts.length} Total',
+                      style: AppTypography.labelSmall.copyWith(
+                        color:
+                            isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+                FilledButton.icon(
+                  key: const Key('accounts_add_pill_btn'),
+                  onPressed: _showAddAccountDialog,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add Account', style: AppTypography.labelMedium),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.emerald700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            if (physicalAccounts.isEmpty)
+              CustomCard(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text(
+                      'No bank or cash accounts added yet.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.gray400
+                            : AppColors.gray600,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...physicalAccounts.map(
+                (acc) => AccountCard(
+                  account: acc,
+                  locks: _accountLocks[acc.id] ?? [],
+                  isExpanded: acc.id != null &&
+                      _expandedAccountIds.contains(acc.id),
+                  onExpansionChanged: (expanded) {
+                    if (acc.id != null) {
+                      setState(() {
+                        if (expanded) {
+                          _expandedAccountIds.add(acc.id!);
+                        } else {
+                          _expandedAccountIds.remove(acc.id!);
+                        }
+                      });
+                    }
+                  },
+                  onTransfer: physicalAccounts.length > 1
+                      ? () => _showTransferDialog(acc)
+                      : null,
+                  onEdit: () => _showEditAccountDialog(acc),
+                ),
+              ),
+
+            const SizedBox(height: AppSpacing.xl),
+
+            // 3. CREDIT CARDS SECTION
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Credit Cards',
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${creditAccounts.length} Total',
+                  style: AppTypography.labelSmall.copyWith(
+                    color:
+                        isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            if (creditAccounts.isEmpty)
+              CustomCard(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text(
+                      'No credit cards added. Tap Add Account to add a card.',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.gray400
+                            : AppColors.gray600,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...creditAccounts.map((acc) {
+                final cc = _creditCardsMap[acc.id];
+                final lockedAmount = cc?.id != null
+                    ? (_ccLockedMap[cc!.id!] ?? 0.0)
+                    : 0.0;
+                return CreditCardAccountCard(
+                  account: acc,
+                  creditCard: cc,
+                  lockedAmount: lockedAmount,
+                  onEdit: () => _showEditAccountDialog(acc),
+                  onPayBill: cc != null
+                      ? () => PayCcBillModal.show(
+                            context,
+                            ccAccount: acc,
+                            creditCard: cc,
+                            lockedAmount: lockedAmount,
+                            bankAccounts: physicalAccounts,
+                            onPaymentCompleted: _refreshAccounts,
+                          )
+                      : null,
+                );
+              }),
+          ],
+
+          const SizedBox(height: AppSpacing.huge),
+        ],
       ),
     );
   }

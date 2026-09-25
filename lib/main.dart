@@ -336,9 +336,15 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
+  int _accountsSubTabIndex = 0;
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index, {int? subTabIndex}) {
     setState(() {
+      if (index == 3 && _selectedIndex == 3 && subTabIndex == null) {
+        _accountsSubTabIndex = 0;
+      } else if (subTabIndex != null) {
+        _accountsSubTabIndex = subTabIndex;
+      }
       _selectedIndex = index;
     });
   }
@@ -351,14 +357,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       DashboardScreen(onNavigateTab: _onItemTapped),
       const HistoryScreen(),
       const AnalyticsScreen(),
-      const AccountsScreen(),
+      AccountsScreen(
+        initialTabIndex: _accountsSubTabIndex,
+        onTabChanged: (subTab) {
+          setState(() {
+            _accountsSubTabIndex = subTab;
+          });
+        },
+      ),
     ];
 
     final titles = [
       'Cashflow',
       'Activity Ledger',
       'Spending Analytics',
-      'My Accounts',
+      _accountsSubTabIndex == 1
+          ? 'Monthly Budgets'
+          : _accountsSubTabIndex == 2
+              ? 'Sinking Funds'
+              : 'My Accounts',
     ];
 
     return Scaffold(

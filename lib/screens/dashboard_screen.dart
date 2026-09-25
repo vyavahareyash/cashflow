@@ -13,11 +13,10 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/category_badge.dart';
 import '../components/app_dialogs.dart';
-import 'budget_screen.dart';
-import 'goals_screen.dart';
+import 'accounts_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final Function(int tabIndex)? onNavigateTab;
+  final void Function(int tabIndex, {int? subTabIndex})? onNavigateTab;
 
   const DashboardScreen({super.key, this.onNavigateTab});
 
@@ -437,10 +436,16 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             color: AppColors.warning,
             isDark: isDark,
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GoalsScreen()),
-              );
+              if (widget.onNavigateTab != null) {
+                widget.onNavigateTab!(3, subTabIndex: 2);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AccountsScreen(initialTabIndex: 2),
+                  ),
+                );
+              }
             },
           ),
         ),
@@ -453,10 +458,16 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             color: AppColors.info,
             isDark: isDark,
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BudgetScreen()),
-              );
+              if (widget.onNavigateTab != null) {
+                widget.onNavigateTab!(3, subTabIndex: 1);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AccountsScreen(initialTabIndex: 1),
+                  ),
+                );
+              }
             },
           ),
         ),
@@ -535,10 +546,16 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
 
     return CustomCard(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BudgetScreen()),
-        );
+        if (widget.onNavigateTab != null) {
+          widget.onNavigateTab!(3, subTabIndex: 1);
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AccountsScreen(initialTabIndex: 1),
+            ),
+          );
+        }
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,10 +720,16 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             ),
             TextButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GoalsScreen()),
-                );
+                if (widget.onNavigateTab != null) {
+                  widget.onNavigateTab!(3, subTabIndex: 2);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AccountsScreen(initialTabIndex: 2),
+                    ),
+                  );
+                }
               },
               child: Text(
                 'View All (${_goals.length})',
@@ -761,10 +784,17 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                   child: CustomCard(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const GoalsScreen()),
-                      );
+                      if (widget.onNavigateTab != null) {
+                        widget.onNavigateTab!(3, subTabIndex: 2);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AccountsScreen(initialTabIndex: 2),
+                          ),
+                        );
+                      }
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,7 +895,9 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             ),
             TextButton(
               onPressed: () {
-                if (widget.onNavigateTab != null) widget.onNavigateTab!(3);
+                if (widget.onNavigateTab != null) {
+                  widget.onNavigateTab!(3, subTabIndex: 0);
+                }
               },
               child: Text(
                 'Manage (${_accounts.length})',
@@ -937,7 +969,9 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         vertical: AppSpacing.md,
       ),
       onTap: () {
-        if (widget.onNavigateTab != null) widget.onNavigateTab!(3);
+        if (widget.onNavigateTab != null) {
+          widget.onNavigateTab!(3, subTabIndex: 0);
+        }
       },
       child: Row(
         children: [
