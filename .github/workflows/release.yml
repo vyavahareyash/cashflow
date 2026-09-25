@@ -10,8 +10,21 @@ permissions:
   contents: write
 
 jobs:
+  # ── Secret scan before any build runs ───────────────────────────────────────
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-android:
     name: Build Android APKs
+    needs: [secret-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,11 +41,26 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Static analysis (fatal infos)
+        run: flutter analyze --fatal-infos
+
       - name: Run unit tests
-        run: flutter test -j 1
+        run: flutter test 
 
       - name: Configure Keystore
         if: env.PLAY_KEYSTORE_BASE64 != ''
@@ -137,6 +165,7 @@ jobs:
 
   build-ios:
     name: Build iOS App
+    needs: [secret-scan]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -146,6 +175,15 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
 
       - name: Install dependencies
         run: flutter pub get

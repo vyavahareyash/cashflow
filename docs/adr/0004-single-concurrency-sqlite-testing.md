@@ -1,7 +1,7 @@
 # 4. Single Concurrency Limit for Automated SQLite Testing
 
 ## Status
-Accepted
+Superseded by [ADR-0007](0007-in-memory-sqlite-testing.md)
 
 ## Context
 Automated tests exercise real SQLite databases via `sqflite_common_ffi`. When Flutter test runs parallel worker processes, concurrent access to local test SQLite database files triggers file locking contention (`database is locked`, OS error 5/11).
