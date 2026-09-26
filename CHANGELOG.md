@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.9.0] - 2026-09-26
+
+### Added
+- **Sample Credit Cards**: Added sample credit cards to the accounts workflow and surfaced whether liabilities are backed or unbacked (407a849).
+
+---
+
 ## [4.8.0] - 2026-09-26
 
 ### Added
