@@ -1,7 +1,9 @@
 import 'package:cashflow/models/account_model.dart';
 import 'package:cashflow/models/category_model.dart';
 import 'package:cashflow/models/goal_model.dart';
+import 'package:cashflow/models/draft_transaction.dart';
 import 'package:cashflow/services/database_helper.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -229,5 +231,77 @@ void main() {
     );
 
     expect(spending, {'Food': 10.0});
+  });
+
+  test('voice transaction committed on same day sorts above earlier manual or credit card transaction', () async {
+    final db = DatabaseHelper.instance;
+    final accountId = await db.createAccount(
+      Account(name: 'Checking', balance: 5000.0, type: 'Bank'),
+    );
+    final categoryId = await db.createCategory(
+      Category(name: 'Groceries', monthlyBudget: 500.0),
+    );
+
+    final earlierTime = DateTime.now().subtract(const Duration(hours: 3));
+    await db.createExpenseTransaction(
+      accountId: accountId,
+      categoryId: categoryId,
+      amount: 50.0,
+      date: earlierTime.toIso8601String(),
+      note: 'Morning manual expense',
+    );
+
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final voiceDraft = DraftTransaction(
+      amount: 20.0,
+      type: 'expense',
+      accountId: accountId,
+      categoryId: categoryId,
+      date: todayStr,
+      note: 'Afternoon voice expense',
+    );
+
+    await db.commitDraftTransactions([voiceDraft]);
+
+    final history = await db.getTransactionHistory();
+    expect(history, hasLength(2));
+    expect(history.first['note'], 'Afternoon voice expense');
+    expect(history.first['amount'], 20.0);
+    expect(history.last['note'], 'Morning manual expense');
+    expect(history.last['amount'], 50.0);
+    expect(history.first['date'], contains('T'));
+  });
+
+  test('legacy transactions with only YYYY-MM-DD on same day order by creation order (id DESC)', () async {
+    final db = DatabaseHelper.instance;
+    final accountId = await db.createAccount(
+      Account(name: 'Checking', balance: 1000.0, type: 'Bank'),
+    );
+    final categoryId = await db.createCategory(
+      Category(name: 'Dining', monthlyBudget: 200.0),
+    );
+
+    final rawDb = await db.database;
+    await rawDb.insert('transactions', {
+      'account_id': accountId,
+      'category_id': categoryId,
+      'amount': 30.0,
+      'date': '2026-09-26T09:00:00.000',
+      'note': 'Morning breakfast',
+      'type': 'expense',
+    });
+    await rawDb.insert('transactions', {
+      'account_id': accountId,
+      'category_id': categoryId,
+      'amount': 45.0,
+      'date': '2026-09-26',
+      'note': 'Later legacy voice lunch',
+      'type': 'expense',
+    });
+
+    final history = await db.getTransactionHistory();
+    expect(history, hasLength(2));
+    expect(history.first['note'], 'Later legacy voice lunch');
+    expect(history.last['note'], 'Morning breakfast');
   });
 }

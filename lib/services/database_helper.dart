@@ -748,7 +748,8 @@ class DatabaseHelper {
     final insertedIds = <int>[];
 
     await db.transaction((txn) async {
-      for (final draft in drafts) {
+      for (var i = 0; i < drafts.length; i++) {
+        final draft = drafts[i];
         if (!draft.isValid) {
           throw ArgumentError(
             'Cannot commit invalid DraftTransaction (id: ${draft.id}, amount: ${draft.amount}, accountId: ${draft.accountId}, type: ${draft.type})',
@@ -758,6 +759,30 @@ class DatabaseHelper {
 
         final accountId = draft.accountId!;
         await _requireAccount(txn, accountId);
+
+        String resolvedDate = draft.date;
+        if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(resolvedDate)) {
+          final now = DateTime.now().add(Duration(milliseconds: i));
+          final todayStr =
+              '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          if (resolvedDate == todayStr) {
+            resolvedDate = now.toIso8601String();
+          } else {
+            final parts = resolvedDate.split('-');
+            final y = int.parse(parts[0]);
+            final m = int.parse(parts[1]);
+            final d = int.parse(parts[2]);
+            resolvedDate = DateTime(
+              y,
+              m,
+              d,
+              now.hour,
+              now.minute,
+              now.second,
+              now.millisecond,
+            ).toIso8601String();
+          }
+        }
 
         if (draft.isTransfer) {
           if (draft.categoryId != null) {
@@ -779,7 +804,7 @@ class DatabaseHelper {
             'category_id': null,
             'goal_id': null,
             'amount': draft.amount,
-            'date': draft.date,
+            'date': resolvedDate,
             'note': draft.note,
             'type': 'transfer',
           });
@@ -802,7 +827,7 @@ class DatabaseHelper {
             'category_id': draft.categoryId,
             'goal_id': null,
             'amount': draft.amount,
-            'date': draft.date,
+            'date': resolvedDate,
             'note': draft.note,
             'type': 'income',
           });
@@ -825,7 +850,7 @@ class DatabaseHelper {
             'category_id': draft.categoryId,
             'goal_id': null,
             'amount': draft.amount,
-            'date': draft.date,
+            'date': resolvedDate,
             'note': draft.note,
             'type': 'expense',
           });
@@ -1413,12 +1438,16 @@ class DatabaseHelper {
       whereArgs.add(year);
     }
     if (startDate != null) {
-      where.add('t.date >= ?');
-      whereArgs.add(startDate.toIso8601String());
+      final startStr =
+          '${startDate.year.toString().padLeft(4, '0')}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      where.add('substr(t.date, 1, 10) >= ?');
+      whereArgs.add(startStr);
     }
     if (endDate != null) {
-      where.add('t.date < ?');
-      whereArgs.add(endDate.add(const Duration(days: 1)).toIso8601String());
+      final endStr =
+          '${endDate.year.toString().padLeft(4, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      where.add('substr(t.date, 1, 10) <= ?');
+      whereArgs.add(endStr);
     }
 
     return await db.rawQuery('''
@@ -1442,7 +1471,7 @@ class DatabaseHelper {
       LEFT JOIN categories c ON t.category_id = c.id
       LEFT JOIN goals g ON t.goal_id = g.id
       ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'}
-      ORDER BY t.date DESC, t.id DESC
+      ORDER BY substr(t.date, 1, 10) DESC, t.id DESC
     ''', whereArgs);
   }
 
