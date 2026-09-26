@@ -512,6 +512,104 @@ void main() {
       },
     );
 
+    test('multiple lock transactions for same account consolidate into single contribution entry', () async {
+      final db = DatabaseHelper.instance;
+      final accId = await db.createAccount(
+        Account(name: 'BOM', balance: 5000.0, type: 'Bank'),
+      );
+      final goalId = await db.createGoal(
+        Goal(
+          name: 'WiFi',
+          totalTarget: 8500.0,
+          targetDate: '2027-06-15',
+          currentSaved: 0.0,
+        ),
+      );
+
+      // First lock of 2000
+      await db.createGoalLockTransaction(
+        goalId: goalId,
+        accountId: accId,
+        amount: 2000.0,
+        date: '2026-09-14',
+        note: 'Locked for WiFi',
+      );
+
+      // Second lock of 730
+      await db.createGoalLockTransaction(
+        goalId: goalId,
+        accountId: accId,
+        amount: 730.0,
+        date: '2026-09-25',
+        note: 'Locked for WiFi',
+      );
+
+      final contribs = await db.getGoalContributions(goalId);
+      final txs = await db.getGoalTransactions(goalId);
+
+      // Contributions by account must have exactly 1 entry for BOM
+      expect(contribs, hasLength(1));
+      expect(contribs.first['account_name'], 'BOM');
+      expect(contribs.first['amount'], 2730.0);
+
+      // Activity history retains both transactions
+      expect(txs, hasLength(2));
+
+      // Able to unlock the full consolidated amount (2730.0) without error
+      await db.createGoalUnlockTransaction(
+        goalId: goalId,
+        accountId: accId,
+        amount: 2730.0,
+        date: '2026-09-26',
+      );
+
+      expect(await db.getGoalContributions(goalId), isEmpty);
+      expect((await getGoal(db, goalId)).currentSaved, 0.0);
+    });
+
+    test('legacy duplicate rows in locked_allocations are automatically consolidated', () async {
+      final db = DatabaseHelper.instance;
+      final rawDb = await db.database;
+      final accId = await db.createAccount(
+        Account(name: 'BOM Legacy', balance: 5000.0, type: 'Bank'),
+      );
+      final goalId = await db.createGoal(
+        Goal(
+          name: 'WiFi Legacy',
+          totalTarget: 8500.0,
+          targetDate: '2027-06-15',
+          currentSaved: 2730.0,
+        ),
+      );
+
+      // Manually insert duplicate rows simulating legacy database state
+      await rawDb.insert('locked_allocations', {
+        'goal_id': goalId,
+        'account_id': accId,
+        'amount': 2000.0,
+      });
+      await rawDb.insert('locked_allocations', {
+        'goal_id': goalId,
+        'account_id': accId,
+        'amount': 730.0,
+      });
+
+      // getGoalContributions should consolidate and return single entry
+      final contribs = await db.getGoalContributions(goalId);
+      expect(contribs, hasLength(1));
+      expect(contribs.first['account_name'], 'BOM Legacy');
+      expect(contribs.first['amount'], 2730.0);
+
+      // Verify underlying table has only 1 row now
+      final rawRows = await rawDb.query(
+        'locked_allocations',
+        where: 'goal_id = ? AND account_id = ?',
+        whereArgs: [goalId, accId],
+      );
+      expect(rawRows, hasLength(1));
+      expect((rawRows.first['amount'] as num).toDouble(), 2730.0);
+    });
+
     testWidgets('renders goal contribution and activity card layout', (
       tester,
     ) async {

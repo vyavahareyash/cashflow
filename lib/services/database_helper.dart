@@ -108,6 +108,7 @@ class DatabaseHelper {
             value TEXT NOT NULL
           )
         ''');
+        await _consolidateDuplicateGoalAllocations(db);
       },
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -942,11 +943,24 @@ class DatabaseHelper {
       }
 
       await _requireGoal(txn, goalId);
-      await txn.insert('locked_allocations', {
-        'goal_id': goalId,
-        'account_id': accountId,
-        'amount': amount,
-      });
+      final existingLock = await txn.query(
+        'locked_allocations',
+        where: 'goal_id = ? AND account_id = ?',
+        whereArgs: [goalId, accountId],
+        limit: 1,
+      );
+      if (existingLock.isNotEmpty) {
+        await txn.rawUpdate(
+          'UPDATE locked_allocations SET amount = amount + ? WHERE id = ?',
+          [amount, existingLock.first['id']],
+        );
+      } else {
+        await txn.insert('locked_allocations', {
+          'goal_id': goalId,
+          'account_id': accountId,
+          'amount': amount,
+        });
+      }
       await txn.rawUpdate(
         'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
         [amount, goalId],
@@ -997,7 +1011,12 @@ class DatabaseHelper {
           throw StateError('Insufficient locked funds in account $accountId');
         }
 
-        await _reduceLockedAllocation(txn, lock, amount);
+        await _reduceLockedAllocationByGoalAndAccount(
+          txn,
+          goalId,
+          accountId,
+          amount,
+        );
 
         final id = await txn.insert('transactions', {
           'account_id': accountId,
@@ -1089,7 +1108,12 @@ class DatabaseHelper {
         }
 
         await _adjustAccountBalance(txn, accountId, -amount);
-        await _reduceLockedAllocation(txn, lock, amount);
+        await _reduceLockedAllocationByGoalAndAccount(
+          txn,
+          goalId,
+          accountId,
+          amount,
+        );
 
         final id = await txn.insert('transactions', {
           'account_id': accountId,
@@ -1211,13 +1235,15 @@ class DatabaseHelper {
     int goalId,
     int accountId,
   ) async {
-    final result = await txn.query(
-      'locked_allocations',
-      where: 'goal_id = ? AND account_id = ?',
-      whereArgs: [goalId, accountId],
-      limit: 1,
+    final result = await txn.rawQuery(
+      '''
+      SELECT SUM(amount) as amount, MIN(id) as id
+      FROM locked_allocations
+      WHERE goal_id = ? AND account_id = ?
+      ''',
+      [goalId, accountId],
     );
-    if (result.isEmpty) {
+    if (result.isEmpty || result.first['amount'] == null) {
       throw StateError('No locked funds found for this goal and account');
     }
     return Map<String, Object?>.from(result.first);
@@ -1294,26 +1320,66 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> _reduceLockedAllocation(
+  Future<void> _reduceLockedAllocationByCreditCardAndAccount(
     Transaction txn,
-    Map<String, Object?> lock,
+    int creditCardId,
+    int accountId,
     double amount,
   ) async {
-    final lockId = lock['id'];
-    final currentAmount = (lock['amount'] as num).toDouble();
-    if (currentAmount == amount) {
-      await txn.delete(
-        'locked_allocations',
-        where: 'id = ?',
-        whereArgs: [lockId],
+    final locks = await txn.query(
+      'locked_allocations',
+      where: 'credit_card_id = ? AND account_id = ?',
+      whereArgs: [creditCardId, accountId],
+      orderBy: 'id DESC',
+    );
+    double remaining = amount;
+    for (final lock in locks) {
+      if (remaining <= 0) break;
+      final lockId = lock['id'] as int;
+      final lockAmount = (lock['amount'] as num).toDouble();
+      if (lockAmount <= remaining + 0.0001) {
+        await txn.delete(
+          'locked_allocations',
+          where: 'id = ?',
+          whereArgs: [lockId],
+        );
+        remaining -= lockAmount;
+      } else {
+        await txn.update(
+          'locked_allocations',
+          {'amount': lockAmount - remaining},
+          where: 'id = ?',
+          whereArgs: [lockId],
+        );
+        remaining = 0;
+      }
+    }
+  }
+
+  Future<void> _restoreCreditCardLockedAllocation(
+    Transaction txn,
+    int creditCardId,
+    int accountId,
+    double amount,
+  ) async {
+    final existing = await txn.query(
+      'locked_allocations',
+      where: 'credit_card_id = ? AND account_id = ?',
+      whereArgs: [creditCardId, accountId],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      await txn.rawUpdate(
+        'UPDATE locked_allocations SET amount = amount + ? WHERE id = ?',
+        [amount, existing.first['id']],
       );
     } else {
-      await txn.update(
-        'locked_allocations',
-        {'amount': currentAmount - amount},
-        where: 'id = ?',
-        whereArgs: [lockId],
-      );
+      await txn.insert('locked_allocations', {
+        'goal_id': null,
+        'credit_card_id': creditCardId,
+        'account_id': accountId,
+        'amount': amount,
+      });
     }
   }
 
@@ -1452,27 +1518,64 @@ class DatabaseHelper {
     int accountId,
     double amount,
   ) async {
-    final existing = await txn.query(
+    final locks = await txn.query(
       'locked_allocations',
       where: 'goal_id = ? AND account_id = ?',
       whereArgs: [goalId, accountId],
-      limit: 1,
+      orderBy: 'id ASC',
     );
-    if (existing.isNotEmpty) {
-      final lock = existing.first;
+    double remaining = amount;
+    for (final lock in locks) {
+      if (remaining <= 0) break;
+      final lockId = lock['id'] as int;
       final current = (lock['amount'] as num).toDouble();
-      if (current <= amount) {
+      if (current <= remaining) {
         await txn.delete(
           'locked_allocations',
           where: 'id = ?',
-          whereArgs: [lock['id']],
+          whereArgs: [lockId],
         );
+        remaining -= current;
       } else {
         await txn.rawUpdate(
           'UPDATE locked_allocations SET amount = amount - ? WHERE id = ?',
-          [amount, lock['id']],
+          [remaining, lockId],
         );
+        remaining = 0;
       }
+    }
+  }
+
+  Future<void> _consolidateDuplicateGoalAllocations(DatabaseExecutor db) async {
+    final tableExists = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'locked_allocations'",
+    );
+    if (tableExists.isEmpty) return;
+
+    final duplicates = await db.rawQuery('''
+      SELECT goal_id, account_id, SUM(amount) as total_amount, MIN(id) as keep_id
+      FROM locked_allocations
+      WHERE goal_id IS NOT NULL
+      GROUP BY goal_id, account_id
+      HAVING COUNT(*) > 1
+    ''');
+    for (final row in duplicates) {
+      final goalId = row['goal_id'] as int;
+      final accountId = row['account_id'] as int;
+      final totalAmount = (row['total_amount'] as num).toDouble();
+      final keepId = row['keep_id'] as int;
+
+      await db.update(
+        'locked_allocations',
+        {'amount': totalAmount},
+        where: 'id = ?',
+        whereArgs: [keepId],
+      );
+      await db.delete(
+        'locked_allocations',
+        where: 'goal_id = ? AND account_id = ? AND id != ?',
+        whereArgs: [goalId, accountId, keepId],
+      );
     }
   }
 
@@ -1574,14 +1677,38 @@ class DatabaseHelper {
           break;
 
         case 'cc_lock':
+          final targetCcAccId = destinationAccountId ?? accountId;
           final ccRows = await txn.query(
             'credit_cards',
             where: 'account_id = ?',
-            whereArgs: [accountId],
+            whereArgs: [targetCcAccId],
           );
           if (ccRows.isNotEmpty) {
             final ccId = ccRows.first['id'] as int;
-            await _reduceLockedAllocationByCreditCard(txn, ccId, amount);
+            await _reduceLockedAllocationByCreditCardAndAccount(
+              txn,
+              ccId,
+              accountId,
+              amount,
+            );
+          }
+          break;
+
+        case 'cc_unlock':
+          final targetUnlockCcAccId = destinationAccountId ?? accountId;
+          final unlockCcRows = await txn.query(
+            'credit_cards',
+            where: 'account_id = ?',
+            whereArgs: [targetUnlockCcAccId],
+          );
+          if (unlockCcRows.isNotEmpty) {
+            final ccId = unlockCcRows.first['id'] as int;
+            await _restoreCreditCardLockedAllocation(
+              txn,
+              ccId,
+              accountId,
+              amount,
+            );
           }
           break;
 
@@ -2539,12 +2666,25 @@ class DatabaseHelper {
   Future<void> lockFunds(int goalId, int accountId, double amount) async {
     final db = await instance.database;
 
-    // 1. Insert the allocation
-    await db.insert('locked_allocations', {
-      'goal_id': goalId,
-      'account_id': accountId,
-      'amount': amount,
-    });
+    // 1. Insert or update the allocation
+    final existingLock = await db.query(
+      'locked_allocations',
+      where: 'goal_id = ? AND account_id = ?',
+      whereArgs: [goalId, accountId],
+      limit: 1,
+    );
+    if (existingLock.isNotEmpty) {
+      await db.rawUpdate(
+        'UPDATE locked_allocations SET amount = amount + ? WHERE id = ?',
+        [amount, existingLock.first['id']],
+      );
+    } else {
+      await db.insert('locked_allocations', {
+        'goal_id': goalId,
+        'account_id': accountId,
+        'amount': amount,
+      });
+    }
 
     // 2. Update the goal's total saved amount
     final List<Map> goalResult = await db.query(
@@ -2798,14 +2938,231 @@ class DatabaseHelper {
     return txId;
   }
 
-  Future<List<Map<String, dynamic>>> getGoalContributions(int goalId) async {
+  /// Returns locked allocations for a specific credit card across bank accounts.
+  Future<List<Map<String, dynamic>>> getCreditCardLockedAllocations(
+    int creditCardId,
+  ) async {
     final db = await instance.database;
     return await db.rawQuery(
       '''
-      SELECT la.amount, a.name as account_name, la.id as lock_id, la.account_id
+      SELECT SUM(la.amount) as amount, a.name as account_name, MIN(la.id) as lock_id, la.account_id
+      FROM locked_allocations la
+      JOIN accounts a ON la.account_id = a.id
+      WHERE la.credit_card_id = ?
+      GROUP BY la.account_id, a.name
+      ''',
+      [creditCardId],
+    );
+  }
+
+  /// Manually locks funds in a bank account for a credit card bill.
+  Future<int> createCreditCardLockTransaction({
+    required int creditCardId,
+    required int bankAccountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+
+    final txId = await db.transaction((txn) async {
+      final ccRows = await txn.query(
+        'credit_cards',
+        where: 'id = ?',
+        whereArgs: [creditCardId],
+      );
+      if (ccRows.isEmpty) {
+        throw StateError('Credit card not found: $creditCardId');
+      }
+      final ccAccountId = ccRows.first['account_id'] as int;
+
+      await _requireAccount(txn, bankAccountId);
+      await _checkUsableFunds(txn, bankAccountId, amount);
+
+      final existing = await txn.query(
+        'locked_allocations',
+        where: 'credit_card_id = ? AND account_id = ?',
+        whereArgs: [creditCardId, bankAccountId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        await txn.rawUpdate(
+          'UPDATE locked_allocations SET amount = amount + ? WHERE id = ?',
+          [amount, existing.first['id']],
+        );
+      } else {
+        await txn.insert('locked_allocations', {
+          'goal_id': null,
+          'credit_card_id': creditCardId,
+          'account_id': bankAccountId,
+          'amount': amount,
+        });
+      }
+
+      return txn.insert('transactions', {
+        'account_id': bankAccountId,
+        'destination_account_id': ccAccountId,
+        'category_id': null,
+        'goal_id': null,
+        'amount': amount,
+        'date': date,
+        'note': note.isNotEmpty ? note : 'Locked for credit card reserve',
+        'type': 'cc_lock',
+      });
+    });
+
+    notifyDataChanged();
+    return txId;
+  }
+
+  /// Manually unlocks funds previously reserved for a credit card in a bank account.
+  Future<int> createCreditCardUnlockTransaction({
+    required int creditCardId,
+    required int bankAccountId,
+    required double amount,
+    required String date,
+    String note = '',
+  }) async {
+    _validateAmount(amount);
+    final db = await instance.database;
+
+    final txId = await db.transaction((txn) async {
+      final ccRows = await txn.query(
+        'credit_cards',
+        where: 'id = ?',
+        whereArgs: [creditCardId],
+      );
+      if (ccRows.isEmpty) {
+        throw StateError('Credit card not found: $creditCardId');
+      }
+      final ccAccountId = ccRows.first['account_id'] as int;
+
+      await _requireAccount(txn, bankAccountId);
+
+      final existing = await txn.query(
+        'locked_allocations',
+        where: 'credit_card_id = ? AND account_id = ?',
+        whereArgs: [creditCardId, bankAccountId],
+      );
+      final currentLocked = existing.fold<double>(
+        0.0,
+        (sum, row) => sum + (row['amount'] as num).toDouble(),
+      );
+      if (currentLocked < amount - 0.0001) {
+        throw StateError(
+          'Insufficient locked funds in bank account for this card',
+        );
+      }
+
+      await _reduceLockedAllocationByCreditCardAndAccount(
+        txn,
+        creditCardId,
+        bankAccountId,
+        amount,
+      );
+
+      return txn.insert('transactions', {
+        'account_id': bankAccountId,
+        'destination_account_id': ccAccountId,
+        'category_id': null,
+        'goal_id': null,
+        'amount': amount,
+        'date': date,
+        'note': note.isNotEmpty ? note : 'Unlocked from credit card reserve',
+        'type': 'cc_unlock',
+      });
+    });
+
+    notifyDataChanged();
+    return txId;
+  }
+
+  /// Unlocks credit card funds across multiple bank accounts.
+  Future<List<int>> createMultiAccountCreditCardUnlockTransactions({
+    required int creditCardId,
+    required Map<int, double> amountsPerAccount,
+    required String date,
+    String note = '',
+  }) async {
+    if (amountsPerAccount.isEmpty) {
+      throw ArgumentError('Amounts per account cannot be empty');
+    }
+    for (final entry in amountsPerAccount.entries) {
+      _validateAmount(entry.value);
+    }
+
+    final db = await instance.database;
+    final ids = await db.transaction((txn) async {
+      final ccRows = await txn.query(
+        'credit_cards',
+        where: 'id = ?',
+        whereArgs: [creditCardId],
+      );
+      if (ccRows.isEmpty) {
+        throw StateError('Credit card not found: $creditCardId');
+      }
+      final ccAccountId = ccRows.first['account_id'] as int;
+
+      final createdIds = <int>[];
+      for (final entry in amountsPerAccount.entries) {
+        final bankAccountId = entry.key;
+        final amount = entry.value;
+
+        await _requireAccount(txn, bankAccountId);
+
+        final existing = await txn.query(
+          'locked_allocations',
+          where: 'credit_card_id = ? AND account_id = ?',
+          whereArgs: [creditCardId, bankAccountId],
+        );
+        final currentLocked = existing.fold<double>(
+          0.0,
+          (sum, row) => sum + (row['amount'] as num).toDouble(),
+        );
+        if (currentLocked < amount - 0.0001) {
+          throw StateError(
+            'Insufficient locked funds in bank account $bankAccountId',
+          );
+        }
+
+        await _reduceLockedAllocationByCreditCardAndAccount(
+          txn,
+          creditCardId,
+          bankAccountId,
+          amount,
+        );
+
+        final id = await txn.insert('transactions', {
+          'account_id': bankAccountId,
+          'destination_account_id': ccAccountId,
+          'category_id': null,
+          'goal_id': null,
+          'amount': amount,
+          'date': date,
+          'note': note.isNotEmpty ? note : 'Unlocked from credit card reserve',
+          'type': 'cc_unlock',
+        });
+        createdIds.add(id);
+      }
+      return createdIds;
+    });
+
+    notifyDataChanged();
+    return ids;
+  }
+
+  Future<List<Map<String, dynamic>>> getGoalContributions(int goalId) async {
+    final db = await instance.database;
+    await _consolidateDuplicateGoalAllocations(db);
+    return await db.rawQuery(
+      '''
+      SELECT SUM(la.amount) as amount, a.name as account_name, MIN(la.id) as lock_id, la.account_id
       FROM locked_allocations la
       JOIN accounts a ON la.account_id = a.id
       WHERE la.goal_id = ?
+      GROUP BY la.account_id, a.name
+      ORDER BY a.name ASC
       ''',
       [goalId],
     );
@@ -3131,6 +3488,7 @@ class DatabaseHelper {
             in data['locked_allocations'] as List<Map<String, dynamic>>) {
           await txn.insert('locked_allocations', lock);
         }
+        await _consolidateDuplicateGoalAllocations(txn);
       });
 
       notifyDataChanged();

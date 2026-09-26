@@ -11,6 +11,8 @@ import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
 import '../components/pay_cc_bill_modal.dart';
+import '../components/lock_cc_funds_modal.dart';
+import '../components/unlock_cc_funds_modal.dart';
 import '../components/app_dialogs.dart';
 import '../components/walkthrough/walkthrough_keys.dart';
 import 'budget_screen.dart';
@@ -499,6 +501,37 @@ class _AccountsScreenState extends State<AccountsScreen> {
     );
   }
 
+  void _openUnlockModalForCreditCard(int ccId) {
+    CreditCard? cc;
+    Account? ccAcc;
+    for (final c in _creditCardsMap.values) {
+      if (c.id == ccId) {
+        cc = c;
+        break;
+      }
+    }
+    if (cc != null) {
+      for (final a in _accounts) {
+        if (a.id == cc.accountId) {
+          ccAcc = a;
+          break;
+        }
+      }
+    }
+    if (cc != null && ccAcc != null) {
+      final locked = _ccLockedMap[cc.id!] ?? 0.0;
+      unawaited(
+        UnlockCcFundsModal.show(
+          context,
+          ccAccount: ccAcc,
+          creditCard: cc,
+          lockedAmount: locked,
+          onUnlockCompleted: _refreshAccounts,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -757,6 +790,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       ? () => _showTransferDialog(acc)
                       : null,
                   onEdit: () => _showEditAccountDialog(acc),
+                  onUnlockCreditCardLock: _openUnlockModalForCreditCard,
                 ),
               ),
 
@@ -807,6 +841,25 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   creditCard: cc,
                   lockedAmount: lockedAmount,
                   onEdit: () => _showEditAccountDialog(acc),
+                  onLock: cc != null
+                      ? () => LockCcFundsModal.show(
+                          context,
+                          ccAccount: acc,
+                          creditCard: cc,
+                          lockedAmount: lockedAmount,
+                          bankAccounts: physicalAccounts,
+                          onLockCompleted: _refreshAccounts,
+                        )
+                      : null,
+                  onUnlock: cc != null && lockedAmount > 0
+                      ? () => UnlockCcFundsModal.show(
+                          context,
+                          ccAccount: acc,
+                          creditCard: cc,
+                          lockedAmount: lockedAmount,
+                          onUnlockCompleted: _refreshAccounts,
+                        )
+                      : null,
                   onPayBill: cc != null
                       ? () => PayCcBillModal.show(
                           context,
@@ -962,6 +1015,7 @@ class AccountCard extends StatefulWidget {
   final VoidCallback? onTransfer;
   final bool? isExpanded;
   final ValueChanged<bool>? onExpansionChanged;
+  final ValueChanged<int>? onUnlockCreditCardLock;
 
   const AccountCard({
     super.key,
@@ -971,6 +1025,7 @@ class AccountCard extends StatefulWidget {
     this.onTransfer,
     this.isExpanded,
     this.onExpansionChanged,
+    this.onUnlockCreditCardLock,
   });
 
   static List<AggregatedGoalLock> aggregateLocks(List<LockedAllocation> locks) {
@@ -1263,6 +1318,29 @@ class _AccountCardState extends State<AccountCard> {
                                       color: AppColors.warning,
                                     ),
                                   ),
+                                  if (lock.isCreditCard &&
+                                      widget.onUnlockCreditCardLock !=
+                                          null) ...[
+                                    const SizedBox(width: 4),
+                                    InkWell(
+                                      key: Key(
+                                        'btn_unlock_cc_lock_${lock.goalId}',
+                                      ),
+                                      onTap: () =>
+                                          widget.onUnlockCreditCardLock!(
+                                            lock.goalId,
+                                          ),
+                                      borderRadius: AppBorderRadius.smallBorder,
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(2.0),
+                                        child: Icon(
+                                          Icons.lock_open_rounded,
+                                          size: 15,
+                                          color: AppColors.warning,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             );
@@ -1285,6 +1363,8 @@ class CreditCardAccountCard extends StatelessWidget {
   final double lockedAmount;
   final VoidCallback? onPayBill;
   final VoidCallback? onEdit;
+  final VoidCallback? onLock;
+  final VoidCallback? onUnlock;
 
   const CreditCardAccountCard({
     super.key,
@@ -1293,6 +1373,8 @@ class CreditCardAccountCard extends StatelessWidget {
     this.lockedAmount = 0.0,
     this.onPayBill,
     this.onEdit,
+    this.onLock,
+    this.onUnlock,
   });
 
   @override
@@ -1376,21 +1458,72 @@ class CreditCardAccountCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (onEdit != null)
-                IconButton(
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    size: 18,
-                    color: isDark ? AppColors.gray400 : AppColors.gray600,
-                  ),
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  constraints: const BoxConstraints(
-                    minWidth: AppComponentSizes.minTouchTarget,
-                    minHeight: AppComponentSizes.minTouchTarget,
-                  ),
-                  tooltip: 'Edit Card',
-                  onPressed: onEdit,
+              PopupMenuButton<String>(
+                key: Key('card_options_${account.id}'),
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  size: 20,
+                  color: isDark ? AppColors.gray400 : AppColors.gray600,
                 ),
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                constraints: const BoxConstraints(
+                  minWidth: AppComponentSizes.minTouchTarget,
+                  minHeight: AppComponentSizes.minTouchTarget,
+                ),
+                tooltip: 'Card Options',
+                onSelected: (action) {
+                  if (action == 'lock') onLock?.call();
+                  if (action == 'unlock') onUnlock?.call();
+                  if (action == 'pay') onPayBill?.call();
+                  if (action == 'edit') onEdit?.call();
+                },
+                itemBuilder: (context) => [
+                  if (onLock != null)
+                    const PopupMenuItem(
+                      value: 'lock',
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock_outline_rounded, size: 18),
+                          SizedBox(width: AppSpacing.sm),
+                          Text('Lock Funds'),
+                        ],
+                      ),
+                    ),
+                  if (onUnlock != null && lockedAmount > 0)
+                    const PopupMenuItem(
+                      value: 'unlock',
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock_open_rounded, size: 18),
+                          SizedBox(width: AppSpacing.sm),
+                          Text('Unlock Funds'),
+                        ],
+                      ),
+                    ),
+                  if (onPayBill != null)
+                    const PopupMenuItem(
+                      value: 'pay',
+                      child: Row(
+                        children: [
+                          Icon(Icons.payment_rounded, size: 18),
+                          SizedBox(width: AppSpacing.sm),
+                          Text('Pay Bill'),
+                        ],
+                      ),
+                    ),
+                  if (onEdit != null)
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 18),
+                          SizedBox(width: AppSpacing.sm),
+                          Text('Edit Card'),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1438,159 +1571,211 @@ class CreditCardAccountCard extends StatelessWidget {
 
           const Divider(height: 16),
 
-          // Bottom Bar: Cash-backed badge & Pay Bill button
+          // Bottom Bar: Cash-backed badge
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    if (outstanding <= 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.emerald600.withValues(alpha: 0.12),
-                          borderRadius: AppBorderRadius.smallBorder,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.check_circle_outline_rounded,
-                              size: 14,
-                              color: AppColors.emerald600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Settled (₹0 Due)',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.emerald600,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (isFullyBacked)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.emerald600.withValues(alpha: 0.12),
-                          borderRadius: AppBorderRadius.smallBorder,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.lock_rounded,
-                              size: 14,
-                              color: AppColors.emerald600,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                '${AppFormatters.currency(lockedAmount)} Locked (100% Backed)',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.emerald600,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (isPartiallyBacked)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning.withValues(alpha: 0.12),
-                          borderRadius: AppBorderRadius.smallBorder,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.lock_clock_rounded,
-                              size: 14,
-                              color: AppColors.warning,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                '${AppFormatters.currency(lockedAmount)} Locked (${((lockedAmount / outstanding) * 100).toInt()}% Backed)',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.warning,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gray200.withValues(alpha: 0.5),
-                          borderRadius: AppBorderRadius.smallBorder,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.lock_open_rounded,
-                              size: 14,
-                              color: isDark
-                                  ? AppColors.gray400
-                                  : AppColors.gray600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Unbacked',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: isDark
-                                    ? AppColors.gray400
-                                    : AppColors.gray600,
-                              ),
-                            ),
-                          ],
+              if (outstanding <= 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald600.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 14,
+                        color: AppColors.emerald600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Settled (₹0 Due)',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.emerald600,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                  ],
+                    ],
+                  ),
+                )
+              else if (isFullyBacked)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald600.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 14,
+                        color: AppColors.emerald600,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '${AppFormatters.currency(lockedAmount)} Locked (100% Backed)',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.emerald600,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (isPartiallyBacked)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.lock_clock_rounded,
+                        size: 14,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '${AppFormatters.currency(lockedAmount)} Locked (${((lockedAmount / outstanding) * 100).toInt()}% Backed)',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.gray200.withValues(alpha: 0.5),
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.lock_open_rounded,
+                        size: 14,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Unbacked',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Action Buttons: Lock, Unlock, Pay Bill
+          Row(
+            children: [
+              if (onLock != null) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: Key('btn_lock_cc_${account.id}'),
+                    onPressed: onLock,
+                    icon: const Icon(Icons.lock_rounded, size: 15),
+                    label: const Text('Lock'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.purple,
+                      side: const BorderSide(color: AppColors.purple),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 6,
+                      ),
+                      minimumSize: const Size(0, 34),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      textStyle: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                if ((onUnlock != null && lockedAmount > 0) || onPayBill != null)
+                  const SizedBox(width: AppSpacing.xs),
+              ],
+              if (onUnlock != null && lockedAmount > 0) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: Key('btn_unlock_cc_${account.id}'),
+                    onPressed: onUnlock,
+                    icon: const Icon(Icons.lock_open_rounded, size: 15),
+                    label: const Text('Unlock'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.warning,
+                      side: const BorderSide(color: AppColors.warning),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 6,
+                      ),
+                      minimumSize: const Size(0, 34),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      textStyle: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                if (onPayBill != null) const SizedBox(width: AppSpacing.xs),
+              ],
               if (onPayBill != null)
-                ElevatedButton.icon(
-                  onPressed: onPayBill,
-                  icon: const Icon(Icons.payment_rounded, size: 16),
-                  label: const Text('Pay Bill'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: 6,
-                    ),
-                    minimumSize: const Size(0, 34),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: AppBorderRadius.smallBorder,
-                    ),
-                    textStyle: AppTypography.labelSmall.copyWith(
-                      fontWeight: FontWeight.bold,
+                Expanded(
+                  child: ElevatedButton.icon(
+                    key: Key('btn_pay_cc_${account.id}'),
+                    onPressed: onPayBill,
+                    icon: const Icon(Icons.payment_rounded, size: 15),
+                    label: const Text('Pay Bill'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 6,
+                      ),
+                      minimumSize: const Size(0, 34),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      textStyle: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
