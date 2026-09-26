@@ -28,6 +28,19 @@ class _GoalsScreenState extends State<GoalsScreen> {
   int _salaryDay = 1;
   bool _isLoading = true;
 
+  double get _totalRecommendedMonthlyContribution {
+    double total = 0.0;
+    for (final goal in _goals) {
+      if (!goal.isCompleted) {
+        final pace = goal.recommendedMonthlyPace(salaryDay: _salaryDay);
+        if (pace != null && pace > 0) {
+          total += pace;
+        }
+      }
+    }
+    return total;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2880,6 +2893,83 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ],
           ),
+          if (_goals.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              key: const Key('goals_total_recommended_monthly_contribution'),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.emerald500.withValues(
+                  alpha: isDark ? 0.15 : 0.08,
+                ),
+                borderRadius: AppBorderRadius.mediumBorder,
+                border: Border.all(
+                  color: AppColors.emerald500.withValues(
+                    alpha: isDark ? 0.3 : 0.2,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: AppColors.emerald500.withValues(alpha: 0.16),
+                      borderRadius: AppBorderRadius.smallBorder,
+                    ),
+                    child: const Icon(
+                      Icons.trending_up_rounded,
+                      size: 20,
+                      color: AppColors.emerald600,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Recommended Monthly Contribution',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isDark
+                                ? AppColors.gray300
+                                : AppColors.gray700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _totalRecommendedMonthlyContribution > 0
+                              ? '${AppFormatters.currency(_totalRecommendedMonthlyContribution)} / month'
+                              : '${AppFormatters.currency(0)} / month',
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: isDark
+                                ? AppColors.emerald300
+                                : AppColors.emerald700,
+                          ),
+                        ),
+                        Text(
+                          _totalRecommendedMonthlyContribution > 0
+                              ? 'Combined next month recommendation across goals'
+                              : 'All goals fully funded or no deadlines set',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
