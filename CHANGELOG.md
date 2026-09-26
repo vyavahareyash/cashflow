@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.0] - 2026-09-26
+
+### Added
+- **Manual Credit Card Fund Locking & Unlocking**: Added dedicated modal workflows for manually locking and unlocking funds against credit cards, including real-time available balance validation, automatic lock row consolidation, and clear visual attribution (#125, #126).
+
+### Fixed
+- **Voice Transaction Ledger Ordering**: Resolved same-day sorting discrepancy where voice transactions appeared below earlier manual transactions or credit card payments by resolving draft timestamps to full ISO-8601 strings and enforcing calendar-day reverse-insertion SQL ordering (#127).
+
+---
+
 ## [4.6.0] - 2026-09-25
 
 ### Added
