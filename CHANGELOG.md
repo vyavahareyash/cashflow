@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.8.0] - 2026-09-26
+
+### Added
+- **Credit Card Fund Management**: Added manual lock and unlock workflows for credit card funds with balance validation and lock consolidation (#126).
+
+### Fixed
+- **Voice Note Account Isolation**: Prevented product notes from being assigned to payment accounts and handled edge cases in the on-device language model flow (c79e076).
+
+### Documentation
+- **Release Workflow**: Documented protected-branch release procedures and squash-merge requirements (#129).
+
+---
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
