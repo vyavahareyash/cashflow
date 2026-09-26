@@ -440,8 +440,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         Expanded(
           child: _buildActionButton(
             key: const Key('dashboard_lock_goal_action'),
-            label: 'Lock Goal',
-            icon: Icons.lock_outline_rounded,
+            label: 'Goals',
+            icon: Icons.savings_rounded,
             color: AppColors.warning,
             isDark: isDark,
             onTap: () {
@@ -462,7 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         Expanded(
           child: _buildActionButton(
             key: const Key('dashboard_add_budget_action'),
-            label: 'Add Budget',
+            label: 'Budgets',
             icon: Icons.pie_chart_outline_rounded,
             color: AppColors.info,
             isDark: isDark,

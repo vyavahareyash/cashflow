@@ -370,7 +370,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   void _onItemTapped(int index, {int? subTabIndex}) {
     setState(() {
-      if (index == 3 && _selectedIndex == 3 && subTabIndex == null) {
+      if (index == 3 && subTabIndex == null) {
         _accountsSubTabIndex = 0;
       } else if (subTabIndex != null) {
         _accountsSubTabIndex = subTabIndex;
@@ -810,6 +810,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          key: Key('nav_item_$index'),
           onTap: () => _onItemTapped(index),
           borderRadius: BorderRadius.circular(20),
           child: Column(

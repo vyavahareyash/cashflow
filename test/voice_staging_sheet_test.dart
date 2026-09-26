@@ -623,8 +623,8 @@ void main() {
 
           // Verify standard Quick Actions are present
           expect(find.text('Log Transaction'), findsOneWidget);
-          expect(find.text('Lock Goal'), findsOneWidget);
-          expect(find.text('Add Budget'), findsOneWidget);
+          expect(find.text('Goals'), findsOneWidget);
+          expect(find.text('Budgets'), findsOneWidget);
         },
       );
 

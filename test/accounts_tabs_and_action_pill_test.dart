@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cashflow/models/account_model.dart';
+import 'package:cashflow/models/goal_model.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
 import 'package:cashflow/screens/budget_screen.dart';
+import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/goals_screen.dart';
 import 'package:cashflow/services/database_helper.dart';
 import 'package:path/path.dart' hide equals;
@@ -170,5 +172,139 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     });
+
+    testWidgets('Dashboard quick actions display Goals and Budgets buttons', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: DashboardScreen())),
+      );
+      await pumpUntilLoaded(tester);
+
+      final goalsAction = find.byKey(const Key('dashboard_lock_goal_action'));
+      expect(goalsAction, findsOneWidget);
+      expect(
+        find.descendant(of: goalsAction, matching: find.text('Goals')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: goalsAction,
+          matching: find.byIcon(Icons.savings_rounded),
+        ),
+        findsOneWidget,
+      );
+
+      final budgetsAction = find.byKey(
+        const Key('dashboard_add_budget_action'),
+      );
+      expect(budgetsAction, findsOneWidget);
+      expect(
+        find.descendant(of: budgetsAction, matching: find.text('Budgets')),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    testWidgets(
+      'AccountsScreen resets to Accounts tab (0) when initialTabIndex becomes 0',
+      (tester) async {
+        int activeTab = 2; // Initially on Goals tab (2)
+        late StateSetter setStateCallback;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                setStateCallback = setState;
+                return Scaffold(
+                  body: AccountsScreen(
+                    initialTabIndex: activeTab,
+                    onTabChanged: (newTab) => activeTab = newTab,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await pumpUntilLoaded(tester);
+
+        expect(find.byKey(const Key('goals_add_pill_btn')), findsOneWidget);
+
+        // Reset to Accounts sub-tab 0
+        setStateCallback(() {
+          activeTab = 0;
+        });
+        await tester.pump();
+        await pumpUntilLoaded(tester);
+
+        expect(
+          find.byKey(const Key('accounts_empty_add_pill_btn')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('goals_add_pill_btn')), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'GoalsScreen shows combined total recommended monthly contribution for next month',
+      (tester) async {
+        final now = DateTime.now();
+        final targetDate1 = DateTime(
+          now.year,
+          now.month + 2,
+          now.day,
+        ).toIso8601String().substring(0, 10);
+        final targetDate2 = DateTime(
+          now.year,
+          now.month + 3,
+          now.day,
+        ).toIso8601String().substring(0, 10);
+
+        final goal1 = Goal(
+          name: 'Emergency Fund',
+          totalTarget: 6000.0,
+          currentSaved: 0.0,
+          targetDate: targetDate1,
+        );
+        final goal2 = Goal(
+          name: 'Vacation',
+          totalTarget: 9000.0,
+          currentSaved: 0.0,
+          targetDate: targetDate2,
+        );
+
+        await tester.runAsync(() async {
+          await DatabaseHelper.instance.createGoal(goal1);
+          await DatabaseHelper.instance.createGoal(goal2);
+        });
+
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: GoalsScreen())),
+        );
+        await pumpUntilLoaded(tester);
+
+        expect(
+          find.byKey(const Key('goals_total_recommended_monthly_contribution')),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Total Recommended Monthly Contribution'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Combined next month recommendation across goals'),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
   });
 }
