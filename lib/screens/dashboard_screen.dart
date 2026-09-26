@@ -1184,6 +1184,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // --- LOG TRANSACTION BOTTOM SHEET ---
   void _showTransactionSheet(BuildContext context) {
+    _selectedDate = DateTime.now();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final amountController = TextEditingController();
     final noteController = TextEditingController();
@@ -1884,7 +1885,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                             lastDate: DateTime(2101),
                           );
                           if (picked != null) {
-                            setStateSheet(() => _selectedDate = picked);
+                            final now = DateTime.now();
+                            setStateSheet(
+                              () => _selectedDate = DateTime(
+                                picked.year,
+                                picked.month,
+                                picked.day,
+                                now.hour,
+                                now.minute,
+                                now.second,
+                                now.millisecond,
+                              ),
+                            );
                           }
                         },
                         shape: RoundedRectangleBorder(
