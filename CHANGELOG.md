@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.10.0] - 2026-09-26
+
+### Added
+- **Dashboard Budget Buffer/Gaps**: Added a dashboard pill showing whether usable funds are above or below the monthly budget cap (e336197).
+- **Quick Actions and Goal Contributions**: Added direct quick actions, navbar account reset behavior, and a combined recommended monthly contribution summary for goals (06909d8).
+
+---
+
 ## [4.9.0] - 2026-09-26
 
 ### Added
