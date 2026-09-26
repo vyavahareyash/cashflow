@@ -116,29 +116,55 @@ flutter build appbundle --release
 
 ---
 
-## 5. Commit, Tag, and Push Procedure
+## 5. Commit, PR, Tag, and Push Procedure
 
-### Step 1: Stage and Commit
-Stage synchronized files:
+> [!IMPORTANT]
+> **Branch Protection Rule (GH013)**: Direct pushes to `main` are declined by GitHub branch protection rules. All changes to `main` must merge via a pull request.
+> **Merge Strategy**: The repository permits only **squash merges** (`gh pr merge --squash`). Merge commits are rejected.
+
+### Step 1: Create Release Branch, Stage, and Commit
 ```bash
+git checkout -b release/vX.Y.Z
 git add pubspec.yaml lib/screens/backup_restore_screen.dart CHANGELOG.md reports/index.html
 git commit -m "chore(release): bump version to X.Y.Z+B"
 ```
 
-### Step 2: Create Annotated Git Tag
-Create tag matching SemVer version prefixed with `v`:
+### Step 2: Push Release Branch and Create Pull Request
+```bash
+git push -u origin release/vX.Y.Z
+gh pr create --title "chore(release): bump version to X.Y.Z+B" --body "## Release vX.Y.Z (Build B)..."
+```
+
+### Step 3: Squash-Merge Pull Request into `main`
+```bash
+gh pr merge <PR_NUMBER> --squash
+```
+
+### Step 4: Sync Local `main`
+Switch back to `main` and pull the squashed release commit:
+```bash
+git checkout main
+git pull origin main
+```
+
+### Step 5: Create Annotated Git Tag on `main`
+Create the release tag matching SemVer prefixed with `v`:
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 ```
 
-### Step 3: Push to Remote
+### Step 6: Push Release Tag to Remote
 > [!IMPORTANT]
-> **Prompt User First**: Confirm with user before pushing (`git push origin main && git push origin vX.Y.Z`), since pushing `v*` tags immediately triggers the GitHub Actions release workflow and Google Play deployment.
+> **Prompt User First**: Confirm with user before pushing (`git push origin vX.Y.Z`), since pushing `v*` tags immediately triggers the GitHub Actions release workflow and Google Play deployment.
 
-Push both main branch and the release tag:
 ```bash
-git push origin main
 git push origin vX.Y.Z
+```
+
+### Step 7: Clean Up Release Branch
+```bash
+git branch -D release/vX.Y.Z
+git push origin --delete release/vX.Y.Z
 ```
 
 ---
@@ -175,7 +201,8 @@ A release is complete when:
 - [ ] `CHANGELOG.md` documents all changes since previous tag.
 - [ ] `reports/index.html` regenerated via `python3 scripts/generate_report.py`.
 - [ ] Pre-commit fast gates (formatting, analysis, syntax) and pre-push tests pass cleanly.
-- [ ] Commit created with message `chore(release): bump version to X.Y.Z+B`.
-- [ ] Annotated tag `vX.Y.Z` created.
-- [ ] Pushed to `origin main` and `origin vX.Y.Z`.
+- [ ] Release branch `release/vX.Y.Z` created, committed, pushed, and squash-merged to `main` via PR.
+- [ ] Local `main` updated and annotated tag `vX.Y.Z` created on the merged commit.
+- [ ] Tag `vX.Y.Z` pushed to `origin`.
+- [ ] Remote release branch cleaned up.
 - [ ] GitHub Actions release workflow completes successfully.
