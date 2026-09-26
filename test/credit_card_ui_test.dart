@@ -128,6 +128,42 @@ void main() {
 
       expect(payBillTapped, isTrue);
     });
+
+    testWidgets('triggers onLock and onUnlock callbacks when tapped', (
+      tester,
+    ) async {
+      bool lockTapped = false;
+      bool unlockTapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CreditCardAccountCard(
+              account: ccAccount,
+              creditCard: cardMeta,
+              lockedAmount: 15000.0,
+              onLock: () {
+                lockTapped = true;
+              },
+              onUnlock: () {
+                unlockTapped = true;
+              },
+            ),
+          ),
+        ),
+      );
+
+      final lockBtn = find.text('Lock');
+      expect(lockBtn, findsOneWidget);
+      await tester.tap(lockBtn);
+      await tester.pumpAndSettle();
+      expect(lockTapped, isTrue);
+
+      final unlockBtn = find.text('Unlock');
+      expect(unlockBtn, findsOneWidget);
+      await tester.tap(unlockBtn);
+      await tester.pumpAndSettle();
+      expect(unlockTapped, isTrue);
+    });
   });
 
   group('PayCcBillModal Widget Tests', () {

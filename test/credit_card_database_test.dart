@@ -146,4 +146,93 @@ void main() {
     expect(await dbHelper.getTotalLockedAmount(), 0.0);
     expect(await dbHelper.calculateUsableBalance(), 45000.0);
   });
+
+  test('manual credit card lock and unlock operations', () async {
+    final dbHelper = DatabaseHelper.instance;
+
+    final bankAccountId = await dbHelper.createAccount(
+      Account(name: 'Salary Checking', balance: 50000.0, type: 'Bank'),
+    );
+
+    final ccAccountId = await dbHelper.createAccount(
+      Account(name: 'Infinia CC', balance: 0.0, type: 'Credit Card'),
+    );
+
+    final creditCardId = await dbHelper.createCreditCard(
+      CreditCard(
+        accountId: ccAccountId,
+        creditLimit: 100000.0,
+        statementDay: 1,
+        dueDay: 20,
+      ),
+    );
+
+    // Initial state check
+    expect(await dbHelper.getTotalLockedAmount(), 0.0);
+    expect(await dbHelper.calculateUsableBalance(), 50000.0);
+
+    // 1. Manual CC Lock
+    final lockTxId = await dbHelper.createCreditCardLockTransaction(
+      creditCardId: creditCardId,
+      bankAccountId: bankAccountId,
+      amount: 15000.0,
+      date: '2026-09-15T11:00:00',
+      note: 'Manual Reserve for CC',
+    );
+    expect(lockTxId, greaterThan(0));
+
+    expect(await dbHelper.getTotalLockedAmount(), 15000.0);
+    expect(await dbHelper.calculateUsableBalance(), 35000.0);
+    final allocationsAfterLock = await dbHelper.getCreditCardLockedAllocations(
+      creditCardId,
+    );
+    expect(allocationsAfterLock.length, 1);
+    expect(allocationsAfterLock.first['account_id'], bankAccountId);
+    expect(allocationsAfterLock.first['amount'], 15000.0);
+
+    // 2. Partial CC Unlock
+    final unlockTxId = await dbHelper.createCreditCardUnlockTransaction(
+      creditCardId: creditCardId,
+      bankAccountId: bankAccountId,
+      amount: 5000.0,
+      date: '2026-09-16T12:00:00',
+      note: 'Partial Unlock',
+    );
+    expect(unlockTxId, greaterThan(0));
+
+    expect(await dbHelper.getTotalLockedAmount(), 10000.0);
+    expect(await dbHelper.calculateUsableBalance(), 40000.0);
+    final allocationsAfterPartial = await dbHelper
+        .getCreditCardLockedAllocations(creditCardId);
+    expect(allocationsAfterPartial.first['amount'], 10000.0);
+
+    // 3. Multi-Account Unlock
+    await dbHelper.createMultiAccountCreditCardUnlockTransactions(
+      creditCardId: creditCardId,
+      amountsPerAccount: {bankAccountId: 10000.0},
+      date: '2026-09-17T13:00:00',
+      note: 'Full Unlock Multi',
+    );
+
+    expect(await dbHelper.getTotalLockedAmount(), 0.0);
+    expect(await dbHelper.calculateUsableBalance(), 50000.0);
+    final allocationsAfterFull = await dbHelper.getCreditCardLockedAllocations(
+      creditCardId,
+    );
+    expect(allocationsAfterFull.isEmpty, true);
+
+    // 4. Test Deleting a cc_lock transaction
+    final lockTxId2 = await dbHelper.createCreditCardLockTransaction(
+      creditCardId: creditCardId,
+      bankAccountId: bankAccountId,
+      amount: 8000.0,
+      date: '2026-09-18T14:00:00',
+    );
+    expect(await dbHelper.getTotalLockedAmount(), 8000.0);
+    expect(await dbHelper.calculateUsableBalance(), 42000.0);
+
+    await dbHelper.deleteTransaction(lockTxId2);
+    expect(await dbHelper.getTotalLockedAmount(), 0.0);
+    expect(await dbHelper.calculateUsableBalance(), 50000.0);
+  });
 }
