@@ -80,6 +80,7 @@ void main() {
         );
 
         expect(find.textContaining('Backed'), findsOneWidget);
+        expect(find.textContaining('Unbacked'), findsOneWidget);
       },
     );
 
@@ -99,6 +100,7 @@ void main() {
         );
 
         expect(find.text('Unbacked'), findsOneWidget);
+        expect(find.textContaining('15,000'), findsWidgets);
       },
     );
 

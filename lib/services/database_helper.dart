@@ -2176,6 +2176,43 @@ class DatabaseHelper {
         Account(name: 'Cash Wallet', balance: 8500.0, type: 'Cash'),
       );
 
+      // Credit Cards (one partially backed, one unbacked)
+      final hdfcCcAccId = await createAccount(
+        Account(
+          name: 'HDFC Regalia Credit Card',
+          balance: 0.0,
+          type: 'Credit Card',
+        ),
+      );
+      await createCreditCard(
+        CreditCard(
+          accountId: hdfcCcAccId,
+          creditLimit: 150000.0,
+          statementDay: 15,
+          dueDay: 5,
+          defaultLockAccountId: salaryAccId,
+          autoLock: true,
+        ),
+      );
+
+      final iciciCcAccId = await createAccount(
+        Account(
+          name: 'Amazon Pay ICICI Card',
+          balance: 0.0,
+          type: 'Credit Card',
+        ),
+      );
+      await createCreditCard(
+        CreditCard(
+          accountId: iciciCcAccId,
+          creditLimit: 100000.0,
+          statementDay: 20,
+          dueDay: 10,
+          defaultLockAccountId: null,
+          autoLock: false,
+        ),
+      );
+
       // 2. Categories
       final catGroceries = await createCategory(
         Category(name: 'Groceries', monthlyBudget: 15000),
@@ -2619,6 +2656,40 @@ class DatabaseHelper {
         amount: 5000.0,
         date: currentCycleDate(3, 16, 0).toIso8601String(),
         note: 'Pay advance appliance installation invoice',
+      );
+
+      // 7. Credit Card Spending & Reserves
+      // Card 1: HDFC Regalia (Partially Cash-Backed: ₹18,500 owed, ₹12,000 locked in HDFC Salary, ₹6,500 unbacked)
+      await createCreditCardExpenseTransaction(
+        ccAccountId: hdfcCcAccId,
+        categoryId: catEntertainment,
+        amount: 12000.0,
+        date: currentCycleDate(2, 14, 0).toIso8601String(),
+        note: 'Flight tickets & weekend resort booking',
+        lockBankAccountId: salaryAccId,
+      );
+      await createCreditCardExpenseTransaction(
+        ccAccountId: hdfcCcAccId,
+        categoryId: catEntertainment,
+        amount: 6500.0,
+        date: currentCycleDate(3, 20, 30).toIso8601String(),
+        note: 'Fine dining & lounge reservation',
+      );
+
+      // Card 2: Amazon Pay ICICI (Completely Unbacked: ₹8,500 owed, ₹0 locked, ₹8,500 unbacked)
+      await createCreditCardExpenseTransaction(
+        ccAccountId: iciciCcAccId,
+        categoryId: catEntertainment,
+        amount: 5200.0,
+        date: currentCycleDate(4, 16, 45).toIso8601String(),
+        note: 'Amazon online gadgets order',
+      );
+      await createCreditCardExpenseTransaction(
+        ccAccountId: iciciCcAccId,
+        categoryId: catEntertainment,
+        amount: 3300.0,
+        date: currentCycleDate(5, 11, 20).toIso8601String(),
+        note: 'Annual streaming cloud renewal',
       );
     } finally {
       _suppressNotifications = false;
