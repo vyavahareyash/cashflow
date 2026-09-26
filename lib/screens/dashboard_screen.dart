@@ -326,62 +326,96 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: AppSpacing.lg),
 
           // Formula Pills Row
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
-              borderRadius: AppBorderRadius.mediumBorder,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildFormulaPill(
-                  'Physical',
-                  AppFormatters.compactCurrency(
-                    _totalBalance,
-                    isPrivate: _isPrivate,
+          () {
+            final diff = _usableBalance - _totalBudgetLimit;
+            final isSurplus = diff >= 0;
+            final diffFormatted = AppFormatters.compactCurrency(
+              diff.abs(),
+              isPrivate: _isPrivate,
+            );
+            final diffAmount = _isPrivate
+                ? '••••'
+                : '${isSurplus ? '+' : '-'}$diffFormatted';
+
+            return Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: AppBorderRadius.mediumBorder,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildFormulaPill(
+                      'Physical',
+                      AppFormatters.compactCurrency(
+                        _totalBalance,
+                        isPrivate: _isPrivate,
+                      ),
+                      Colors.white,
+                      Icons.account_balance_rounded,
+                    ),
                   ),
-                  Colors.white,
-                  Icons.account_balance_rounded,
-                ),
-                const Text(
-                  '-',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                  const Text(
+                    '-',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
-                _buildFormulaPill(
-                  'Locked',
-                  AppFormatters.compactCurrency(
-                    _lockedAmount,
-                    isPrivate: _isPrivate,
+                  Expanded(
+                    child: _buildFormulaPill(
+                      'Locked',
+                      AppFormatters.compactCurrency(
+                        _lockedAmount,
+                        isPrivate: _isPrivate,
+                      ),
+                      const Color(0xFFFDE68A), // Light amber
+                      Icons.lock_clock_rounded,
+                    ),
                   ),
-                  const Color(0xFFFDE68A), // Light amber
-                  Icons.lock_clock_rounded,
-                ),
-                Container(
-                  height: 28,
-                  width: 1,
-                  color: Colors.white24,
-                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                ),
-                _buildFormulaPill(
-                  'Budget cap',
-                  AppFormatters.compactCurrency(
-                    _totalBudgetLimit,
-                    isPrivate: _isPrivate,
+                  Container(height: 28, width: 1, color: Colors.white24),
+                  Expanded(
+                    child: _buildFormulaPill(
+                      'Budget cap',
+                      AppFormatters.compactCurrency(
+                        _totalBudgetLimit,
+                        isPrivate: _isPrivate,
+                      ),
+                      const Color(0xFF93C5FD), // Light blue
+                      Icons.pie_chart_rounded,
+                    ),
                   ),
-                  const Color(0xFF93C5FD), // Light blue
-                  Icons.pie_chart_rounded,
-                ),
-              ],
-            ),
-          ),
+                  if (_totalBudgetLimit > 0) ...[
+                    Container(height: 28, width: 1, color: Colors.white24),
+                    Expanded(
+                      child: _buildFormulaPill(
+                        isSurplus ? 'Buffer' : 'Gap',
+                        diffAmount,
+                        isSurplus
+                            ? const Color(0xFF6EE7B7)
+                            : const Color(0xFFFCA5A5),
+                        isSurplus
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_down_rounded,
+                        tooltip: _isPrivate
+                            ? (isSurplus
+                                  ? 'Usable cash covers budget cap'
+                                  : 'Budget cap exceeds usable cash')
+                            : (isSurplus
+                                  ? 'Usable covers budget cap (+$diffFormatted buffer)'
+                                  : 'Budget cap exceeds usable (-$diffFormatted gap)'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }(),
         ],
       ),
     );
@@ -391,35 +425,50 @@ class _DashboardScreenState extends State<DashboardScreen>
     String label,
     String amount,
     Color color,
-    IconData icon,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: color.withValues(alpha: 0.8)),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              style: AppTypography.labelSmall.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 10,
+    IconData icon, {
+    String? tooltip,
+  }) {
+    final pill = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: color.withValues(alpha: 0.8)),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 10,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          amount,
-          style: AppTypography.labelMedium.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 2),
+          Text(
+            amount,
+            maxLines: 1,
+            style: AppTypography.labelMedium.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
+
+    if (tooltip != null) {
+      return Tooltip(
+        message: tooltip,
+        triggerMode: TooltipTriggerMode.tap,
+        child: pill,
+      );
+    }
+    return pill;
   }
 
   // --- QUICK ACTIONS BAR ---
