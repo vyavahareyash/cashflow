@@ -519,6 +519,122 @@ void main() {
       expect(drafts.first.amount, 20.0);
       expect(drafts.first.note, 'Gas');
     });
+
+    test('parseJsonOutput unwraps markdown fenced code blocks', () {
+      const fencedOutput = '''
+```json
+[
+  {
+    "amount": 42.50,
+    "type": "expense",
+    "account_id": 1,
+    "destination_account_id": null,
+    "category_id": 10,
+    "date": "2026-09-22",
+    "note": "Lunch"
+  }
+]
+```
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        fencedOutput,
+        anchorDate: anchor,
+        accounts: accounts,
+        categories: categories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.amount, 42.50);
+      expect(drafts.first.note, 'Lunch');
+    });
+
+    test('parseJsonOutput coerces string amounts and formatted numbers', () {
+      const stringAmountOutput = '''
+[
+  {
+    "amount": "150.00",
+    "type": "expense",
+    "account_id": 1,
+    "destination_account_id": null,
+    "category_id": 10,
+    "date": "2026-09-22",
+    "note": "Groceries"
+  },
+  {
+    "amount": "1,250.50",
+    "type": "expense",
+    "account_id": 1,
+    "destination_account_id": null,
+    "category_id": 10,
+    "date": "2026-09-22",
+    "note": "Bulk Purchase"
+  }
+]
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        stringAmountOutput,
+        anchorDate: anchor,
+        accounts: accounts,
+        categories: categories,
+      );
+
+      expect(drafts.length, 2);
+      expect(drafts[0].amount, 150.00);
+      expect(drafts[1].amount, 1250.50);
+    });
+
+    test('parseJsonOutput falls back to category name when note is empty or whitespace', () {
+      const emptyNoteOutput = '''
+[
+  {
+    "amount": 55.0,
+    "type": "expense",
+    "account_id": 1,
+    "destination_account_id": null,
+    "category_id": 10,
+    "date": "2026-09-22",
+    "note": "   "
+  }
+]
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        emptyNoteOutput,
+        anchorDate: anchor,
+        accounts: accounts,
+        categories: categories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.note, 'Groceries');
+    });
+
+    test('parseJsonOutput handles single JSON object instead of array', () {
+      const singleObjectOutput = '''
+{
+  "amount": 18.0,
+  "type": "expense",
+  "account_id": 1,
+  "destination_account_id": null,
+  "category_id": 10,
+  "date": "2026-09-22",
+  "note": "Snacks"
+}
+''';
+
+      final drafts = VoiceEntityParser.parseJsonOutput(
+        singleObjectOutput,
+        anchorDate: anchor,
+        accounts: accounts,
+        categories: categories,
+      );
+
+      expect(drafts.length, 1);
+      expect(drafts.first.amount, 18.0);
+      expect(drafts.first.note, 'Snacks');
+    });
   });
 
   group('SlmInferenceService and MockSlmEngine Lifecycle', () {
@@ -722,6 +838,134 @@ void main() {
 
       expect(drafts.length, 1);
       expect(drafts.first.note, 'Transfer: Checking → Savings');
+    });
+
+    test('Strips account info from draft notes and retains only product (spent 150 on bike from sbi)', () {
+      final accountsWithSbi = [
+        ...mockAccounts,
+        Account(id: 4, name: 'SBI', balance: 1000.0, type: 'Bank'),
+      ];
+      final categoriesWithBike = [
+        ...mockCategories,
+        Category(id: 13, name: 'Bike', monthlyBudget: 200.0, type: 'expense'),
+      ];
+
+      // 1. Transcription sample parsing
+      final draftsSample = VoiceEntityParser.parseTranscriptionSample(
+        'spent 150 on bike from sbi',
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: categoriesWithBike,
+      );
+      expect(draftsSample.length, 1);
+      expect(draftsSample.first.amount, 150.0);
+      expect(draftsSample.first.accountId, 4);
+      expect(draftsSample.first.categoryId, 13);
+      expect(draftsSample.first.note, 'Bike');
+
+      // 2. SLM output where note contains "bike from sbi"
+      const slmOutputWithAccountInNote = '''
+[
+  {
+    "amount": 150.0,
+    "type": "expense",
+    "account_id": 4,
+    "destination_account_id": null,
+    "category_id": 13,
+    "date": "2026-09-22",
+    "note": "bike from sbi"
+  }
+]
+''';
+      final draftsSlm = VoiceEntityParser.parseJsonOutput(
+        slmOutputWithAccountInNote,
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: categoriesWithBike,
+      );
+      expect(draftsSlm.length, 1);
+      expect(draftsSlm.first.amount, 150.0);
+      expect(draftsSlm.first.accountId, 4);
+      expect(draftsSlm.first.categoryId, 13);
+      expect(draftsSlm.first.note, 'Bike');
+    });
+
+    test('Isolates product note across various connector prepositions (using, via upi)', () {
+      final accountsWithSbi = [
+        ...mockAccounts,
+        Account(id: 4, name: 'SBI', balance: 1000.0, type: 'Bank'),
+      ];
+
+      // 1. "using [Account]"
+      final draftUsing = VoiceEntityParser.parseTranscriptionSample(
+        'paid 200 for groceries using Checking',
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: mockCategories,
+      );
+      expect(draftUsing.length, 1);
+      expect(draftUsing.first.amount, 200.0);
+      expect(draftUsing.first.accountId, 1); // Checking
+      expect(draftUsing.first.note, 'Groceries');
+
+      // 2. "via upi from [Account]"
+      final draftUpi = VoiceEntityParser.parseTranscriptionSample(
+        '300 for dinner via upi from SBI',
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: mockCategories,
+      );
+      expect(draftUpi.length, 1);
+      expect(draftUpi.first.amount, 300.0);
+      expect(draftUpi.first.accountId, 4); // SBI
+      expect(draftUpi.first.note, 'Dinner');
+    });
+
+    test('Preserves legitimate merchant in "from [Merchant]" while stripping payment account', () {
+      final accountsWithSbi = [
+        ...mockAccounts,
+        Account(id: 4, name: 'SBI', balance: 1000.0, type: 'Bank'),
+      ];
+
+      final draft = VoiceEntityParser.parseTranscriptionSample(
+        'bought jacket for 120 from Zara on SBI',
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: mockCategories,
+      );
+      expect(draft.length, 1);
+      expect(draft.first.amount, 120.0);
+      expect(draft.first.accountId, 4); // SBI
+      expect(draft.first.note, 'Jacket from Zara');
+    });
+
+    test('Handles rupee currency symbols and leading dot decimals', () {
+      final accountsWithSbi = [
+        ...mockAccounts,
+        Account(id: 4, name: 'SBI', balance: 1000.0, type: 'Bank'),
+      ];
+
+      // Rupee symbol ₹
+      final draftRupee = VoiceEntityParser.parseTranscriptionSample(
+        'spent ₹150.50 on medicine',
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: mockCategories,
+      );
+      expect(draftRupee.length, 1);
+      expect(draftRupee.first.amount, 150.50);
+      expect(draftRupee.first.note, 'Medicine');
+
+      // Leading dot decimal (.75)
+      final draftDecimal = VoiceEntityParser.parseTranscriptionSample(
+        'spent .75 on candy on Checking',
+        anchorDate: anchorDate,
+        accounts: accountsWithSbi,
+        categories: mockCategories,
+      );
+      expect(draftDecimal.length, 1);
+      expect(draftDecimal.first.amount, 0.75);
+      expect(draftDecimal.first.note, 'Candy');
     });
   });
 
