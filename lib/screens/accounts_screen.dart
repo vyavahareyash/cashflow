@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -39,6 +40,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Map<int, List<LockedAllocation>> _accountLocks = {};
   double _totalPhysical = 0.0;
   double _totalCreditOutstanding = 0.0;
+  double _totalCreditBacked = 0.0;
+  double _totalCreditUnbacked = 0.0;
   double _totalLocked = 0.0;
   bool _isLoading = true;
   final Set<int> _expandedAccountIds = {};
@@ -102,12 +105,16 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
     double physicalTotal = 0.0;
     double ccTotal = 0.0;
+    double ccBackedTotal = 0.0;
     double lockedTotal = 0.0;
     final Map<int, List<LockedAllocation>> locksMap = {};
 
     for (var acc in data) {
       if (acc.isCreditCard) {
         ccTotal += acc.balance;
+        final cc = ccMap[acc.id];
+        final cardLocked = cc?.id != null ? (ccLocks[cc!.id!] ?? 0.0) : 0.0;
+        ccBackedTotal += math.min(acc.balance, cardLocked);
       } else {
         physicalTotal += acc.balance;
       }
@@ -120,6 +127,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
       }
     }
 
+    final double ccUnbackedTotal = math.max(0.0, ccTotal - ccBackedTotal);
+
     if (mounted) {
       setState(() {
         _accounts = data;
@@ -128,6 +137,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
         _accountLocks = locksMap;
         _totalPhysical = physicalTotal;
         _totalCreditOutstanding = ccTotal;
+        _totalCreditBacked = ccBackedTotal;
+        _totalCreditUnbacked = ccUnbackedTotal;
         _totalLocked = lockedTotal;
         _isLoading = false;
       });
@@ -987,6 +998,93 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.xs),
+            // Ratio / Split Progress Bar
+            ClipRRect(
+              borderRadius: AppBorderRadius.pillBorder,
+              child: SizedBox(
+                height: 6,
+                child: Row(
+                  children: [
+                    if (_totalCreditBacked > 0)
+                      Expanded(
+                        flex: (_totalCreditBacked * 1000).toInt(),
+                        child: Container(color: AppColors.emerald600),
+                      ),
+                    if (_totalCreditUnbacked > 0)
+                      Expanded(
+                        flex: (_totalCreditUnbacked * 1000).toInt(),
+                        child: Container(
+                          color: isDark
+                              ? AppColors.warning.withValues(alpha: 0.85)
+                              : AppColors.warning,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            // Backed & Unbacked Breakdown
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Backed
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.lock_rounded,
+                      size: 13,
+                      color: AppColors.emerald600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Backed: ${AppFormatters.currency(_totalCreditBacked)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.emerald600,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      ' (${((_totalCreditBacked / _totalCreditOutstanding) * 100).round()}%)',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+                // Unbacked
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_open_rounded,
+                      size: 13,
+                      color: _totalCreditUnbacked > 0
+                          ? AppColors.warning
+                          : (isDark ? AppColors.gray500 : AppColors.gray400),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Unbacked: ${AppFormatters.currency(_totalCreditUnbacked)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: _totalCreditUnbacked > 0
+                            ? AppColors.warning
+                            : (isDark ? AppColors.gray400 : AppColors.gray600),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      ' (${((_totalCreditUnbacked / _totalCreditOutstanding) * 100).round()}%)',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -1656,7 +1754,7 @@ class CreditCardAccountCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          '${AppFormatters.currency(lockedAmount)} Locked (${((lockedAmount / outstanding) * 100).toInt()}% Backed)',
+                          '${AppFormatters.currency(lockedAmount)} Locked • ${AppFormatters.currency(math.max(0.0, outstanding - lockedAmount))} Unbacked (${((lockedAmount / outstanding) * 100).toInt()}% Backed)',
                           style: AppTypography.labelSmall.copyWith(
                             color: AppColors.warning,
                             fontWeight: FontWeight.bold,
@@ -1688,6 +1786,14 @@ class CreditCardAccountCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'Unbacked',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '(${AppFormatters.currency(outstanding)})',
                         style: AppTypography.labelSmall.copyWith(
                           color: isDark ? AppColors.gray400 : AppColors.gray600,
                         ),

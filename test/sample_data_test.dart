@@ -142,13 +142,37 @@ void main() {
 
       // 6. Accounts & Usable Balance Integrity
       final accounts = await db.readAllAccounts();
-      expect(accounts.length, 3);
-      final totalPhysical = accounts.fold<double>(
+      final physicalAccounts = accounts.where((a) => !a.isCreditCard).toList();
+      final creditAccounts = accounts.where((a) => a.isCreditCard).toList();
+      expect(physicalAccounts.length, 3);
+      expect(creditAccounts.length, 2);
+      expect(accounts.length, 5);
+
+      final totalPhysical = physicalAccounts.fold<double>(
         0.0,
         (sum, a) => sum + a.balance,
       );
       final totalLocked = await db.getTotalLockedAmount();
       expect(totalPhysical, greaterThan(totalLocked));
+
+      // 7. Credit Card Liabilities & Reserves Integrity
+      final creditCards = await db.readAllCreditCards();
+      expect(creditCards.length, 2);
+
+      final totalCcOutstanding = await db.getTotalCreditCardOutstanding();
+      expect(totalCcOutstanding, 27000.0); // 18,500 (Regalia) + 8,500 (ICICI)
+
+      final totalCcLocked = await db.getTotalCreditCardLockedAmount();
+      expect(
+        totalCcLocked,
+        12000.0,
+      ); // 12,000 locked for Regalia in HDFC Salary
+
+      final totalCcUnbacked = totalCcOutstanding - totalCcLocked;
+      expect(
+        totalCcUnbacked,
+        15000.0,
+      ); // 6,500 unbacked on Regalia + 8,500 on ICICI
     },
   );
 }
