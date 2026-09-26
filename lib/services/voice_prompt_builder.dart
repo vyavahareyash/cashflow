@@ -93,17 +93,20 @@ Extraction Instructions:
 5. "category_id": Integer ID of the matching user category if type is "expense" or "income", otherwise null.
 6. "date": ISO date "YYYY-MM-DD". Calculate relative dates ("yesterday", "last Friday", "today") deterministically using the calendar anchor.
 7. "note": Concise 1-4 word contextual label specifying the exact product, service, merchant, or income source:
-   - For expenses: ALWAYS include the specific product name, service name, or merchant purchased (e.g., "Starbucks Coffee", "Milk", "Uber Ride", "Netflix Subscription", "iPhone Charger"). If the user specifies an item or merchant, put that exact product/service name in the note.
+   - For expenses: ALWAYS include the specific product name, service name, or merchant purchased (e.g., "Starbucks Coffee", "Milk", "Bike", "Uber Ride", "Netflix Subscription", "iPhone Charger"). Extract ONLY the product/service name, NEVER account info. If the user specifies an item or merchant, put that exact product/service name in the note.
    - For incomes: Specific source or service (e.g., "$incomeCatExample", "Salary", "Freelance Design", "Cashback", "Tax Refund").
    - For transfers: "Transfer: [Source Account] -> [Destination Account]" (e.g., "Transfer: $sampleSourceAcc -> $sampleDestAcc").
-   - CRITICAL: "note" must NEVER be the raw voice transcript or full sentence. Do NOT include amounts, currency words, dates, or payment account names in "note".
+   - CRITICAL: "note" must NEVER be the raw voice transcript or full sentence. Do NOT include amounts, currency words, dates, prepositions like "from [Account]" or "with [Account]", or payment account names in "note".
+     Example: "spent 150 on bike from $sampleSourceAcc" -> "note" MUST be "Bike" (NEVER "Bike from $sampleSourceAcc").
 
-Multi-Transaction Rules:
-- If user dictates multiple transactions in a monologue, emit a separate JSON object for each transaction.
+Examples & Multi-Transaction Rules:
+- Example: "Spent 150 on bike from $sampleSourceAcc"
+  -> note must be "Bike" (product only, never include account info like "$sampleSourceAcc" in note).
 - Example: "Spent 5 on coffee with $sampleSourceAcc and 45 for groceries on $sampleSourceAcc yesterday"
   -> notes must be specific product/service ("Coffee", "Groceries").
 - Example: "Moved 200 from $sampleSourceAcc to $sampleDestAcc and received 3000 $incomeCatExample into $sampleSourceAcc"
   -> notes must be "Transfer: $sampleSourceAcc -> $sampleDestAcc" and "$incomeCatExample".
+- If user dictates multiple transactions in a monologue, emit a separate JSON object for each transaction.
 
 Output MUST strictly be a JSON array conforming to the grammar without any Markdown formatting or commentary.
 <|im_end|>

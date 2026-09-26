@@ -343,11 +343,17 @@ class VoiceEntityParser {
       accounts,
       primaryAccountId,
     );
-    final trimmed = jsonString.trim();
+    var cleanJson = jsonString.trim();
+    if (cleanJson.startsWith('```')) {
+      cleanJson = cleanJson
+          .replaceAll(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s*```$'), '')
+          .trim();
+    }
 
     List<dynamic> list;
     try {
-      final decoded = jsonDecode(trimmed);
+      final decoded = jsonDecode(cleanJson);
       if (decoded is List) {
         list = decoded;
       } else if (decoded is Map<String, dynamic>) {
@@ -357,7 +363,7 @@ class VoiceEntityParser {
       }
     } catch (_) {
       // If direct jsonDecode fails, try extracting array via regex
-      final match = RegExp(r'\[[\s\S]*\]').firstMatch(trimmed);
+      final match = RegExp(r'\[[\s\S]*\]').firstMatch(cleanJson);
       if (match != null) {
         try {
           list = jsonDecode(match.group(0)!) as List;
@@ -375,7 +381,13 @@ class VoiceEntityParser {
       if (raw is! Map) continue;
       final map = Map<String, dynamic>.from(raw);
 
-      final double amount = (map['amount'] as num?)?.toDouble() ?? 0.0;
+      double amount = 0.0;
+      final rawAmount = map['amount'];
+      if (rawAmount is num) {
+        amount = rawAmount.toDouble();
+      } else if (rawAmount is String) {
+        amount = double.tryParse(rawAmount.replaceAll(',', '').trim()) ?? 0.0;
+      }
       String type = (map['type'] as String?)?.toLowerCase() ?? 'expense';
       final String rawNote = (map['note'] as String?)?.trim() ?? '';
 
@@ -448,13 +460,20 @@ class VoiceEntityParser {
           ? categories.where((c) => c.id == categoryId).firstOrNull
           : null;
 
-      final note = isContaminatedNote(rawNote)
+      final note =
+          isContaminatedNote(
+            rawNote,
+            sourceAccount: sourceAcc,
+            destinationAccount: destAcc,
+            accounts: accounts,
+          )
           ? generateContextualNote(
               rawText: rawNote,
               type: type,
               sourceAccount: sourceAcc,
               destinationAccount: destAcc,
               category: cat,
+              accounts: accounts,
             )
           : rawNote;
 
@@ -545,7 +564,7 @@ class VoiceEntityParser {
 
     // 1. Extract Amount
     final amountMatch = RegExp(
-      r'(?:\$|\b)\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars?|bucks?|usd|\$|\b)',
+      r'(?:\$|₹|rs\.?|inr|\b)\s*(\d+(?:\.\d{1,2})?|\.\d{1,2})\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|₹|\b)',
       caseSensitive: false,
     ).firstMatch(lower);
 
@@ -554,7 +573,8 @@ class VoiceEntityParser {
       amount = double.tryParse(amountMatch.group(1)!);
     } else {
       // General number match
-      final numMatch = RegExp(r'\b(\d+(?:\.\d{1,2})?)\b').firstMatch(lower);
+      final numMatch = RegExp(r'\b(\d+(?:\.\d{1,2})?|\.\d{1,2})\b')
+          .firstMatch(lower);
       if (numMatch != null) {
         amount = double.tryParse(numMatch.group(1)!);
       }
@@ -690,6 +710,7 @@ class VoiceEntityParser {
       sourceAccount: matchedSourceAcc,
       destinationAccount: matchedDestAcc,
       category: matchedCatFinal,
+      accounts: accounts,
     );
 
     return DraftTransaction(
@@ -708,8 +729,13 @@ class VoiceEntityParser {
   }
 
   /// Evaluates whether an extracted note contains raw sentence fragments,
-  /// full transcription phrases, dates, amounts, or conversational filler.
-  static bool isContaminatedNote(String note) {
+  /// full transcription phrases, dates, amounts, account references, or conversational filler.
+  static bool isContaminatedNote(
+    String note, {
+    Account? sourceAccount,
+    Account? destinationAccount,
+    List<Account>? accounts,
+  }) {
     final lower = note.trim().toLowerCase();
     if (lower.isEmpty) return true;
 
@@ -733,11 +759,24 @@ class VoiceEntityParser {
       return true;
     }
 
-    // Contains conversational account connector phrases (e.g., "with chase", "on my card", "from checking to savings")
+    // Contains conversational account connector phrases (e.g., "with chase", "from sbi", "on my card", "from checking to savings")
     if (RegExp(
-      r'\b(?:on\s+my\s+card|using\s+(?:my\s+)?card|from\s+.+?\s+to\s+)\b',
+      r'\b(?:on\s+my\s+card|using\s+(?:my\s+)?card|from\s+.+?\s+to\s+|from\s+[a-z0-9]+|with\s+[a-z0-9]+|via\s+[a-z0-9]+|using\s+[a-z0-9]+)\b',
     ).hasMatch(lower)) {
       return true;
+    }
+
+    // Contains account names or keywords
+    final allAccounts = <Account>{
+      ?sourceAccount,
+      ?destinationAccount,
+      ...?accounts,
+    };
+    for (final acc in allAccounts) {
+      final name = acc.name.trim().toLowerCase();
+      if (name.length >= 2 && lower.contains(name)) {
+        return true;
+      }
     }
 
     // Too long to be a clean note title (> 5 words)
@@ -763,6 +802,8 @@ class VoiceEntityParser {
       'on',
       'to',
       'with',
+      'from',
+      'by',
       'a',
       'an',
       'the',
@@ -790,6 +831,7 @@ class VoiceEntityParser {
     Account? sourceAccount,
     Account? destinationAccount,
     Category? category,
+    List<Account>? accounts,
   }) {
     // 1. Transfers: Standardize from account context
     if (type == 'transfer') {
@@ -806,16 +848,26 @@ class VoiceEntityParser {
     // 2. Strip transaction metadata already captured in structured fields
     String cleaned = rawText;
 
-    // Currency symbols and units
+    // Currency symbols, amounts, and amount prepositions (e.g., "for 120", "worth 50")
     cleaned = cleaned.replaceAll(
       RegExp(
-        r'(?:\$|\b)\s*\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|\b)',
+        r'\b(?:for|of|worth)\s+(?:\$|₹|rs\.?|inr)?\s*(?:\d+(?:\.\d{1,2})?|\.\d{1,2})\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|₹|\b)',
+        caseSensitive: false,
+      ),
+      ' ',
+    );
+    cleaned = cleaned.replaceAll(
+      RegExp(
+        r'(?:\$|₹|rs\.?|inr|\b)\s*(?:\d+(?:\.\d{1,2})?|\.\d{1,2})\s*(?:dollars?|bucks?|rupees?|rs\.?|inr|cents?|usd|\$|₹|\b)',
         caseSensitive: false,
       ),
       ' ',
     );
     // Standalone numbers
-    cleaned = cleaned.replaceAll(RegExp(r'\b\d+(?:\.\d{1,2})?\b'), ' ');
+    cleaned = cleaned.replaceAll(
+      RegExp(r'\b(?:\d+(?:\.\d{1,2})?|\.\d{1,2})\b'),
+      ' ',
+    );
 
     // Relative dates and weekday references
     cleaned = cleaned.replaceAll(
@@ -826,34 +878,46 @@ class VoiceEntityParser {
       ' ',
     );
 
-    // Source account name & keywords
-    if (sourceAccount != null) {
+    // Source & destination account names & keywords
+    final allAccounts = <Account>{
+      ?sourceAccount,
+      ?destinationAccount,
+      ...?accounts,
+    };
+
+    for (final acc in allAccounts) {
       cleaned = cleaned.replaceAll(
         RegExp(
           r'\b(?:on|using|with|via|from|to|into)\s+' +
-              RegExp.escape(sourceAccount.name) +
+              RegExp.escape(acc.name) +
               r'\b',
           caseSensitive: false,
         ),
         ' ',
       );
-      for (final word in sourceAccount.name.split(RegExp(r'\s+'))) {
-        if (word.length >= 3) {
+      for (final word in acc.name.split(RegExp(r'\s+'))) {
+        if (word.length >= 2) {
           cleaned = cleaned.replaceAll(
             RegExp(
-              r'\b(?:on|using|with|via)\s+' + RegExp.escape(word) + r'\b',
+              r'\b(?:on|using|with|via|from|to|into)\s+' +
+                  RegExp.escape(word) +
+                  r'\b',
               caseSensitive: false,
             ),
             ' ',
           );
         }
       }
+      cleaned = cleaned.replaceAll(
+        RegExp(r'\b' + RegExp.escape(acc.name) + r'\b', caseSensitive: false),
+        ' ',
+      );
     }
 
     // Generic payment phrases
     cleaned = cleaned.replaceAll(
       RegExp(
-        r'\b(?:on\s+my\s+card|using\s+card|on\s+card|with\s+card|on\s+credit|with\s+debit|using\s+debit|using\s+upi|on\s+upi|in\s+cash|with\s+cash)\b',
+        r'\b(?:on\s+my\s+card|using\s+card|on\s+card|with\s+card|on\s+credit|with\s+debit|using\s+debit|using\s+upi|on\s+upi|via\s+upi|in\s+cash|with\s+cash)\b',
         caseSensitive: false,
       ),
       ' ',
