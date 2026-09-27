@@ -9,6 +9,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
+import '../components/choice_picker_field.dart';
 
 class BudgetScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -148,48 +149,21 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (!isEditing) ...[
-                          Text(
-                            'Category Type',
-                            style: AppTypography.labelMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.gray300
-                                  : AppColors.gray700,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          DropdownButtonFormField<String>(
+                          AppChoicePickerField<String>(
+                            label: 'Category Type',
                             initialValue: type,
-                            isExpanded: true,
-                            dropdownColor: isDark
-                                ? AppColors.darkSurfaceElevated
-                                : AppColors.white,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: isDark
-                                  ? AppColors.darkSurface
-                                  : AppColors.gray50,
-                              border: OutlineInputBorder(
-                                borderRadius: AppBorderRadius.mediumBorder,
-                                borderSide: BorderSide(
-                                  color: isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray300,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.md,
-                              ),
-                            ),
                             items: const [
-                              DropdownMenuItem(
+                              AppChoiceItem(
                                 value: 'expense',
-                                child: Text('Expense Category'),
+                                label: 'Expense Category',
+                                icon: Icons.arrow_upward_rounded,
+                                iconColor: AppColors.danger,
                               ),
-                              DropdownMenuItem(
+                              AppChoiceItem(
                                 value: 'income',
-                                child: Text('Income Category'),
+                                label: 'Income Category',
+                                icon: Icons.arrow_downward_rounded,
+                                iconColor: AppColors.emerald500,
                               ),
                             ],
                             onChanged: (val) {

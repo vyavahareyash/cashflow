@@ -5,6 +5,7 @@ import '../models/credit_card_model.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import 'app_dialogs.dart';
+import 'choice_picker_field.dart';
 
 // ignore_for_file: deprecated_member_use
 
@@ -400,58 +401,18 @@ class _PayCcBillModalState extends State<PayCcBillModal> {
             const SizedBox(height: AppSpacing.md),
 
             // Pay From Account Selector
-            Text(
-              'Pay From Bank Account',
-              style: AppTypography.labelMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.gray300 : AppColors.gray700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            DropdownButtonFormField<int>(
+            AppChoicePickerField<int>(
+              label: 'Pay From Bank Account',
+              sheetTitle: 'Select Bank Account',
               initialValue: _selectedBankAccountId,
-              isExpanded: true,
-              dropdownColor: isDark
-                  ? AppColors.darkSurfaceElevated
-                  : AppColors.white,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
-                border: OutlineInputBorder(
-                  borderRadius: AppBorderRadius.mediumBorder,
-                  borderSide: BorderSide(
-                    color: isDark ? AppColors.darkBorder : AppColors.gray300,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
-                ),
-              ),
               items: widget.bankAccounts
                   .map(
-                    (acc) => DropdownMenuItem(
-                      value: acc.id,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              acc.name,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            AppFormatters.currency(acc.balance),
-                            style: AppTypography.labelSmall.copyWith(
-                              color: isDark
-                                  ? AppColors.gray400
-                                  : AppColors.gray500,
-                            ),
-                          ),
-                        ],
-                      ),
+                    (acc) => AppChoiceItem<int>(
+                      value: acc.id!,
+                      label: acc.name,
+                      subtitle: AppFormatters.currency(acc.balance),
+                      icon: Icons.account_balance_wallet_rounded,
+                      iconColor: AppColors.emerald600,
                     ),
                   )
                   .toList(),

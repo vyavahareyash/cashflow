@@ -15,6 +15,7 @@ import '../components/pay_cc_bill_modal.dart';
 import '../components/lock_cc_funds_modal.dart';
 import '../components/unlock_cc_funds_modal.dart';
 import '../components/app_dialogs.dart';
+import '../components/choice_picker_field.dart';
 import '../components/walkthrough/walkthrough_keys.dart';
 import 'budget_screen.dart';
 import 'goals_screen.dart';
@@ -206,55 +207,36 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Account Type',
-                              style: AppTypography.labelMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.gray300
-                                    : AppColors.gray700,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            DropdownButtonFormField<String>(
+                            AppChoicePickerField<String>(
+                              label: 'Account Type',
                               initialValue: selectedType,
-                              isExpanded: true,
-                              dropdownColor: isDark
-                                  ? AppColors.darkSurfaceElevated
-                                  : AppColors.white,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: isDark
-                                    ? AppColors.darkSurface
-                                    : AppColors.gray50,
-                                border: OutlineInputBorder(
-                                  borderRadius: AppBorderRadius.mediumBorder,
-                                  borderSide: BorderSide(
-                                    color: isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.gray300,
-                                  ),
+                              items: const [
+                                AppChoiceItem(
+                                  value: 'Bank',
+                                  label: 'Bank',
+                                  icon: Icons.account_balance_rounded,
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.lg,
-                                  vertical: AppSpacing.md,
+                                AppChoiceItem(
+                                  value: 'Cash',
+                                  label: 'Cash',
+                                  icon: Icons.payments_rounded,
                                 ),
-                              ),
-                              items:
-                                  [
-                                        'Bank',
-                                        'Cash',
-                                        'Savings',
-                                        'Wallet',
-                                        'Credit Card',
-                                      ]
-                                      .map(
-                                        (type) => DropdownMenuItem(
-                                          value: type,
-                                          child: Text(type),
-                                        ),
-                                      )
-                                      .toList(),
+                                AppChoiceItem(
+                                  value: 'Savings',
+                                  label: 'Savings',
+                                  icon: Icons.savings_rounded,
+                                ),
+                                AppChoiceItem(
+                                  value: 'Wallet',
+                                  label: 'Wallet',
+                                  icon: Icons.account_balance_wallet_rounded,
+                                ),
+                                AppChoiceItem(
+                                  value: 'Credit Card',
+                                  label: 'Credit Card',
+                                  icon: Icons.credit_card_rounded,
+                                ),
+                              ],
                               onChanged: (val) {
                                 if (val != null) {
                                   setStateDialog(() => selectedType = val);
@@ -342,46 +324,17 @@ class _AccountsScreenState extends State<AccountsScreen> {
                             ],
                           ),
                           if (bankAccounts.isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              'Default Account to Lock Funds',
-                              style: AppTypography.labelMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.gray300
-                                    : AppColors.gray700,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            DropdownButtonFormField<int>(
+                            AppChoicePickerField<int>(
+                              label: 'Default Account to Lock Funds',
                               initialValue: defaultLockAccountId,
-                              isExpanded: true,
-                              dropdownColor: isDark
-                                  ? AppColors.darkSurfaceElevated
-                                  : AppColors.white,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: isDark
-                                    ? AppColors.darkSurface
-                                    : AppColors.gray50,
-                                border: OutlineInputBorder(
-                                  borderRadius: AppBorderRadius.mediumBorder,
-                                  borderSide: BorderSide(
-                                    color: isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.gray300,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.lg,
-                                  vertical: AppSpacing.md,
-                                ),
-                              ),
                               items: bankAccounts
                                   .map(
-                                    (a) => DropdownMenuItem(
-                                      value: a.id,
-                                      child: Text(a.name),
+                                    (a) => AppChoiceItem<int>(
+                                      value: a.id!,
+                                      label: a.name,
+                                      subtitle:
+                                          'Balance: ${AppFormatters.currency(a.balance)}',
+                                      icon: Icons.account_balance_rounded,
                                     ),
                                   )
                                   .toList(),
@@ -2056,29 +2009,36 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
               ),
               const SizedBox(height: AppSpacing.md),
               if (!isCC)
-                DropdownButtonFormField<String>(
+                AppChoicePickerField<String>(
+                  label: 'Account Type',
                   initialValue: _selectedType,
-                  isExpanded: true,
-                  dropdownColor: isDark
-                      ? AppColors.darkSurfaceElevated
-                      : AppColors.white,
-                  decoration: InputDecoration(
-                    labelText: 'Account Type',
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.darkSurface
-                        : AppColors.gray50,
-                    border: const OutlineInputBorder(
-                      borderRadius: AppBorderRadius.mediumBorder,
+                  items: const [
+                    AppChoiceItem(
+                      value: 'Bank',
+                      label: 'Bank',
+                      icon: Icons.account_balance_rounded,
                     ),
-                  ),
-                  items: ['Bank', 'Cash', 'Savings', 'Wallet']
-                      .map(
-                        (type) =>
-                            DropdownMenuItem(value: type, child: Text(type)),
-                      )
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedType = val!),
+                    AppChoiceItem(
+                      value: 'Cash',
+                      label: 'Cash',
+                      icon: Icons.payments_rounded,
+                    ),
+                    AppChoiceItem(
+                      value: 'Savings',
+                      label: 'Savings',
+                      icon: Icons.savings_rounded,
+                    ),
+                    AppChoiceItem(
+                      value: 'Wallet',
+                      label: 'Wallet',
+                      icon: Icons.account_balance_wallet_rounded,
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _selectedType = val);
+                    }
+                  },
                 )
               else ...[
                 CustomInputField(
@@ -2135,43 +2095,17 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                 ),
                 if (bankAccounts.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Default Account to Lock Funds',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: isDark ? AppColors.gray300 : AppColors.gray700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  DropdownButtonFormField<int>(
+                  AppChoicePickerField<int>(
+                    label: 'Default Account to Lock Funds',
                     initialValue: _defaultLockAccountId,
-                    isExpanded: true,
-                    dropdownColor: isDark
-                        ? AppColors.darkSurfaceElevated
-                        : AppColors.white,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurface
-                          : AppColors.gray50,
-                      border: OutlineInputBorder(
-                        borderRadius: AppBorderRadius.mediumBorder,
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : AppColors.gray300,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.md,
-                      ),
-                    ),
                     items: bankAccounts
                         .map(
-                          (a) => DropdownMenuItem(
-                            value: a.id,
-                            child: Text(a.name),
+                          (a) => AppChoiceItem<int>(
+                            value: a.id!,
+                            label: a.name,
+                            subtitle:
+                                'Balance: ${AppFormatters.currency(a.balance)}',
+                            icon: Icons.account_balance_rounded,
                           ),
                         )
                         .toList(),
@@ -2340,40 +2274,15 @@ class _TransferFundsModalState extends State<TransferFundsModal> {
               prefixIcon: Icons.swap_horiz_rounded,
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              'Destination Account',
-              style: AppTypography.labelMedium.copyWith(
-                color: isDark ? AppColors.gray300 : AppColors.gray700,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            DropdownButtonFormField<int>(
+            AppChoicePickerField<int>(
+              label: 'Destination Account',
               initialValue: _destinationAccountId,
-              isExpanded: true,
-              dropdownColor: isDark
-                  ? AppColors.darkSurfaceElevated
-                  : AppColors.white,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
-                border: OutlineInputBorder(
-                  borderRadius: AppBorderRadius.mediumBorder,
-                  borderSide: BorderSide(
-                    color: isDark ? AppColors.darkBorder : AppColors.gray300,
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
-                ),
-              ),
               items: widget.destinationAccounts.map((acc) {
-                return DropdownMenuItem<int>(
-                  value: acc.id,
-                  child: Text(
-                    '${acc.name} (${AppFormatters.currency(acc.balance)})',
-                  ),
+                return AppChoiceItem<int>(
+                  value: acc.id!,
+                  label: acc.name,
+                  subtitle: AppFormatters.currency(acc.balance),
+                  icon: Icons.account_balance_rounded,
                 );
               }).toList(),
               onChanged: (val) {

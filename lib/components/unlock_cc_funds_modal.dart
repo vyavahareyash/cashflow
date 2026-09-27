@@ -7,6 +7,7 @@ import '../models/credit_card_model.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import 'app_dialogs.dart';
+import 'choice_picker_field.dart';
 import 'custom_input.dart';
 
 class UnlockCcFundsModal extends StatefulWidget {
@@ -468,63 +469,20 @@ class _UnlockCcFundsModalState extends State<UnlockCcFundsModal> {
 
               if (!_unlockAllAccounts) ...[
                 if (hasMultipleAccounts) ...[
-                  Text(
-                    'Unlock From Account',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: isDark ? AppColors.gray300 : AppColors.gray700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  DropdownButtonFormField<int>(
+                  AppChoicePickerField<int>(
+                    label: 'Unlock From Account',
+                    sheetTitle: 'Select Account to Unlock From',
                     initialValue: _selectedAccountId,
-                    isExpanded: true,
-                    dropdownColor: isDark
-                        ? AppColors.darkSurfaceElevated
-                        : AppColors.white,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurface
-                          : AppColors.gray50,
-                      border: OutlineInputBorder(
-                        borderRadius: AppBorderRadius.mediumBorder,
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.darkBorder
-                              : AppColors.gray300,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.md,
-                      ),
-                    ),
                     items: _contributions.map((c) {
                       final accId = (c['account_id'] as num).toInt();
                       final accName = c['account_name'] as String;
                       final amt = (c['amount'] as num).toDouble();
-                      return DropdownMenuItem<int>(
+                      return AppChoiceItem<int>(
                         value: accId,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                accName,
-                                style: AppTypography.bodyMedium,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              'Locked: ${AppFormatters.currency(amt)}',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+                        label: accName,
+                        subtitle: 'Locked: ${AppFormatters.currency(amt)}',
+                        icon: Icons.account_balance_wallet_rounded,
+                        iconColor: AppColors.emerald600,
                       );
                     }).toList(),
                     onChanged: (val) {

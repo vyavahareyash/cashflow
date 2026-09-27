@@ -8,6 +8,7 @@ import '../models/credit_card_model.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import 'app_dialogs.dart';
+import 'choice_picker_field.dart';
 import 'custom_input.dart';
 
 class LockCcFundsModal extends StatefulWidget {
@@ -388,15 +389,15 @@ class _LockCcFundsModalState extends State<LockCcFundsModal> {
             const SizedBox(height: AppSpacing.md),
 
             // Bank Account Dropdown
-            Text(
-              'Lock From Bank Account',
-              style: AppTypography.labelMedium.copyWith(
-                color: isDark ? AppColors.gray300 : AppColors.gray700,
-                fontWeight: FontWeight.w600,
+            if (widget.bankAccounts.isEmpty) ...[
+              Text(
+                'Lock From Bank Account',
+                style: AppTypography.labelMedium.copyWith(
+                  color: isDark ? AppColors.gray300 : AppColors.gray700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            if (widget.bankAccounts.isEmpty)
+              const SizedBox(height: AppSpacing.xs),
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -421,62 +422,27 @@ class _LockCcFundsModalState extends State<LockCcFundsModal> {
                     ),
                   ],
                 ),
-              )
-            else
-              DropdownButtonFormField<int>(
+              ),
+            ] else
+              AppChoicePickerField<int>(
+                label: 'Lock From Bank Account',
+                sheetTitle: 'Select Bank Account',
                 initialValue: _selectedBankAccountId,
-                isExpanded: true,
-                dropdownColor: isDark
-                    ? AppColors.darkSurfaceElevated
-                    : AppColors.white,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: isDark ? AppColors.darkSurface : AppColors.gray50,
-                  border: OutlineInputBorder(
-                    borderRadius: AppBorderRadius.mediumBorder,
-                    borderSide: BorderSide(
-                      color: isDark ? AppColors.darkBorder : AppColors.gray300,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                ),
                 items: widget.bankAccounts.map((acc) {
                   final available = _availableToLockMap[acc.id] ?? 0.0;
-                  return DropdownMenuItem<int>(
-                    value: acc.id,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            acc.name,
-                            style: AppTypography.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          _loadingBalances
-                              ? '...'
-                              : 'Avail: ${AppFormatters.currency(available)}',
-                          style: AppTypography.labelSmall.copyWith(
-                            color: available > 0
-                                ? AppColors.emerald600
-                                : (isDark
-                                      ? AppColors.gray400
-                                      : AppColors.gray600),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                  final availText = _loadingBalances
+                      ? '...'
+                      : 'Avail: ${AppFormatters.currency(available)}';
+                  return AppChoiceItem<int>(
+                    value: acc.id!,
+                    label: acc.name,
+                    subtitle: availText,
+                    icon: Icons.account_balance_wallet_rounded,
+                    iconColor: AppColors.emerald600,
                   );
                 }).toList(),
-                onChanged: (val) {
-                  setState(() => _selectedBankAccountId = val);
-                },
+                onChanged: (val) =>
+                    setState(() => _selectedBankAccountId = val),
               ),
             const SizedBox(height: AppSpacing.md),
 

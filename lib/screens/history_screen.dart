@@ -8,6 +8,7 @@ import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/category_badge.dart';
+import '../components/choice_picker_field.dart';
 import '../components/app_dialogs.dart';
 import '../components/export_backup_dialog.dart';
 
@@ -751,21 +752,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       },
                     ),
                     const Divider(),
-                    DropdownButtonFormField<int>(
+                    AppChoicePickerField<int>(
                       key: const Key('edit_transaction_account_dropdown'),
+                      label: isTransfer ? 'Source Account' : 'Account',
+                      sheetTitle: isTransfer
+                          ? 'Select Source Account'
+                          : 'Select Account',
                       initialValue: selectedAccountId,
-                      decoration: InputDecoration(
-                        labelText: isTransfer ? 'Source Account' : 'Account',
-                        border: const OutlineInputBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                        ),
-                      ),
                       items: accounts.map((a) {
-                        return DropdownMenuItem<int>(
-                          value: a.id,
-                          child: Text(
-                            '${a.name} (${AppFormatters.compactCurrency(a.balance)})',
-                          ),
+                        return AppChoiceItem<int>(
+                          value: a.id!,
+                          label: a.name,
+                          subtitle: AppFormatters.compactCurrency(a.balance),
+                          icon: a.isCreditCard
+                              ? Icons.credit_card_rounded
+                              : Icons.account_balance_wallet_rounded,
+                          iconColor: a.isCreditCard
+                              ? AppColors.purple
+                              : AppColors.emerald600,
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -776,25 +780,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     if (isTransfer) ...[
-                      DropdownButtonFormField<int>(
+                      AppChoicePickerField<int>(
                         key: const Key(
                           'edit_transaction_dest_account_dropdown',
                         ),
+                        label: 'Destination Account',
+                        sheetTitle: 'Select Destination Account',
                         initialValue: selectedDestAccountId,
-                        decoration: const InputDecoration(
-                          labelText: 'Destination Account',
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                          ),
-                        ),
                         items: accounts
                             .where((a) => a.id != selectedAccountId)
                             .map((a) {
-                              return DropdownMenuItem<int>(
-                                value: a.id,
-                                child: Text(
-                                  '${a.name} (${AppFormatters.compactCurrency(a.balance)})',
+                              return AppChoiceItem<int>(
+                                value: a.id!,
+                                label: a.name,
+                                subtitle: AppFormatters.compactCurrency(
+                                  a.balance,
                                 ),
+                                icon: a.isCreditCard
+                                    ? Icons.credit_card_rounded
+                                    : Icons.account_balance_wallet_rounded,
+                                iconColor: a.isCreditCard
+                                    ? AppColors.purple
+                                    : AppColors.emerald600,
                               );
                             })
                             .toList(),
@@ -808,29 +815,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         type != 'goal_lock' &&
                         type != 'goal_unlock' &&
                         filteredCategories.isNotEmpty) ...[
-                      DropdownButtonFormField<int?>(
+                      AppChoicePickerField<int?>(
                         key: const Key('edit_transaction_category_dropdown'),
+                        label: 'Category',
+                        sheetTitle: 'Select Category',
                         initialValue:
                             filteredCategories.any(
                               (c) => c.id == selectedCategoryId,
                             )
                             ? selectedCategoryId
                             : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Category',
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                          ),
-                        ),
                         items: [
-                          const DropdownMenuItem<int?>(
+                          const AppChoiceItem<int?>(
                             value: null,
-                            child: Text('Uncategorized'),
+                            label: 'Uncategorized',
+                            icon: Icons.label_off_rounded,
+                            iconColor: AppColors.gray400,
                           ),
                           ...filteredCategories.map((c) {
-                            return DropdownMenuItem<int?>(
+                            final style = CategoryStyle.getStyle(c.name);
+                            return AppChoiceItem<int?>(
                               value: c.id,
-                              child: Text(c.name),
+                              label: c.name,
+                              icon: style.icon,
+                              iconColor: style.color,
                             );
                           }),
                         ],
