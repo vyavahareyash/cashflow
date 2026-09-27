@@ -58,3 +58,6 @@ key.properties
 **/android/app/key.properties
 *play-service-account*.json
 *.aab
+
+# Local SonarQube credentials
+.sonar-token
