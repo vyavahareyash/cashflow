@@ -326,96 +326,62 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: AppSpacing.lg),
 
           // Formula Pills Row
-          () {
-            final diff = _usableBalance - _totalBudgetLimit;
-            final isSurplus = diff >= 0;
-            final diffFormatted = AppFormatters.compactCurrency(
-              diff.abs(),
-              isPrivate: _isPrivate,
-            );
-            final diffAmount = _isPrivate
-                ? '••••'
-                : '${isSurplus ? '+' : '-'}$diffFormatted';
-
-            return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: AppSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
-                borderRadius: AppBorderRadius.mediumBorder,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildFormulaPill(
-                      'Physical',
-                      AppFormatters.compactCurrency(
-                        _totalBalance,
-                        isPrivate: _isPrivate,
-                      ),
-                      Colors.white,
-                      Icons.account_balance_rounded,
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: AppBorderRadius.mediumBorder,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildFormulaPill(
+                    'Physical',
+                    AppFormatters.compactCurrency(
+                      _totalBalance,
+                      isPrivate: _isPrivate,
                     ),
+                    Colors.white,
+                    Icons.account_balance_rounded,
                   ),
-                  const Text(
-                    '-',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                ),
+                const Text(
+                  '-',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                  Expanded(
-                    child: _buildFormulaPill(
-                      'Locked',
-                      AppFormatters.compactCurrency(
-                        _lockedAmount,
-                        isPrivate: _isPrivate,
-                      ),
-                      const Color(0xFFFDE68A), // Light amber
-                      Icons.lock_clock_rounded,
+                ),
+                Expanded(
+                  child: _buildFormulaPill(
+                    'Locked',
+                    AppFormatters.compactCurrency(
+                      _lockedAmount,
+                      isPrivate: _isPrivate,
                     ),
+                    const Color(0xFFFDE68A), // Light amber
+                    Icons.lock_clock_rounded,
                   ),
-                  Container(height: 28, width: 1, color: Colors.white24),
-                  Expanded(
-                    child: _buildFormulaPill(
-                      'Budget cap',
-                      AppFormatters.compactCurrency(
-                        _totalBudgetLimit,
-                        isPrivate: _isPrivate,
-                      ),
-                      const Color(0xFF93C5FD), // Light blue
-                      Icons.pie_chart_rounded,
+                ),
+                Container(height: 28, width: 1, color: Colors.white24),
+                Expanded(
+                  child: _buildFormulaPill(
+                    'Budget cap',
+                    AppFormatters.compactCurrency(
+                      _totalBudgetLimit,
+                      isPrivate: _isPrivate,
                     ),
+                    const Color(0xFF93C5FD), // Light blue
+                    Icons.pie_chart_rounded,
                   ),
-                  if (_totalBudgetLimit > 0) ...[
-                    Container(height: 28, width: 1, color: Colors.white24),
-                    Expanded(
-                      child: _buildFormulaPill(
-                        isSurplus ? 'Buffer' : 'Gap',
-                        diffAmount,
-                        isSurplus
-                            ? const Color(0xFF6EE7B7)
-                            : const Color(0xFFFCA5A5),
-                        isSurplus
-                            ? Icons.trending_up_rounded
-                            : Icons.trending_down_rounded,
-                        tooltip: _isPrivate
-                            ? (isSurplus
-                                  ? 'Usable cash covers budget cap'
-                                  : 'Budget cap exceeds usable cash')
-                            : (isSurplus
-                                  ? 'Usable covers budget cap (+$diffFormatted buffer)'
-                                  : 'Budget cap exceeds usable (-$diffFormatted gap)'),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          }(),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -595,6 +561,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       0.0,
       double.infinity,
     );
+    final dynamicSlack = _usableBalance - remainingBudget;
+    final isFullyFunded = dynamicSlack >= 0;
+    final slackFormatted = AppFormatters.compactCurrency(
+      dynamicSlack.abs(),
+      isPrivate: _isPrivate,
+    );
     final progress = _totalBudgetLimit > 0
         ? (_totalSpentThisMonth / _totalBudgetLimit)
         : 0.0;
@@ -757,6 +729,94 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ],
           ),
+          if (_totalBudgetLimit > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Tooltip(
+              message: _isPrivate
+                  ? (isFullyFunded
+                        ? 'Usable cash covers your remaining cycle budget'
+                        : 'Remaining cycle budget exceeds your usable cash')
+                  : (isFullyFunded
+                        ? 'Usable cash covers remaining budget with $slackFormatted slack'
+                        : 'Remaining budget exceeds usable cash by $slackFormatted'),
+              triggerMode: TooltipTriggerMode.tap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isFullyFunded
+                      ? (isDark
+                            ? AppColors.emerald700.withValues(alpha: 0.15)
+                            : AppColors.emerald50.withValues(alpha: 0.8))
+                      : (isDark
+                            ? AppColors.danger.withValues(alpha: 0.15)
+                            : const Color(0xFFFEF2F2)),
+                  borderRadius: AppBorderRadius.smallBorder,
+                  border: Border.all(
+                    color: isFullyFunded
+                        ? AppColors.emerald500.withValues(
+                            alpha: isDark ? 0.3 : 0.25,
+                          )
+                        : AppColors.danger.withValues(
+                            alpha: isDark ? 0.3 : 0.25,
+                          ),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isFullyFunded
+                              ? Icons.shield_outlined
+                              : Icons.warning_amber_rounded,
+                          size: 14,
+                          color: isFullyFunded
+                              ? AppColors.emerald600
+                              : AppColors.danger,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Liquidity Coverage',
+                          style: AppTypography.labelSmall.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppColors.darkText
+                                : AppColors.gray800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Flexible(
+                      child: Text(
+                        _isPrivate
+                            ? (isFullyFunded
+                                  ? 'Fully funded (••••)'
+                                  : 'Underfunded (••••)')
+                            : (isFullyFunded
+                                  ? '100% funded (+$slackFormatted slack)'
+                                  : 'Underfunded (-$slackFormatted gap)'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isFullyFunded
+                              ? AppColors.emerald600
+                              : AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
