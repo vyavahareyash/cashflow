@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.12.0] - 2026-09-27
+
+### Added
+- **Reusable Choice Picker Field**: Added a shared choice picker form field for consistent selection controls across the app (#140).
+
+---
+
 ## [4.11.0] - 2026-09-27
 
 ### Added
