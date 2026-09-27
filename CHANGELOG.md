@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.11.0] - 2026-09-27
+
+### Added
+- **Liquidity Coverage Badge**: Added a dynamic dashboard badge showing monthly budget coverage status (#138).
+
+---
+
 ## [4.10.0] - 2026-09-26
 
 ### Added
