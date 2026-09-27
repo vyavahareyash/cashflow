@@ -10,6 +10,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/custom_button.dart';
+import '../components/choice_picker_field.dart';
 import '../components/app_dialogs.dart';
 import '../components/walkthrough/walkthrough_keys.dart';
 
@@ -939,21 +940,17 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    DropdownButtonFormField<int>(
+                    AppChoicePickerField<int>(
                       key: const Key('edit_goal_transaction_account_dropdown'),
+                      label: 'Account',
                       initialValue: selectedAccountId,
-                      decoration: const InputDecoration(
-                        labelText: 'Account',
-                        border: OutlineInputBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                        ),
-                      ),
                       items: accounts.map((a) {
-                        return DropdownMenuItem<int>(
-                          value: a.id,
-                          child: Text(
-                            '${a.name} (${AppFormatters.compactCurrency(a.balance)})',
-                          ),
+                        return AppChoiceItem<int>(
+                          value: a.id!,
+                          label: a.name,
+                          subtitle:
+                              'Balance: ${AppFormatters.compactCurrency(a.balance)}',
+                          icon: Icons.account_balance_rounded,
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -1202,65 +1199,19 @@ class _GoalsScreenState extends State<GoalsScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
 
-                      Text(
-                        'Source Account',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: isDark ? AppColors.gray300 : AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      DropdownButtonFormField<int>(
+                      AppChoicePickerField<int>(
+                        label: 'Source Account',
                         initialValue: selectedAccountId,
-                        isExpanded: true,
-                        dropdownColor: isDark
-                            ? AppColors.darkSurfaceElevated
-                            : AppColors.white,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.gray50,
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            borderSide: BorderSide(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : AppColors.gray300,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
-                          ),
-                        ),
-                        items: accounts
-                            .map(
-                              (acc) => DropdownMenuItem(
-                                value: acc.id,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        acc.name,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Text(
-                                      'Avail: ₹${(availableToLockMap[acc.id] ?? acc.balance).toStringAsFixed(0)}',
-                                      style: AppTypography.labelSmall.copyWith(
-                                        color: isDark
-                                            ? AppColors.gray400
-                                            : AppColors.gray500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
+                        items: accounts.map((acc) {
+                          final avail =
+                              availableToLockMap[acc.id] ?? acc.balance;
+                          return AppChoiceItem<int>(
+                            value: acc.id!,
+                            label: acc.name,
+                            subtitle: 'Available: ₹${avail.toStringAsFixed(0)}',
+                            icon: Icons.account_balance_rounded,
+                          );
+                        }).toList(),
                         onChanged: (val) =>
                             setStateSheet(() => selectedAccountId = val),
                       ),
@@ -1721,50 +1672,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ] else ...[
-                        Text(
-                          'Pay From Account',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.gray300
-                                : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        DropdownButtonFormField<int>(
+                        AppChoicePickerField<int>(
+                          label: 'Pay From Account',
                           initialValue: selectedAccountId,
-                          isExpanded: true,
-                          dropdownColor: isDark
-                              ? AppColors.darkSurfaceElevated
-                              : AppColors.white,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.gray50,
-                            border: OutlineInputBorder(
-                              borderRadius: AppBorderRadius.mediumBorder,
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : AppColors.gray300,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md,
-                            ),
-                          ),
                           items: contributions.map((c) {
                             final accId = (c['account_id'] as num).toInt();
                             final accName = c['account_name'] as String;
                             final amt = (c['amount'] as num).toDouble();
-                            return DropdownMenuItem<int>(
+                            return AppChoiceItem<int>(
                               value: accId,
-                              child: Text(
-                                '$accName (${AppFormatters.currency(amt)} locked)',
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              label:
+                                  '$accName (${AppFormatters.currency(amt)} locked)',
+                              icon: Icons.account_balance_rounded,
                             );
                           }).toList(),
                           onChanged: (val) {
@@ -1838,63 +1757,22 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         const SizedBox(height: AppSpacing.md),
                       ],
 
-                      Text(
-                        'Expense Category (Optional)',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: isDark ? AppColors.gray300 : AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      DropdownButtonFormField<int?>(
+                      AppChoicePickerField<int?>(
+                        label: 'Expense Category (Optional)',
                         initialValue: selectedCategoryId,
-                        isExpanded: true,
-                        dropdownColor: isDark
-                            ? AppColors.darkSurfaceElevated
-                            : AppColors.white,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.gray50,
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            borderSide: BorderSide(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : AppColors.gray300,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
-                          ),
-                        ),
                         items: [
-                          const DropdownMenuItem<int?>(
+                          const AppChoiceItem<int?>(
                             value: null,
-                            child: Text('No Category / Sinking Fund'),
+                            label: 'No Category / Sinking Fund',
+                            icon: Icons.label_off_outlined,
                           ),
                           ...categories.map((cat) {
                             final style = CategoryStyle.getStyle(cat.name);
-                            return DropdownMenuItem<int?>(
+                            return AppChoiceItem<int?>(
                               value: cat.id,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    style.icon,
-                                    size: 18,
-                                    color: style.color,
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Expanded(
-                                    child: Text(
-                                      cat.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              label: cat.name,
+                              icon: style.icon,
+                              iconColor: style.color,
                             );
                           }),
                         ],
@@ -2400,49 +2278,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ] else ...[
-                        Text(
-                          'Release To Account',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.gray300
-                                : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        DropdownButtonFormField<int>(
+                        AppChoicePickerField<int>(
+                          label: 'Release To Account',
                           initialValue: selectedAccountId,
-                          isExpanded: true,
-                          dropdownColor: isDark
-                              ? AppColors.darkSurfaceElevated
-                              : AppColors.white,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.gray50,
-                            border: OutlineInputBorder(
-                              borderRadius: AppBorderRadius.mediumBorder,
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : AppColors.gray300,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md,
-                            ),
-                          ),
                           items: contributions.map((c) {
                             final accId = (c['account_id'] as num).toInt();
                             final accName = c['account_name'] as String;
                             final amt = (c['amount'] as num).toDouble();
-                            return DropdownMenuItem<int>(
+                            return AppChoiceItem<int>(
                               value: accId,
-                              child: Text(
-                                '$accName (${AppFormatters.currency(amt)} locked)',
-                              ),
+                              label:
+                                  '$accName (${AppFormatters.currency(amt)} locked)',
+                              icon: Icons.account_balance_rounded,
                             );
                           }).toList(),
                           onChanged: (val) {

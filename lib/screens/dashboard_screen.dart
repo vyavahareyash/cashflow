@@ -14,6 +14,7 @@ import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
 import '../components/custom_input.dart';
 import '../components/category_badge.dart';
+import '../components/choice_picker_field.dart';
 import '../components/app_dialogs.dart';
 import '../components/walkthrough/walkthrough_keys.dart';
 import 'accounts_screen.dart';
@@ -1374,54 +1375,34 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: AppSpacing.sm),
 
                       // Transaction Type Selector
-                      Text(
-                        'Type',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: isDark ? AppColors.gray300 : AppColors.gray700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      DropdownButtonFormField<String>(
+                      AppChoicePickerField<String>(
+                        label: 'Type',
+                        sheetTitle: 'Select Transaction Type',
                         initialValue: selectedType,
-                        isExpanded: true,
-                        dropdownColor: isDark
-                            ? AppColors.darkSurfaceElevated
-                            : AppColors.white,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.gray50,
-                          border: OutlineInputBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            borderSide: BorderSide(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : AppColors.gray300,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md,
-                          ),
-                        ),
                         items: const [
-                          DropdownMenuItem(
+                          AppChoiceItem(
                             value: 'expense',
-                            child: Text('Expense'),
+                            label: 'Expense',
+                            icon: Icons.arrow_upward_rounded,
+                            iconColor: AppColors.danger,
                           ),
-                          DropdownMenuItem(
+                          AppChoiceItem(
                             value: 'income',
-                            child: Text('Income'),
+                            label: 'Income',
+                            icon: Icons.arrow_downward_rounded,
+                            iconColor: AppColors.success,
                           ),
-                          DropdownMenuItem(
+                          AppChoiceItem(
                             value: 'transfer',
-                            child: Text('Transfer'),
+                            label: 'Transfer',
+                            icon: Icons.swap_horiz_rounded,
+                            iconColor: AppColors.info,
                           ),
-                          DropdownMenuItem(
+                          AppChoiceItem(
                             value: 'goal_lock',
-                            child: Text('Goal Lock'),
+                            label: 'Goal Lock',
+                            icon: Icons.savings_rounded,
+                            iconColor: AppColors.purple,
                           ),
                         ],
                         onChanged: (val) {
@@ -1473,65 +1454,47 @@ class _DashboardScreenState extends State<DashboardScreen>
                       // Category Selector (expense & income)
                       if (selectedType != 'transfer' &&
                           selectedType != 'goal_lock') ...[
-                        Text(
-                          'Category',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.gray300
-                                : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        DropdownButtonFormField<int>(
+                        AppChoicePickerField<int>(
                           key: ValueKey(
                             'tx_cat_dropdown_${selectedType}_$selectedCategoryId',
                           ),
+                          label: 'Category',
+                          sheetTitle: 'Select Category',
                           initialValue:
                               availableCats.any(
                                 (c) => c.id == selectedCategoryId,
                               )
                               ? selectedCategoryId
                               : availableCats.firstOrNull?.id,
-                          isExpanded: true,
-                          dropdownColor: isDark
-                              ? AppColors.darkSurfaceElevated
-                              : AppColors.white,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.gray50,
-                            border: OutlineInputBorder(
-                              borderRadius: AppBorderRadius.mediumBorder,
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : AppColors.gray300,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md,
-                            ),
-                          ),
-                          items: availableCats
-                              .map(
-                                (cat) => DropdownMenuItem(
-                                  value: cat.id,
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: CategoryBadge(
-                                          label: cat.name,
-                                          showIcon: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                          items: availableCats.map((cat) {
+                            final style = CategoryStyle.getStyle(cat.name);
+                            return AppChoiceItem<int>(
+                              value: cat.id!,
+                              label: cat.name,
+                              icon: style.icon,
+                              iconColor: style.color,
+                            );
+                          }).toList(),
+                          selectedWidgetBuilder: (context, item) {
+                            if (item == null) {
+                              return Text(
+                                'Select category',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray500
+                                      : AppColors.gray400,
                                 ),
-                              )
-                              .toList(),
+                              );
+                            }
+                            return Row(
+                              children: [
+                                CategoryBadge(
+                                  label: item.label,
+                                  showIcon: true,
+                                ),
+                              ],
+                            );
+                          },
                           onChanged: (val) =>
                               setStateSheet(() => selectedCategoryId = val),
                         ),
@@ -1540,16 +1503,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       // Goal Selector (goal_lock only)
                       if (selectedType == 'goal_lock') ...[
-                        Text(
-                          'Goal',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.gray300
-                                : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
                         if (_goals.isEmpty)
                           Text(
                             'No goals available. Create a goal first.',
@@ -1558,39 +1511,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           )
                         else
-                          DropdownButtonFormField<int>(
+                          AppChoicePickerField<int>(
+                            label: 'Goal',
+                            sheetTitle: 'Select Goal',
                             initialValue: selectedGoalId,
-                            isExpanded: true,
-                            dropdownColor: isDark
-                                ? AppColors.darkSurfaceElevated
-                                : AppColors.white,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: isDark
-                                  ? AppColors.darkSurface
-                                  : AppColors.gray50,
-                              border: OutlineInputBorder(
-                                borderRadius: AppBorderRadius.mediumBorder,
-                                borderSide: BorderSide(
-                                  color: isDark
-                                      ? AppColors.darkBorder
-                                      : AppColors.gray300,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.md,
-                              ),
-                            ),
                             items: _goals
                                 .map(
-                                  (goal) => DropdownMenuItem(
-                                    value: goal.id,
-                                    child: Text(
-                                      '${goal.name} (₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)})',
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
+                                  (goal) => AppChoiceItem<int>(
+                                    value: goal.id!,
+                                    label: goal.name,
+                                    subtitle:
+                                        '₹${goal.currentSaved.toStringAsFixed(0)} / ₹${goal.totalTarget.toStringAsFixed(0)}',
+                                    icon: Icons.savings_rounded,
+                                    iconColor: AppColors.purple,
                                   ),
                                 )
                                 .toList(),
@@ -1614,125 +1547,105 @@ class _DashboardScreenState extends State<DashboardScreen>
                               : eligibleAccounts.firstOrNull?.id;
                           selectedAccountId = currentAccId;
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                selectedType == 'income'
-                                    ? 'To Account'
-                                    : 'From Account',
-                                style: AppTypography.labelMedium.copyWith(
-                                  color: isDark
-                                      ? AppColors.gray300
-                                      : AppColors.gray700,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              DropdownButtonFormField<int>(
-                                initialValue: selectedAccountId,
-                                isExpanded: true,
-                                dropdownColor: isDark
-                                    ? AppColors.darkSurfaceElevated
-                                    : AppColors.white,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: isDark
-                                      ? AppColors.darkSurface
-                                      : AppColors.gray50,
-                                  border: OutlineInputBorder(
-                                    borderRadius: AppBorderRadius.mediumBorder,
-                                    borderSide: BorderSide(
-                                      color: isDark
-                                          ? AppColors.darkBorder
-                                          : AppColors.gray300,
+                          return AppChoicePickerField<int>(
+                            label: selectedType == 'income'
+                                ? 'To Account'
+                                : 'From Account',
+                            sheetTitle: selectedType == 'income'
+                                ? 'Select Destination Account'
+                                : 'Select Source Account',
+                            initialValue: selectedAccountId,
+                            items: eligibleAccounts.map((acc) {
+                              final balanceText = acc.isCreditCard
+                                  ? 'Due: ₹${acc.balance.toStringAsFixed(0)}'
+                                  : '₹${acc.balance.toStringAsFixed(0)}';
+                              return AppChoiceItem<int>(
+                                value: acc.id!,
+                                label: acc.name,
+                                subtitle: balanceText,
+                                icon: acc.isCreditCard
+                                    ? Icons.credit_card_rounded
+                                    : Icons.account_balance_wallet_rounded,
+                                iconColor: acc.isCreditCard
+                                    ? AppColors.purple
+                                    : AppColors.emerald600,
+                              );
+                            }).toList(),
+                            selectedWidgetBuilder: (context, item) {
+                              if (item == null) {
+                                return Text(
+                                  'Select account',
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: isDark
+                                        ? AppColors.gray500
+                                        : AppColors.gray400,
+                                  ),
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  if (item.icon != null) ...[
+                                    Icon(
+                                      item.icon,
+                                      size: 18,
+                                      color:
+                                          item.iconColor ??
+                                          AppColors.emerald600,
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                  ],
+                                  Expanded(
+                                    child: Text(
+                                      item.label,
+                                      style: AppTypography.bodyLarge.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkText
+                                            : AppColors.gray900,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.lg,
-                                    vertical: AppSpacing.md,
-                                  ),
-                                ),
-                                items: eligibleAccounts
-                                    .map(
-                                      (acc) => DropdownMenuItem(
-                                        value: acc.id,
-                                        child: Row(
-                                          children: [
-                                            if (acc.isCreditCard) ...[
-                                              const Icon(
-                                                Icons.credit_card_rounded,
-                                                size: 16,
-                                                color: AppColors.purple,
-                                              ),
-                                              const SizedBox(
-                                                width: AppSpacing.xs,
-                                              ),
-                                            ],
-                                            Expanded(
-                                              child: Text(
-                                                acc.name,
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              width: AppSpacing.sm,
-                                            ),
-                                            Text(
-                                              acc.isCreditCard
-                                                  ? 'Due: ₹${acc.balance.toStringAsFixed(0)}'
-                                                  : '₹${acc.balance.toStringAsFixed(0)}',
-                                              style: AppTypography.labelSmall
-                                                  .copyWith(
-                                                    color: acc.isCreditCard
-                                                        ? AppColors.purple
-                                                        : (isDark
-                                                              ? AppColors
-                                                                    .gray400
-                                                              : AppColors
-                                                                    .gray500),
-                                                    fontWeight: acc.isCreditCard
-                                                        ? FontWeight.w600
-                                                        : FontWeight.normal,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
+                                  if (item.subtitle != null) ...[
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text(
+                                      item.subtitle!,
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.gray400
+                                            : AppColors.gray500,
                                       ),
-                                    )
-                                    .toList(),
-                                onChanged: (val) {
-                                  setStateSheet(() {
-                                    selectedAccountId = val;
-                                    if (val != null) {
-                                      final cc = _creditCardsMap[val];
-                                      if (cc != null) {
-                                        lockCcFunds = cc.autoLock;
-                                        if (cc.defaultLockAccountId != null &&
-                                            bankAccounts.any(
-                                              (b) =>
-                                                  b.id ==
-                                                  cc.defaultLockAccountId,
-                                            )) {
-                                          selectedLockBankAccountId =
-                                              cc.defaultLockAccountId;
-                                        } else if (selectedLockBankAccountId ==
-                                                null ||
-                                            !bankAccounts.any(
-                                              (b) =>
-                                                  b.id ==
-                                                  selectedLockBankAccountId,
-                                            )) {
-                                          selectedLockBankAccountId =
-                                              bankAccounts.firstOrNull?.id;
-                                        }
-                                      }
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
+                            onChanged: (val) {
+                              setStateSheet(() {
+                                selectedAccountId = val;
+                                if (val != null) {
+                                  final cc = _creditCardsMap[val];
+                                  if (cc != null) {
+                                    lockCcFunds = cc.autoLock;
+                                    if (cc.defaultLockAccountId != null &&
+                                        bankAccounts.any(
+                                          (b) =>
+                                              b.id == cc.defaultLockAccountId,
+                                        )) {
+                                      selectedLockBankAccountId =
+                                          cc.defaultLockAccountId;
+                                    } else if (selectedLockBankAccountId ==
+                                            null ||
+                                        !bankAccounts.any(
+                                          (b) =>
+                                              b.id == selectedLockBankAccountId,
+                                        )) {
+                                      selectedLockBankAccountId =
+                                          bankAccounts.firstOrNull?.id;
                                     }
-                                  });
-                                },
-                              ),
-                            ],
+                                  }
+                                }
+                              });
+                            },
                           );
                         },
                       ),
@@ -1783,17 +1696,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               if (lockCcFunds) ...[
                                 const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'Reserve From Account',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: isDark
-                                        ? AppColors.gray400
-                                        : AppColors.gray600,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.xxs),
-                                DropdownButtonFormField<int>(
+                                AppChoicePickerField<int>(
+                                  label: 'Reserve From Account',
+                                  sheetTitle: 'Select Account to Reserve From',
                                   initialValue:
                                       bankAccounts.any(
                                         (b) =>
@@ -1801,57 +1706,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       )
                                       ? selectedLockBankAccountId
                                       : bankAccounts.firstOrNull?.id,
-                                  isExpanded: true,
-                                  dropdownColor: isDark
-                                      ? AppColors.darkSurfaceElevated
-                                      : AppColors.white,
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: isDark
-                                        ? AppColors.darkSurface
-                                        : AppColors.white,
-                                    border: OutlineInputBorder(
-                                      borderRadius:
-                                          AppBorderRadius.mediumBorder,
-                                      borderSide: BorderSide(
-                                        color: isDark
-                                            ? AppColors.darkBorder
-                                            : AppColors.gray300,
-                                      ),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.md,
-                                      vertical: AppSpacing.sm,
-                                    ),
-                                  ),
                                   items: bankAccounts
                                       .map(
-                                        (acc) => DropdownMenuItem(
-                                          value: acc.id,
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  acc.name,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  maxLines: 1,
-                                                ),
-                                              ),
-                                              const SizedBox(
-                                                width: AppSpacing.sm,
-                                              ),
-                                              Text(
-                                                '₹${acc.balance.toStringAsFixed(0)}',
-                                                style: AppTypography.labelSmall
-                                                    .copyWith(
-                                                      color: isDark
-                                                          ? AppColors.gray400
-                                                          : AppColors.gray500,
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
+                                        (acc) => AppChoiceItem<int>(
+                                          value: acc.id!,
+                                          label: acc.name,
+                                          subtitle:
+                                              '₹${acc.balance.toStringAsFixed(0)}',
+                                          icon: Icons
+                                              .account_balance_wallet_rounded,
+                                          iconColor: AppColors.emerald600,
                                         ),
                                       )
                                       .toList(),
@@ -1869,16 +1733,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ],
 
                       if (selectedType == 'transfer') ...[
-                        Text(
-                          'To Account',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: isDark
-                                ? AppColors.gray300
-                                : AppColors.gray700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
                         Builder(
                           builder: (context) {
                             final eligibleDestinations = bankAccounts
@@ -1892,58 +1746,72 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 : eligibleDestinations.firstOrNull?.id;
                             selectedDestinationAccountId = currentDestId;
 
-                            return DropdownButtonFormField<int>(
+                            return AppChoicePickerField<int>(
+                              label: 'To Account',
+                              sheetTitle: 'Select Destination Account',
                               initialValue: selectedDestinationAccountId,
-                              isExpanded: true,
-                              dropdownColor: isDark
-                                  ? AppColors.darkSurfaceElevated
-                                  : AppColors.white,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: isDark
-                                    ? AppColors.darkSurface
-                                    : AppColors.gray50,
-                                border: OutlineInputBorder(
-                                  borderRadius: AppBorderRadius.mediumBorder,
-                                  borderSide: BorderSide(
-                                    color: isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.gray300,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.lg,
-                                  vertical: AppSpacing.md,
-                                ),
-                              ),
                               items: eligibleDestinations
                                   .map(
-                                    (acc) => DropdownMenuItem(
-                                      value: acc.id,
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              acc.name,
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                          ),
-                                          const SizedBox(width: AppSpacing.sm),
-                                          Text(
-                                            '₹${acc.balance.toStringAsFixed(0)}',
-                                            style: AppTypography.labelSmall
-                                                .copyWith(
-                                                  color: isDark
-                                                      ? AppColors.gray400
-                                                      : AppColors.gray500,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
+                                    (acc) => AppChoiceItem<int>(
+                                      value: acc.id!,
+                                      label: acc.name,
+                                      subtitle:
+                                          '₹${acc.balance.toStringAsFixed(0)}',
+                                      icon:
+                                          Icons.account_balance_wallet_rounded,
+                                      iconColor: AppColors.emerald600,
                                     ),
                                   )
                                   .toList(),
+                              selectedWidgetBuilder: (context, item) {
+                                if (item == null) {
+                                  return Text(
+                                    'Select account',
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: isDark
+                                          ? AppColors.gray500
+                                          : AppColors.gray400,
+                                    ),
+                                  );
+                                }
+                                return Row(
+                                  children: [
+                                    if (item.icon != null) ...[
+                                      Icon(
+                                        item.icon,
+                                        size: 18,
+                                        color:
+                                            item.iconColor ??
+                                            AppColors.emerald600,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        item.label,
+                                        style: AppTypography.bodyLarge.copyWith(
+                                          color: isDark
+                                              ? AppColors.darkText
+                                              : AppColors.gray900,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (item.subtitle != null) ...[
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Text(
+                                        item.subtitle!,
+                                        style: AppTypography.labelSmall
+                                            .copyWith(
+                                              color: isDark
+                                                  ? AppColors.gray400
+                                                  : AppColors.gray500,
+                                            ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
                               onChanged: (val) => setStateSheet(
                                 () => selectedDestinationAccountId = val,
                               ),
