@@ -44,6 +44,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
   double _totalCreditBacked = 0.0;
   double _totalCreditUnbacked = 0.0;
   double _totalLocked = 0.0;
+  double _totalGoalLocked = 0.0;
+  double _totalCardLocked = 0.0;
   bool _isLoading = true;
   final Set<int> _expandedAccountIds = {};
   late int _selectedTab;
@@ -67,7 +69,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
       final newIndex = widget.initialTabIndex.clamp(0, 2);
       setState(() {
         _selectedTab = newIndex;
-        if (!_loadedTabs.contains(0) && newIndex == 0) {
+        if (newIndex == 0) {
           unawaited(_refreshAccounts());
         }
         _loadedTabs.add(newIndex);
@@ -108,6 +110,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
     double ccTotal = 0.0;
     double ccBackedTotal = 0.0;
     double lockedTotal = 0.0;
+    double goalLockedTotal = 0.0;
+    double ccLockedTotal = 0.0;
     final Map<int, List<LockedAllocation>> locksMap = {};
 
     for (var acc in data) {
@@ -124,6 +128,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
         locksMap[acc.id!] = locks;
         for (var l in locks) {
           lockedTotal += l.amount;
+          if (l.goalId != null) {
+            goalLockedTotal += l.amount;
+          } else if (l.creditCardId != null) {
+            ccLockedTotal += l.amount;
+          }
         }
       }
     }
@@ -141,6 +150,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
         _totalCreditBacked = ccBackedTotal;
         _totalCreditUnbacked = ccUnbackedTotal;
         _totalLocked = lockedTotal;
+        _totalGoalLocked = goalLockedTotal;
+        _totalCardLocked = ccLockedTotal;
         _isLoading = false;
       });
     }
@@ -563,7 +574,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     final newIndex = newSelection.first;
                     setState(() {
                       _selectedTab = newIndex;
-                      if (!_loadedTabs.contains(0) && newIndex == 0) {
+                      if (newIndex == 0) {
                         unawaited(_refreshAccounts());
                       }
                       _loadedTabs.add(_selectedTab);
@@ -885,7 +896,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Locked in Sinking Funds',
+                    _totalCardLocked > 0
+                        ? 'Total Locked Funds'
+                        : 'Locked in Sinking Funds',
                     style: AppTypography.labelSmall.copyWith(
                       color: isDark ? AppColors.gray400 : AppColors.gray600,
                     ),
@@ -897,6 +910,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       color: AppColors.warning,
                     ),
                   ),
+                  if (_totalCardLocked > 0)
+                    Text(
+                      '${AppFormatters.currency(_totalGoalLocked)} goals • ${AppFormatters.currency(_totalCardLocked)} cards',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        fontSize: 10,
+                      ),
+                    ),
                 ],
               ),
               Column(
