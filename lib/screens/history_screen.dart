@@ -418,8 +418,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  bool _isCredit(String type) =>
-      type == 'income' || type == 'goal_unlock' || type == 'cc_unlock';
+  bool _isCredit(String type) => type == 'income';
+
+  bool _isEarmarkOrTransfer(String type) =>
+      type == 'transfer' ||
+      type == 'goal_lock' ||
+      type == 'goal_unlock' ||
+      type == 'cc_lock' ||
+      type == 'cc_unlock';
 
   void _setPeriod(DateTime? period) {
     setState(() {
@@ -959,15 +965,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     for (final tx in filtered) {
       final amt = (tx['amount'] as num?)?.toDouble() ?? 0.0;
       final type = tx['type'] as String? ?? 'expense';
-      if (type == 'expense' ||
-          type == 'goal_payment' ||
-          type == 'goal_lock' ||
-          type == 'cc_payment' ||
-          type == 'cc_lock') {
+      if (type == 'expense' || type == 'goal_payment' || type == 'cc_payment') {
         totalOutflow += amt;
-      } else if (type == 'income' ||
-          type == 'goal_unlock' ||
-          type == 'cc_unlock') {
+      } else if (type == 'income') {
         totalInflow += amt;
       }
     }
@@ -1542,13 +1542,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   Text(
                                     '${_isCredit(type)
                                         ? '+'
-                                        : type == 'transfer'
+                                        : _isEarmarkOrTransfer(type)
                                         ? ''
                                         : '-'}${AppFormatters.currency(amount)}',
                                     style: AppTypography.titleMedium.copyWith(
                                       color: _isCredit(type)
                                           ? AppColors.success
-                                          : type == 'transfer'
+                                          : _isEarmarkOrTransfer(type)
                                           ? AppColors.info
                                           : AppColors.danger,
                                       fontWeight: FontWeight.bold,
