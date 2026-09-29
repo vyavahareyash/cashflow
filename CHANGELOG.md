@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.13.0] - 2026-09-29
+
+### Added
+- **Analytics Category Controls and Budget Baseline**: Added category toggles, trend controls, and a budget baseline to analytics (#143).
+
+### Fixed
+- **History Cashflow Classification**: Excluded fund locks and unlocks from cashflow inflow and outflow totals (#142).
+
+---
+
 ## [4.12.0] - 2026-09-27
 
 ### Added
