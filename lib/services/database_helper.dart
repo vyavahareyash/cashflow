@@ -3667,20 +3667,26 @@ class DatabaseHelper {
     return map;
   }
 
-  /// Gets monthly spending totals for the last N months.
+  /// Gets monthly spending totals for the last N months, optionally filtered by category.
   /// Returns a Map<"YYYY-MM", totalAmount>
-  Future<Map<String, double>> getMonthlySpendings({int months = 12}) async {
+  Future<Map<String, double>> getMonthlySpendings({
+    int months = 12,
+    int? categoryId,
+  }) async {
     final db = await instance.database;
+
+    final categoryClause = categoryId != null ? ' AND category_id = ?' : '';
+    final whereArgs = categoryId != null ? [categoryId] : <Object>[];
 
     final result = await db.rawQuery('''
       SELECT 
         SUBSTR(date, 1, 7) as month,
         SUM(amount) as total
       FROM transactions
-      WHERE type = 'expense' AND date >= datetime('now', '-$months months')
+      WHERE type = 'expense' AND date >= datetime('now', '-$months months')$categoryClause
       GROUP BY month
       ORDER BY month ASC
-    ''');
+    ''', whereArgs);
 
     final map = <String, double>{};
     for (var row in result) {
@@ -3797,24 +3803,29 @@ class DatabaseHelper {
     };
   }
 
-  /// Gets month-by-month spending for the given year (Jan through Dec).
-  Future<Map<String, double>> getYtdMonthlySpendings({int? year}) async {
+  /// Gets month-by-month spending for the given year (Jan through Dec), optionally filtered by category.
+  Future<Map<String, double>> getYtdMonthlySpendings({
+    int? year,
+    int? categoryId,
+  }) async {
     final db = await instance.database;
     final targetYear = year ?? DateTime.now().year;
     final yearPrefix = '$targetYear-';
 
-    final result = await db.rawQuery(
-      '''
+    final categoryClause = categoryId != null ? ' AND category_id = ?' : '';
+    final whereArgs = categoryId != null
+        ? [yearPrefix, categoryId]
+        : [yearPrefix];
+
+    final result = await db.rawQuery('''
       SELECT 
         SUBSTR(date, 1, 7) as month,
         SUM(amount) as total
       FROM transactions
-      WHERE type = 'expense' AND SUBSTR(date, 1, 5) = ?
+      WHERE type = 'expense' AND SUBSTR(date, 1, 5) = ?$categoryClause
       GROUP BY month
       ORDER BY month ASC
-    ''',
-      [yearPrefix],
-    );
+    ''', whereArgs);
 
     final map = <String, double>{};
     for (var row in result) {
