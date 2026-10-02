@@ -116,3 +116,48 @@ jobs:
           name: coverage-report
           path: coverage/lcov.info
           retention-days: 7
+
+  # ── 4. Web headless & Playwright E2E ────────────────────────────────────────
+  web-test:
+    name: Headless Chrome & Playwright E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          npm ci || npm install
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Headless Chrome Unit & Widget Tests
+        run: flutter test --platform chrome test/web_routing_chrome_test.dart
+
+      - name: Build Web Application
+        run: flutter build web --release
+
+      - name: Run Playwright E2E Persistence Tests
+        run: npm run test:e2e
+

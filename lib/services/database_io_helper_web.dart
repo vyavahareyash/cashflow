@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:html' as html;
 import 'dart:typed_data';
 
 import 'package:sqflite/sqflite.dart';
@@ -53,9 +55,24 @@ class DatabaseIoHelper {
     await databaseFactory.deleteDatabase(oldPath);
   }
 
-  static void writeWalkthroughSnapshot(String dbPath, String json) {}
+  static const String _walkthroughSnapshotKey = 'cashflow_walkthrough_snapshot';
 
-  static String? readWalkthroughSnapshot(String dbPath) => null;
+  static void writeWalkthroughSnapshot(String dbPath, String json) {
+    try {
+      html.window.localStorage[_walkthroughSnapshotKey] = json;
+    } catch (_) {}
+  }
 
-  static void deleteWalkthroughSnapshot(String dbPath) {}
+  static String? readWalkthroughSnapshot(String dbPath) {
+    try {
+      return html.window.localStorage[_walkthroughSnapshotKey];
+    } catch (_) {}
+    return null;
+  }
+
+  static void deleteWalkthroughSnapshot(String dbPath) {
+    try {
+      html.window.localStorage.remove(_walkthroughSnapshotKey);
+    } catch (_) {}
+  }
 }

@@ -48,7 +48,9 @@ app.*.map.json
 .widget_preview/
 
 node_modules/
+test-results/
 *.zip
+
 
 # Android Signing & Play Store Secrets
 *.jks
