@@ -27,9 +27,14 @@ class BillingService extends ChangeNotifier {
     return BillingService._(iapInstance: iapInstance);
   }
 
+  /// Whether Google Play Billing is supported on this platform.
+  /// Strictly restricted to native Android.
+  static bool get isSupportedPlatform =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   final InAppPurchase? _customIap;
   InAppPurchase? get _iap =>
-      _customIap ?? (kIsWeb ? null : InAppPurchase.instance);
+      _customIap ?? (isSupportedPlatform ? InAppPurchase.instance : null);
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   static const String productCoffeeSingle = 'coffee_single';
@@ -106,7 +111,7 @@ class BillingService extends ChangeNotifier {
 
   /// Initialize billing connection and query product catalog.
   Future<void> initialize() async {
-    if (kIsWeb) {
+    if (!isSupportedPlatform && _customIap == null) {
       _isLoading = false;
       _isAvailable = false;
       notifyListeners();
@@ -163,7 +168,9 @@ class BillingService extends ChangeNotifier {
 
   /// Purchase a consumable coffee tier.
   Future<bool> buyProduct(ProductDetails product) async {
-    if (kIsWeb || !_isAvailable) return false;
+    if ((!isSupportedPlatform && _customIap == null) || !_isAvailable) {
+      return false;
+    }
     final iap = _iap;
     if (iap == null) return false;
 

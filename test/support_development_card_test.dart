@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' hide equals;
@@ -67,6 +68,8 @@ void main() {
   tearDown(() async {
     AppConfig.setOverrideEnableExternalDonations(null);
     AppConfig.setOverrideEnablePlayStoreTips(null);
+    AppConfig.setOverrideIsDesktopOrWeb(null);
+    debugDefaultTargetPlatformOverride = null;
     BillingService.setMockInstance(null);
     final dbPath = await getDatabasesPath();
     await DatabaseHelper.instance.close();
@@ -95,6 +98,60 @@ void main() {
       AppConfig.setOverrideEnablePlayStoreTips(false);
       expect(AppConfig.enablePlayStoreTips, isFalse);
     });
+
+    test('Desktop and Web platforms default to coffee link and disable Play Store tips', () {
+      for (final platform in [
+        TargetPlatform.macOS,
+        TargetPlatform.windows,
+        TargetPlatform.linux,
+      ]) {
+        debugDefaultTargetPlatformOverride = platform;
+        AppConfig.setOverrideEnableExternalDonations(null);
+        AppConfig.setOverrideEnablePlayStoreTips(null);
+        AppConfig.setOverrideIsDesktopOrWeb(null);
+
+        expect(AppConfig.isDesktopOrWeb, isTrue);
+        expect(AppConfig.enableExternalDonations, isTrue);
+        expect(AppConfig.enablePlayStoreTips, isFalse);
+      }
+
+      // Simulated Web platform
+      debugDefaultTargetPlatformOverride = null;
+      AppConfig.setOverrideIsDesktopOrWeb(true);
+      expect(AppConfig.isDesktopOrWeb, isTrue);
+      expect(AppConfig.enableExternalDonations, isTrue);
+      expect(AppConfig.enablePlayStoreTips, isFalse);
+    });
+
+    test('Android Play Store release keeps Play Store product and disables coffee link', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      AppConfig.setOverrideIsDesktopOrWeb(false);
+      // Simulate release mode behavior by explicitly disabling external donations
+      AppConfig.setOverrideEnableExternalDonations(false);
+      AppConfig.setOverrideEnablePlayStoreTips(null);
+
+      expect(AppConfig.isDesktopOrWeb, isFalse);
+      expect(AppConfig.enableExternalDonations, isFalse);
+      expect(AppConfig.enablePlayStoreTips, isTrue);
+    });
+
+    test(
+      'BillingService.isSupportedPlatform is true only on native Android',
+      () {
+        for (final platform in [
+          TargetPlatform.macOS,
+          TargetPlatform.windows,
+          TargetPlatform.linux,
+          TargetPlatform.iOS,
+        ]) {
+          debugDefaultTargetPlatformOverride = platform;
+          expect(BillingService.isSupportedPlatform, isFalse);
+        }
+
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        expect(BillingService.isSupportedPlatform, isTrue);
+      },
+    );
   });
 
   group('BackupRestoreScreen Support Development Card', () {
@@ -235,6 +292,36 @@ void main() {
           find.byKey(const Key('developer_linkedin_button')),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets(
+      'Support card automatically shows Buy Me a Coffee on desktop without Play Store tips',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          AppConfig.setOverrideEnableExternalDonations(null);
+          AppConfig.setOverrideEnablePlayStoreTips(null);
+          AppConfig.setOverrideIsDesktopOrWeb(null);
+
+          await tester.pumpWidget(
+            const MaterialApp(home: BackupRestoreScreen()),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Support & Open Source'), findsOneWidget);
+          expect(
+            find.byKey(const Key('buy_me_a_coffee_button')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('play_store_buy_coffee_button')),
+            findsNothing,
+          );
+          expect(find.byKey(const Key('retry_billing_button')), findsNothing);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
       },
     );
   });
