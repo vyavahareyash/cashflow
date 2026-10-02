@@ -28,7 +28,8 @@ class BillingService extends ChangeNotifier {
   }
 
   final InAppPurchase? _customIap;
-  InAppPurchase get _iap => _customIap ?? InAppPurchase.instance;
+  InAppPurchase? get _iap =>
+      _customIap ?? (kIsWeb ? null : InAppPurchase.instance);
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   static const String productCoffeeSingle = 'coffee_single';
@@ -105,12 +106,27 @@ class BillingService extends ChangeNotifier {
 
   /// Initialize billing connection and query product catalog.
   Future<void> initialize() async {
+    if (kIsWeb) {
+      _isLoading = false;
+      _isAvailable = false;
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _isAvailable = await _iap.isAvailable().timeout(
+      final iap = _iap;
+      if (iap == null) {
+        _isAvailable = false;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      _isAvailable = await iap.isAvailable().timeout(
         const Duration(seconds: 10),
         onTimeout: () => false,
       );
@@ -120,7 +136,7 @@ class BillingService extends ChangeNotifier {
         return;
       }
 
-      _subscription ??= _iap.purchaseStream.listen(
+      _subscription ??= iap.purchaseStream.listen(
         _onPurchaseStream,
         onDone: () => _subscription?.cancel(),
         onError: (err) {
@@ -130,7 +146,7 @@ class BillingService extends ChangeNotifier {
         },
       );
 
-      final response = await _iap.queryProductDetails(productIds);
+      final response = await iap.queryProductDetails(productIds);
       if (response.error != null) {
         _errorMessage = response.error!.message;
       }
@@ -147,7 +163,9 @@ class BillingService extends ChangeNotifier {
 
   /// Purchase a consumable coffee tier.
   Future<bool> buyProduct(ProductDetails product) async {
-    if (!_isAvailable) return false;
+    if (kIsWeb || !_isAvailable) return false;
+    final iap = _iap;
+    if (iap == null) return false;
 
     final purchaseParam = PurchaseParam(productDetails: product);
     _purchasePending = true;
@@ -155,7 +173,7 @@ class BillingService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      return await _iap.buyConsumable(
+      return await iap.buyConsumable(
         purchaseParam: purchaseParam,
         autoConsume: true,
       );
@@ -185,7 +203,7 @@ class BillingService extends ChangeNotifier {
 
         if (purchaseDetails.pendingCompletePurchase) {
           try {
-            await _iap.completePurchase(purchaseDetails);
+            await _iap?.completePurchase(purchaseDetails);
           } catch (_) {}
         }
       }

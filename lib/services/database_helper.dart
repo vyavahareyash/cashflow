@@ -4,9 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-
-import 'dart:io';
-
+import 'package:cashflow/services/database_io_helper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cashflow/services/backup_platform.dart';
 import 'package:cashflow/services/backup_codec.dart';
@@ -553,24 +551,20 @@ class DatabaseHelper {
     try {
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, _dbName);
-      final file = File(path);
-
-      if (!await file.exists()) {
-        throw Exception('Database file not found');
-      }
-
       final targetDir =
           destinationDirectory ?? await getEffectiveBackupDirectory();
       final name = basename(fileName ?? 'cashflow_backup.db');
-      final backupDir = Directory(targetDir);
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
+      final backupFilePath = await DatabaseIoHelper.copyFileToDirectory(
+        path,
+        targetDir,
+        name,
+      );
+      if (backupFilePath == null) {
+        throw Exception('Failed to copy database file');
       }
-      final backupPath = join(targetDir, name);
-      final backupFile = await file.copy(backupPath);
       await setLastBackupTimestamp(DateTime.now());
 
-      return backupFile.path;
+      return backupFilePath;
     } catch (e, stackTrace) {
       developer.log(
         'Export error',
@@ -625,13 +619,10 @@ class DatabaseHelper {
       final tmpPath = join(dbPath, '$_dbName.tmp');
 
       // Create backup of current database
-      final currentFile = File(path);
-      if (await currentFile.exists()) {
-        await currentFile.copy(bakPath);
-      }
+      await DatabaseIoHelper.copyFile(path, bakPath);
 
       // Stage to temp file and validate
-      await File(tmpPath).writeAsBytes(bytes, flush: true);
+      await DatabaseIoHelper.writeBytes(tmpPath, bytes, flush: true);
 
       // Verify integrity of the staged file
       final testDb = await openDatabase(tmpPath, readOnly: true);
@@ -640,7 +631,7 @@ class DatabaseHelper {
         final status = result.first.values.first as String;
         if (status != 'ok') {
           await testDb.close();
-          await File(tmpPath).delete();
+          await DatabaseIoHelper.deleteFile(tmpPath);
           return false;
         }
       } finally {
@@ -648,15 +639,12 @@ class DatabaseHelper {
       }
 
       // Replace current DB with validated file
-      await File(tmpPath).rename(path);
+      await DatabaseIoHelper.renameFile(tmpPath, path);
       await instance.database;
       notifyDataChanged();
 
       // Clean up backup on success
-      final bakFile = File(bakPath);
-      if (await bakFile.exists()) {
-        await bakFile.delete();
-      }
+      await DatabaseIoHelper.deleteFile(bakPath);
 
       return true;
     } catch (e, stackTrace) {
@@ -671,11 +659,8 @@ class DatabaseHelper {
         final dbPath = await getDatabasesPath();
         final path = join(dbPath, _dbName);
         final bakPath = join(dbPath, '$_dbName.bak');
-        final bakFile = File(bakPath);
-        if (await bakFile.exists()) {
-          await bakFile.copy(path);
-          await bakFile.delete();
-        }
+        await DatabaseIoHelper.copyFile(bakPath, path);
+        await DatabaseIoHelper.deleteFile(bakPath);
         _database = null;
         await instance.database;
       } catch (_) {}
@@ -3978,11 +3963,11 @@ class DatabaseHelper {
 
   /// Retrieves the default backup directory for this platform.
   Future<String> getDefaultBackupDirectory() async {
-    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+    if (!kIsWeb && DatabaseIoHelper.isFlutterTest) {
       try {
         return await getDatabasesPath();
       } catch (_) {
-        return Directory.systemTemp.path;
+        return DatabaseIoHelper.systemTempPath;
       }
     }
     try {
@@ -3992,7 +3977,7 @@ class DatabaseHelper {
       try {
         return await getDatabasesPath();
       } catch (_) {
-        return Directory.systemTemp.path;
+        return DatabaseIoHelper.systemTempPath;
       }
     }
   }
@@ -4068,8 +4053,7 @@ class DatabaseHelper {
     if (!kIsWeb) {
       try {
         final dbPath = await getDatabasesPath();
-        final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
-        snapshotFile.writeAsStringSync(jsonSnapshot, flush: true);
+        DatabaseIoHelper.writeWalkthroughSnapshot(dbPath, jsonSnapshot);
       } catch (_) {}
     }
     _walkthroughSnapshot = jsonSnapshot;
@@ -4089,10 +4073,7 @@ class DatabaseHelper {
       if (jsonToRestore == null && !kIsWeb) {
         try {
           final dbPath = await getDatabasesPath();
-          final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
-          if (snapshotFile.existsSync()) {
-            jsonToRestore = snapshotFile.readAsStringSync();
-          }
+          jsonToRestore = DatabaseIoHelper.readWalkthroughSnapshot(dbPath);
         } catch (_) {}
       }
 
@@ -4106,10 +4087,7 @@ class DatabaseHelper {
       if (!kIsWeb) {
         try {
           final dbPath = await getDatabasesPath();
-          final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
-          if (snapshotFile.existsSync()) {
-            snapshotFile.deleteSync();
-          }
+          DatabaseIoHelper.deleteWalkthroughSnapshot(dbPath);
         } catch (_) {}
       }
     } finally {
@@ -4125,12 +4103,11 @@ class DatabaseHelper {
     if (kIsWeb) return;
     try {
       final dbPath = await getDatabasesPath();
-      final snapshotFile = File(join(dbPath, 'walkthrough_snapshot.json'));
-      if (snapshotFile.existsSync()) {
-        final json = snapshotFile.readAsStringSync();
+      final json = DatabaseIoHelper.readWalkthroughSnapshot(dbPath);
+      if (json != null) {
         await importDatabaseFromJSON(jsonContentForTesting: json);
         try {
-          snapshotFile.deleteSync();
+          DatabaseIoHelper.deleteWalkthroughSnapshot(dbPath);
         } catch (_) {}
         _walkthroughSnapshot = null;
         _isWalkthroughDemoMode = false;
