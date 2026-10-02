@@ -56,6 +56,10 @@ class DatabaseIoHelper {
     await File(oldPath).rename(newPath);
   }
 
+  static Future<List<int>> readBytes(String path) async {
+    return await File(path).readAsBytes();
+  }
+
   static void writeWalkthroughSnapshot(String dbPath, String json) {
     try {
       final file = File(p.join(dbPath, 'walkthrough_snapshot.json'));

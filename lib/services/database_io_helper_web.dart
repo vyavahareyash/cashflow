@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:sqflite/sqflite.dart';
+
 class DatabaseIoHelper {
   static bool get isFlutterTest => false;
 
@@ -11,19 +15,43 @@ class DatabaseIoHelper {
     return null;
   }
 
-  static Future<bool> fileExists(String path) async => false;
+  static Future<bool> fileExists(String path) async {
+    return await databaseFactory.databaseExists(path);
+  }
 
-  static Future<void> copyFile(String src, String dest) async {}
+  static Future<void> copyFile(String src, String dest) async {
+    final exists = await databaseFactory.databaseExists(src);
+    if (exists) {
+      final bytes = await databaseFactory.readDatabaseBytes(src);
+      await databaseFactory.writeDatabaseBytes(dest, bytes);
+    }
+  }
 
-  static Future<void> deleteFile(String path) async {}
+  static Future<void> deleteFile(String path) async {
+    final exists = await databaseFactory.databaseExists(path);
+    if (exists) {
+      await databaseFactory.deleteDatabase(path);
+    }
+  }
 
   static Future<void> writeBytes(
     String path,
     List<int> bytes, {
     bool flush = false,
-  }) async {}
+  }) async {
+    final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+    await databaseFactory.writeDatabaseBytes(path, uint8List);
+  }
 
-  static Future<void> renameFile(String oldPath, String newPath) async {}
+  static Future<List<int>> readBytes(String path) async {
+    return await databaseFactory.readDatabaseBytes(path);
+  }
+
+  static Future<void> renameFile(String oldPath, String newPath) async {
+    final bytes = await databaseFactory.readDatabaseBytes(oldPath);
+    await databaseFactory.writeDatabaseBytes(newPath, bytes);
+    await databaseFactory.deleteDatabase(oldPath);
+  }
 
   static void writeWalkthroughSnapshot(String dbPath, String json) {}
 

@@ -379,20 +379,18 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (!kIsWeb) ...[
-              _buildDialogOptionTile(
-                icon: Icons.storage_rounded,
-                iconColor: AppColors.emerald700,
-                title: 'SQLite Database (.db)',
-                subtitle: 'Full binary database restore',
-                isDark: isDark,
-                onTap: () {
-                  Navigator.of(dialogCtx).pop();
-                  unawaited(_handleImport());
-                },
-              ),
-              const Divider(height: 1),
-            ],
+            _buildDialogOptionTile(
+              icon: Icons.storage_rounded,
+              iconColor: AppColors.emerald700,
+              title: 'SQLite Database (.db)',
+              subtitle: 'Full binary database restore',
+              isDark: isDark,
+              onTap: () {
+                Navigator.of(dialogCtx).pop();
+                unawaited(_handleImport());
+              },
+            ),
+            const Divider(height: 1),
             _buildDialogOptionTile(
               icon: Icons.data_object_rounded,
               iconColor: AppColors.purple,
@@ -497,17 +495,18 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     final success = await DatabaseHelper.instance.importDatabase();
 
     if (mounted) {
+      final error = DatabaseHelper.instance.lastImportError;
       setState(() {
         _isProcessing = false;
         _statusMessage = success
             ? 'Database imported successfully! Please refresh screens.'
-            : 'Import cancelled or failed';
+            : (error ?? 'Import cancelled');
       });
       _showFeedback(
         success
             ? 'Database imported successfully! Screens updated.'
-            : 'Import cancelled or failed',
-        isError: !success,
+            : (error ?? 'Import cancelled'),
+        isError: !success && error != null,
       );
     }
     unawaited(_loadStats());
@@ -1608,9 +1607,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             icon: Icons.file_download_outlined,
             iconColor: AppColors.emerald700,
             title: 'Export Data & Backups',
-            subtitle: kIsWeb
-                ? 'Export as JSON or CSV spreadsheet'
-                : 'Export as SQLite (.db), JSON, or CSV spreadsheet',
+            subtitle: 'Export as SQLite (.db), JSON, or CSV spreadsheet',
             onTap: _isProcessing ? null : () => _showExportDialog(isDark),
             isDark: isDark,
           ),
@@ -1620,9 +1617,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             icon: Icons.file_upload_outlined,
             iconColor: AppColors.info,
             title: 'Import & Restore Data',
-            subtitle: kIsWeb
-                ? 'Restore categories, accounts & transactions from JSON'
-                : 'Restore from SQLite (.db) or JSON backup',
+            subtitle: 'Restore from SQLite (.db) or JSON backup',
             onTap: _isProcessing ? null : () => _showImportDialog(isDark),
             isDark: isDark,
           ),
