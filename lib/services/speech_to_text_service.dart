@@ -176,7 +176,9 @@ class NativePlatformSttEngine implements SttEngine {
     if (lower.contains('not supported') ||
         lower.contains('not-supported') ||
         lower.contains('speech_not_supported')) {
-      return 'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.';
+      return effectiveIsWeb
+          ? 'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.'
+          : 'Speech recognition is not supported on this platform.';
     }
     return raw;
   }
@@ -195,8 +197,10 @@ class NativePlatformSttEngine implements SttEngine {
     if (lower.contains('not supported') ||
         lower.contains('not-supported') ||
         lower.contains('speech_not_supported')) {
-      return const SttNotSupportedException(
-        'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.',
+      return SttNotSupportedException(
+        effectiveIsWeb
+            ? 'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.'
+            : 'Speech recognition is not supported on this platform.',
       );
     }
     return null;
@@ -204,6 +208,14 @@ class NativePlatformSttEngine implements SttEngine {
 
   @override
   Future<void> initialize({String? modelDirPath}) async {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux)) {
+      _initialized = false;
+      throw const SttNotSupportedException(
+        'Speech recognition is not supported on Windows and Linux.',
+      );
+    }
     if (_initialized && _speech.isAvailable) return;
 
     try {

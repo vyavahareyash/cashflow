@@ -41,6 +41,8 @@ dependencies:
   file_picker: ^12.0.0
   fl_chart: ^0.68.0
   sqflite_common_ffi_web: ^1.1.2
+  sqflite_common_ffi: ^2.3.0
+  sqlite3_flutter_libs: ^0.5.24
   crypto: ^3.0.6
   record: ^7.1.1
   speech_to_text: ^7.5.0
@@ -56,7 +58,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
 
-  sqflite_common_ffi: any
   path_provider_platform_interface: any
   plugin_platform_interface: any
 
@@ -68,6 +69,8 @@ flutter_launcher_icons:
   min_sdk_android: 21
   adaptive_icon_background: "#064E3B"
   adaptive_icon_foreground: "assets/icon/app_icon.jpeg"
+  macos:
+    image_path: "assets/icon/app_icon.jpeg"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

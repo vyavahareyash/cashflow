@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
@@ -426,6 +427,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
+  void _openSettingsScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BackupRestoreScreen()),
+    );
+  }
+
   void _onItemTapped(int index, {int? subTabIndex}) {
     setState(() {
       if (index == 3 && subTabIndex == null) {
@@ -485,18 +493,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               color: isDark ? AppColors.darkText : AppColors.gray700,
               size: 22,
             ),
-            onPressed: () {
-              if (widget.onOpenSettings != null) {
-                widget.onOpenSettings!();
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BackupRestoreScreen(),
-                  ),
-                );
-              }
-            },
+            onPressed: _openSettingsScreen,
           ),
 
           IconButton(
@@ -589,14 +586,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     color: isDark ? AppColors.darkText : AppColors.gray700,
                     size: 22,
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BackupRestoreScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _openSettingsScreen,
                 ),
                 IconButton(
                   tooltip: 'Toggle Theme',
@@ -712,7 +702,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
           );
 
-    return ListenableBuilder(
+    final mainContent = ListenableBuilder(
       listenable: WalkthroughController.instance,
       builder: (context, _) {
         final isTourActive = WalkthroughController.instance.isTourActive;
@@ -736,6 +726,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ],
         );
       },
+    );
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
+            _handleVoiceFabTap,
+        const SingleActivator(LogicalKeyboardKey.keyN, control: true):
+            _handleVoiceFabTap,
+        const SingleActivator(LogicalKeyboardKey.comma, meta: true):
+            _openSettingsScreen,
+        const SingleActivator(LogicalKeyboardKey.comma, control: true):
+            _openSettingsScreen,
+        const SingleActivator(LogicalKeyboardKey.digit1, meta: true): () =>
+            _onItemTapped(0),
+        const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
+            _onItemTapped(0),
+        const SingleActivator(LogicalKeyboardKey.digit2, meta: true): () =>
+            _onItemTapped(1),
+        const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
+            _onItemTapped(1),
+        const SingleActivator(LogicalKeyboardKey.digit3, meta: true): () =>
+            _onItemTapped(2),
+        const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
+            _onItemTapped(2),
+        const SingleActivator(LogicalKeyboardKey.digit4, meta: true): () =>
+            _onItemTapped(3),
+        const SingleActivator(LogicalKeyboardKey.digit4, control: true): () =>
+            _onItemTapped(3),
+        const SingleActivator(LogicalKeyboardKey.keyT, meta: true):
+            widget.onThemeToggle,
+        const SingleActivator(LogicalKeyboardKey.keyT, control: true):
+            widget.onThemeToggle,
+      },
+      child: Focus(autofocus: true, child: mainContent),
     );
   }
 
