@@ -1,0 +1,12 @@
+{
+  "name": "cashflow-web",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test",
+    "screenshots:web": "node scripts/capture_web_screenshots.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "playwright": "^1.63.0"
+  }
+}

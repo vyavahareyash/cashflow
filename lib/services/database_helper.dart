@@ -4082,12 +4082,10 @@ class DatabaseHelper {
     if (_isWalkthroughDemoMode) return;
 
     final jsonSnapshot = await exportDatabaseToJSONString();
-    if (!kIsWeb) {
-      try {
-        final dbPath = await getDatabasesPath();
-        DatabaseIoHelper.writeWalkthroughSnapshot(dbPath, jsonSnapshot);
-      } catch (_) {}
-    }
+    try {
+      final dbPath = await getDatabasesPath();
+      DatabaseIoHelper.writeWalkthroughSnapshot(dbPath, jsonSnapshot);
+    } catch (_) {}
     _walkthroughSnapshot = jsonSnapshot;
 
     _isWalkthroughDemoMode = true;
@@ -4102,7 +4100,7 @@ class DatabaseHelper {
 
     try {
       String? jsonToRestore = _walkthroughSnapshot;
-      if (jsonToRestore == null && !kIsWeb) {
+      if (jsonToRestore == null) {
         try {
           final dbPath = await getDatabasesPath();
           jsonToRestore = DatabaseIoHelper.readWalkthroughSnapshot(dbPath);
@@ -4116,12 +4114,10 @@ class DatabaseHelper {
         await seedDatabase();
       }
 
-      if (!kIsWeb) {
-        try {
-          final dbPath = await getDatabasesPath();
-          DatabaseIoHelper.deleteWalkthroughSnapshot(dbPath);
-        } catch (_) {}
-      }
+      try {
+        final dbPath = await getDatabasesPath();
+        DatabaseIoHelper.deleteWalkthroughSnapshot(dbPath);
+      } catch (_) {}
     } finally {
       _walkthroughSnapshot = null;
       _isWalkthroughDemoMode = false;
@@ -4132,7 +4128,6 @@ class DatabaseHelper {
 
   /// Automatically recovers from an interrupted demo mode (e.g. app killed mid-tour).
   Future<void> recoverWalkthroughDemoModeIfNeeded() async {
-    if (kIsWeb) return;
     try {
       final dbPath = await getDatabasesPath();
       final json = DatabaseIoHelper.readWalkthroughSnapshot(dbPath);
