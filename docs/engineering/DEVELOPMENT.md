@@ -210,6 +210,39 @@ flutter build appbundle --release --build-name=1.0.0 --build-number=1
 # build/app/outputs/bundle/release/app-release.aab
 ```
 
+### Desktop Targets & Native Installers
+
+Run locally during development:
+```bash
+flutter run -d macos
+flutter run -d windows
+flutter run -d linux
+```
+
+Automated desktop build & installer packaging script:
+```bash
+./scripts/build_desktop.sh
+```
+
+Manual release commands by platform:
+```bash
+# macOS App & DMG Disk Image (modern diskutil syntax)
+flutter build macos --release
+mkdir -p dmg-source && cp -r build/macos/Build/Products/Release/cashflow.app dmg-source/
+ln -sf /Applications dmg-source/Applications
+diskutil image create from --format UDZO --volumeName "Cashflow" dmg-source "cashflow-macos.dmg"
+# (or fallback on older macOS: hdiutil create -volname "Cashflow" -srcfolder dmg-source -ov -format UDZO "cashflow-macos.dmg")
+
+# Windows Executable & Inno Setup Wizard
+flutter build windows --release
+iscc /DMyAppVersion=4.13.0 windows/installer/cashflow.iss
+# Generates windows/installer/Output/cashflow-windows-x64-setup.exe
+
+# Linux Bundle & Debian Package
+flutter build linux --release
+# Generates cashflow-linux-x64.tar.gz and cashflow-linux-amd64.deb via ./scripts/build_desktop.sh
+```
+
 ### Other Platform Targets
 
 ```bash

@@ -14,6 +14,7 @@ A complete walkthrough of Cashflow's features, interfaces, and core concepts.
 7. [Analytics, Trends & YTD Cashflow](#7-analytics-trends--ytd-cashflow)
 8. [Settings, Data Portability & Backup](#8-settings-data-portability--backup)
 9. [Offline Voice Journaling & AI Assistant](#9-offline-voice-journaling--ai-assistant)
+10. [Desktop & Wide Screen Experience](#10-desktop--wide-screen-experience)
 
 ---
 
@@ -198,4 +199,28 @@ Cashflow transcends traditional expense trackers that serve merely as static log
    - Closing the sheet discards drafts from RAM, leaving zero orphaned records in your database.
 6. **Zero Audio Persistence**:
    - Temporary audio buffers are purged from disk immediately after transcription or on session cancel.
+
+---
+
+## 10. Desktop & Wide Screen Experience
+
+Cashflow delivers first-class desktop application support across macOS, Windows, and Linux while preserving full functional parity with mobile:
+
+- **Adaptive Desktop & Web Layout**:
+  - Automatically activates on wide displays ($\ge 900\,\text{px}$) with an ergonomic, persistent **NavigationRail** on the left.
+  - Multi-column dashboard surfaces Hero Safe-to-Spend cards, quick action bars, and recent activity side by side.
+  - Sinking funds, monthly budgets, and analytics charts expand to utilize widescreen real estate without distortion.
+- **Productivity Keyboard Shortcuts**:
+  - `Cmd / Ctrl + N`: Open AI Voice Journaling / quick transaction logging.
+  - `Cmd / Ctrl + ,`: Navigate directly to Settings & Data Backup.
+  - `Cmd / Ctrl + 1`: Jump to **Home** (Dashboard).
+  - `Cmd / Ctrl + 2`: Jump to **Activity** (Ledger).
+  - `Cmd / Ctrl + 3`: Jump to **Analytics** (Spending breakdown & trends).
+  - `Cmd / Ctrl + 4`: Jump to **Accounts** (Bank accounts, budgets & sinking funds).
+  - `Cmd / Ctrl + T`: Toggle between Light and Dark themes.
+  - `Esc`: Dismiss open modal sheets and dialogs.
+- **Native Installers & Offline Privacy**:
+  - Available as native drag-and-drop `.dmg` (macOS), `Setup.exe` wizard (Windows), and `.deb` package (Linux).
+  - Financial data is stored in native local SQLite databases (`money_tracker.db`) inside standard user application directories with zero cloud connections.
+
 

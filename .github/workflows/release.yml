@@ -212,10 +212,210 @@ jobs:
             cashflow-v*-ios-app.zip
           retention-days: 1
 
+  build-macos:
+    name: Build macOS Desktop App
+    needs: [secret-scan]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS App
+        run: flutter build macos --release
+
+      - name: Package macOS App & DMG
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../../cashflow-macos.zip cashflow.app
+          cd ../../../../..
+          cp cashflow-macos.zip "cashflow-v${VERSION}-macos.zip"
+
+          mkdir -p build/staging/dmg-source
+          cp -r build/macos/Build/Products/Release/cashflow.app build/staging/dmg-source/
+          ln -s /Applications build/staging/dmg-source/Applications
+          if command -v diskutil >/dev/null 2>&1 && diskutil help image create from >/dev/null 2>&1; then
+            diskutil image create from --format UDZO --volumeName "Cashflow" build/staging/dmg-source "cashflow-macos.dmg"
+          else
+            hdiutil create -volname "Cashflow" -srcfolder build/staging/dmg-source -ov -format UDZO "cashflow-macos.dmg"
+          fi
+          cp cashflow-macos.dmg "cashflow-v${VERSION}-macos.dmg"
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-bundle
+          path: |
+            cashflow-macos.zip
+            cashflow-v*-macos.zip
+            cashflow-macos.dmg
+            cashflow-v*-macos.dmg
+          retention-days: 1
+
+  build-windows:
+    name: Build Windows Desktop App
+    needs: [secret-scan]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows App
+        run: flutter build windows --release
+
+      - name: Package Windows App (ZIP & Setup.exe)
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          cd build/windows/x64/runner/Release
+          tar -a -c -f ../../../../../cashflow-windows-x64.zip *
+          cd ../../../../..
+          cp cashflow-windows-x64.zip "cashflow-v${VERSION}-windows-x64.zip"
+
+          if [ -f "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" ]; then
+            ISCC_CMD="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          elif command -v iscc >/dev/null 2>&1; then
+            ISCC_CMD="iscc"
+          else
+            echo "Installing Inno Setup via choco..."
+            choco install innosetup -y
+            ISCC_CMD="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          fi
+
+          "$ISCC_CMD" "/DMyAppVersion=${VERSION}" windows/installer/cashflow.iss
+          cp windows/installer/Output/cashflow-windows-x64-setup.exe "cashflow-windows-x64-setup.exe"
+          cp windows/installer/Output/cashflow-windows-x64-setup.exe "cashflow-v${VERSION}-windows-x64-setup.exe"
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bundle
+          path: |
+            cashflow-windows-x64.zip
+            cashflow-v*-windows-x64.zip
+            cashflow-windows-x64-setup.exe
+            cashflow-v*-windows-x64-setup.exe
+          retention-days: 1
+
+  build-linux:
+    name: Build Linux Desktop App
+    needs: [secret-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsqlite3-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux App
+        run: flutter build linux --release
+
+      - name: Package Linux App (TAR.GZ & DEB)
+        run: |
+          VERSION=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../cashflow-linux-x64.tar.gz *
+          cd ../../../../..
+          cp cashflow-linux-x64.tar.gz "cashflow-v${VERSION}-linux-x64.tar.gz"
+
+          STAGING_DIR="build/staging/deb-package"
+          mkdir -p "${STAGING_DIR}/DEBIAN"
+          mkdir -p "${STAGING_DIR}/usr/bin"
+          mkdir -p "${STAGING_DIR}/usr/lib/cashflow"
+          mkdir -p "${STAGING_DIR}/usr/share/applications"
+          mkdir -p "${STAGING_DIR}/usr/share/icons/hicolor/512x512/apps"
+
+          cp -r build/linux/x64/release/bundle/* "${STAGING_DIR}/usr/lib/cashflow/"
+          chmod +x "${STAGING_DIR}/usr/lib/cashflow/cashflow"
+          ln -s /usr/lib/cashflow/cashflow "${STAGING_DIR}/usr/bin/cashflow"
+
+          cp assets/icon/playstore_icon_512.png "${STAGING_DIR}/usr/share/icons/hicolor/512x512/apps/cashflow.png"
+
+          cat << 'EOF' > "${STAGING_DIR}/usr/share/applications/cashflow.desktop"
+          [Desktop Entry]
+          Name=Cashflow
+          Comment=Personal Finance & Cashflow Tracking
+          Exec=/usr/bin/cashflow
+          Icon=cashflow
+          Terminal=false
+          Type=Application
+          Categories=Office;Finance;
+          EOF
+
+          cat << EOF > "${STAGING_DIR}/DEBIAN/control"
+          Package: cashflow
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Yash Vyavahare
+          Description: Offline-first personal finance and cashflow management app.
+          EOF
+
+          dpkg-deb --build --root-owner-group "${STAGING_DIR}" "cashflow-linux-amd64.deb"
+          cp cashflow-linux-amd64.deb "cashflow-v${VERSION}-linux-amd64.deb"
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle
+          path: |
+            cashflow-linux-x64.tar.gz
+            cashflow-v*-linux-x64.tar.gz
+            cashflow-linux-amd64.deb
+            cashflow-v*-linux-amd64.deb
+          retention-days: 1
+
   publish-release:
     name: Publish GitHub Release
-    needs: [build-android, build-ios]
-    if: always() && (needs.build-android.result == 'success' || needs.build-ios.result == 'success')
+    needs: [build-android, build-ios, build-web, build-macos, build-windows, build-linux]
+    if: always() && (needs.build-android.result == 'success' || needs.build-ios.result == 'success' || needs.build-web.result == 'success' || needs.build-macos.result == 'success' || needs.build-windows.result == 'success' || needs.build-linux.result == 'success')
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

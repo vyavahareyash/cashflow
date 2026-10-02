@@ -56,5 +56,14 @@ node_modules/
 key.properties
 **/android/key.properties
 **/android/app/key.properties
+
+# Desktop Packaging & Staging
+dmg-source/
+deb-package/
+windows/installer/Output/
+*.dmg
+*.deb
+*.tar.gz
+*.exe
 *play-service-account*.json
 *.aab
