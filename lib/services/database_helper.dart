@@ -39,6 +39,7 @@ class DatabaseHelper {
   bool _isWalkthroughDemoMode = false;
   bool get isWalkthroughDemoMode => _isWalkthroughDemoMode;
   String? _walkthroughSnapshot;
+  String? lastImportError;
 
   static bool _suppressNotifications = false;
 
@@ -546,14 +547,27 @@ class DatabaseHelper {
     String? destinationDirectory,
     String? fileName,
   }) async {
-    if (kIsWeb) return null;
-
     try {
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, _dbName);
+      final name = basename(fileName ?? 'cashflow_backup.db');
+
+      if (kIsWeb) {
+        final db = await database;
+        try {
+          await db.rawQuery('PRAGMA wal_checkpoint(FULL)');
+        } catch (_) {}
+
+        final bytes = await DatabaseIoHelper.readBytes(path);
+        final result = await saveBackupBytes(name, bytes);
+        if (result != null) {
+          await setLastBackupTimestamp(DateTime.now());
+        }
+        return result;
+      }
+
       final targetDir =
           destinationDirectory ?? await getEffectiveBackupDirectory();
-      final name = basename(fileName ?? 'cashflow_backup.db');
       final backupFilePath = await DatabaseIoHelper.copyFileToDirectory(
         path,
         targetDir,
@@ -580,8 +594,7 @@ class DatabaseHelper {
   /// Validates SQLite header, stages to temp file, runs integrity check,
   /// and maintains a .bak rollback copy.
   Future<bool> importDatabase({List<int>? bytesForTesting}) async {
-    if (kIsWeb) return false;
-
+    lastImportError = null;
     try {
       final bytes = bytesForTesting ?? await pickBackupBytes();
       if (bytes == null) return false;
@@ -605,13 +618,20 @@ class DatabaseHelper {
         0x33,
         0x00,
       ];
-      if (bytes.length < 16) return false;
+      if (bytes.length < 16) {
+        lastImportError = 'Invalid SQLite database: file is too small.';
+        return false;
+      }
       for (int i = 0; i < 16; i++) {
-        if (bytes[i] != sqliteHeader[i]) return false;
+        if (bytes[i] != sqliteHeader[i]) {
+          lastImportError = 'Invalid database: file is not a SQLite database.';
+          return false;
+        }
       }
 
       await close();
       _database = null;
+      _databaseFuture = null;
 
       final dbPath = await getDatabasesPath();
       final path = join(dbPath, _dbName);
@@ -625,11 +645,17 @@ class DatabaseHelper {
       await DatabaseIoHelper.writeBytes(tmpPath, bytes, flush: true);
 
       // Verify integrity of the staged file
-      final testDb = await openDatabase(tmpPath, readOnly: true);
+      final testDb = await openDatabase(
+        tmpPath,
+        readOnly: true,
+        singleInstance: false,
+      );
       try {
         final result = await testDb.rawQuery('PRAGMA integrity_check');
         final status = result.first.values.first as String;
         if (status != 'ok') {
+          lastImportError =
+              'Corrupted database: SQLite integrity check failed ($status).';
           await testDb.close();
           await DatabaseIoHelper.deleteFile(tmpPath);
           return false;
@@ -640,6 +666,8 @@ class DatabaseHelper {
 
       // Replace current DB with validated file
       await DatabaseIoHelper.renameFile(tmpPath, path);
+      _database = null;
+      _databaseFuture = null;
       await instance.database;
       notifyDataChanged();
 
@@ -654,14 +682,18 @@ class DatabaseHelper {
         error: e,
         stackTrace: stackTrace,
       );
+      lastImportError ??= 'Failed to import database: $e';
       // Attempt rollback from backup
       try {
         final dbPath = await getDatabasesPath();
         final path = join(dbPath, _dbName);
         final bakPath = join(dbPath, '$_dbName.bak');
-        await DatabaseIoHelper.copyFile(bakPath, path);
-        await DatabaseIoHelper.deleteFile(bakPath);
+        if (await DatabaseIoHelper.fileExists(bakPath)) {
+          await DatabaseIoHelper.copyFile(bakPath, path);
+          await DatabaseIoHelper.deleteFile(bakPath);
+        }
         _database = null;
+        _databaseFuture = null;
         await instance.database;
       } catch (_) {}
       return false;

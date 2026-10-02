@@ -46,7 +46,7 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
     if (widget.fixedFormat) {
       _selectedFormat = widget.initialFormat;
     } else {
-      _selectedFormat = kIsWeb ? ExportFormat.json : widget.initialFormat;
+      _selectedFormat = widget.initialFormat;
     }
     _selectedDirectory = widget.initialDirectory;
     _fileNameController = TextEditingController(
@@ -103,25 +103,23 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              if (!kIsWeb) ...[
-                _buildOptionCard(
-                  title: 'SQLite Database (.db)',
-                  subtitle: 'Full binary database backup & restore',
-                  icon: Icons.storage_rounded,
-                  iconColor: AppColors.emerald700,
-                  isSelected: _selectedFormat == ExportFormat.sqlite,
-                  isDark: widget.isDark,
-                  onTap: () {
-                    setState(() {
-                      _selectedFormat = ExportFormat.sqlite;
-                      _fileNameController.text = _getDefaultName(
-                        ExportFormat.sqlite,
-                      );
-                    });
-                  },
-                ),
-                const SizedBox(height: AppSpacing.xs),
-              ],
+              _buildOptionCard(
+                title: 'SQLite Database (.db)',
+                subtitle: 'Full binary database backup & restore',
+                icon: Icons.storage_rounded,
+                iconColor: AppColors.emerald700,
+                isSelected: _selectedFormat == ExportFormat.sqlite,
+                isDark: widget.isDark,
+                onTap: () {
+                  setState(() {
+                    _selectedFormat = ExportFormat.sqlite;
+                    _fileNameController.text = _getDefaultName(
+                      ExportFormat.sqlite,
+                    );
+                  });
+                },
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _buildOptionCard(
                 title: 'JSON Backup (.json)',
                 subtitle: 'Portable structured accounts & transactions',
