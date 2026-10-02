@@ -22,8 +22,13 @@ export '../components/export_backup_dialog.dart' show ExportFormat;
 
 class BackupRestoreScreen extends StatefulWidget {
   final bool scrollToVoiceModels;
+  final bool? isWeb;
 
-  const BackupRestoreScreen({super.key, this.scrollToVoiceModels = false});
+  const BackupRestoreScreen({
+    super.key,
+    this.scrollToVoiceModels = false,
+    this.isWeb,
+  });
 
   @override
   State<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
@@ -2758,6 +2763,145 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   // --- 4. OFFLINE VOICE AI MODEL PACK CARD ---
   Widget _buildVoiceAiModelPackCard(bool isDark) {
+    final effectiveIsWeb = widget.isWeb ?? kIsWeb;
+    if (effectiveIsWeb) {
+      return CustomCard(
+        key: const Key('voice_model_card'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald500.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.mediumBorder,
+                  ),
+                  child: const Icon(
+                    Icons.graphic_eq_rounded,
+                    color: AppColors.emerald600,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Voice AI Model Pack',
+                        style: AppTypography.titleMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Web Speech API + client-side parser (0 MB download)',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  key: const Key('voice_model_status_badge'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald600.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.pillBorder,
+                    border: Border.all(
+                      color: AppColors.emerald600.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 14,
+                        color: AppColors.emerald600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Ready (Zero Download)',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.emerald600,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Local Storage Footprint',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: isDark ? AppColors.darkText : AppColors.gray900,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  '0.0 MB Footprint',
+                  key: const Key('voice_model_storage_text'),
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.emerald600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              key: const Key('web_speech_active_banner'),
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.emerald500.withValues(alpha: 0.08),
+                borderRadius: AppBorderRadius.smallBorder,
+                border: Border.all(
+                  color: AppColors.emerald500.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.mic_none_rounded,
+                    color: AppColors.emerald600,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Browser-native Web Speech recognition is active. '
+                      'Speech transcription and transaction extraction run directly in your browser with zero model downloads.',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray300 : AppColors.gray700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final modelService = ModelManagementService.instance;
     final status = modelService.status;
     final isInstalled = status == ModelPackStatus.installed;

@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../screens/backup_restore_screen.dart';
 import '../services/model_management_service.dart';
 import '../theme/theme_constants.dart';
+import 'voice_recording_modal.dart';
 
 /// Modal bottom sheet informing the user about the required Offline AI Model Pack (US 14, US 19).
 ///
@@ -10,10 +14,12 @@ import '../theme/theme_constants.dart';
 /// displaying the download size (~230 MB) and routing the user to [BackupRestoreScreen]
 /// to initiate the verified Wi-Fi download, or displaying active progress if already downloading.
 class VoiceModelDownloadSheet extends StatelessWidget {
-  const VoiceModelDownloadSheet({super.key});
+  final bool? isWeb;
+
+  const VoiceModelDownloadSheet({super.key, this.isWeb});
 
   /// Displays the download prompt modal bottom sheet.
-  static Future<void> show(BuildContext context) async {
+  static Future<void> show(BuildContext context, {bool? isWeb}) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     await showModalBottomSheet<void>(
       context: context,
@@ -22,13 +28,14 @@ class VoiceModelDownloadSheet extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => const VoiceModelDownloadSheet(),
+      builder: (ctx) => VoiceModelDownloadSheet(isWeb: isWeb),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveIsWeb = isWeb ?? kIsWeb;
 
     return AnimatedBuilder(
       animation: ModelManagementService.instance,
@@ -88,11 +95,13 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                   Semantics(
                     header: true,
                     child: Text(
-                      isActive
-                          ? (isVerifying
-                                ? 'Verifying AI Model Pack...'
-                                : 'Downloading AI Model Pack')
-                          : 'Offline AI Models Required',
+                      effectiveIsWeb
+                          ? 'Web Speech Engine Ready'
+                          : (isActive
+                                ? (isVerifying
+                                      ? 'Verifying AI Model Pack...'
+                                      : 'Downloading AI Model Pack')
+                                : 'Offline AI Models Required'),
                       style: AppTypography.headlineMedium.copyWith(
                         color: isDark ? AppColors.darkText : AppColors.gray900,
                         fontWeight: FontWeight.w700,
@@ -104,11 +113,13 @@ class VoiceModelDownloadSheet extends StatelessWidget {
 
                   // Subtitle / Value Proposition or Status Detail
                   Text(
-                    isActive
-                        ? (modelService.statusDetail.isNotEmpty
-                              ? modelService.statusDetail
-                              : 'Downloading neural weights for on-device voice journaling...')
-                        : 'To protect your financial privacy, speech recognition and transaction extraction run 100% on your device with zero cloud servers.',
+                    effectiveIsWeb
+                        ? 'Cashflow Web uses your browser\'s built-in Web Speech API and client-side deterministic parsing with zero model downloads.'
+                        : (isActive
+                              ? (modelService.statusDetail.isNotEmpty
+                                    ? modelService.statusDetail
+                                    : 'Downloading neural weights for on-device voice journaling...')
+                              : 'To protect your financial privacy, speech recognition and transaction extraction run 100% on your device with zero cloud servers.'),
                     style: AppTypography.bodyMedium.copyWith(
                       color: isDark
                           ? AppColors.darkTextSecondary
@@ -133,7 +144,32 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                             : AppColors.gray200,
                       ),
                     ),
-                    child: isActive
+                    child: effectiveIsWeb
+                        ? Column(
+                            children: [
+                              _buildFeatureRow(
+                                icon: Icons.wifi_off_rounded,
+                                title: '100% Client-Side & Private',
+                                subtitle: 'Audio and transactions never leave your browser.',
+                                isDark: isDark,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _buildFeatureRow(
+                                icon: Icons.speed_rounded,
+                                title: 'Zero Download Required',
+                                subtitle: 'Built-in browser Web Speech API. No 230 MB model download needed on Web.',
+                                isDark: isDark,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _buildFeatureRow(
+                                icon: Icons.tune_rounded,
+                                title: 'Deterministic Heuristic Parser',
+                                subtitle: 'Instant entity extraction for amounts, dates, accounts, and categories.',
+                                isDark: isDark,
+                              ),
+                            ],
+                          )
+                        : isActive
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -222,33 +258,43 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                   // Primary Action
                   Semantics(
                     button: true,
-                    label: isActive
-                        ? 'View download details in Settings'
-                        : 'Go to Settings & Data Backup to download AI models',
+                    label: effectiveIsWeb
+                        ? 'Start voice journaling'
+                        : (isActive
+                              ? 'View download details in Settings'
+                              : 'Go to Settings & Data Backup to download AI models'),
                     child: SizedBox(
                       height: 50,
                       child: ElevatedButton.icon(
                         key: const Key('voice_model_download_settings_button'),
                         onPressed: () {
                           Navigator.of(context).pop();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const BackupRestoreScreen(
-                                scrollToVoiceModels: true,
+                          if (effectiveIsWeb) {
+                            unawaited(VoiceRecordingModal.show(context));
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const BackupRestoreScreen(
+                                  scrollToVoiceModels: true,
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         },
                         icon: Icon(
-                          isActive
-                              ? Icons.settings_outlined
-                              : Icons.download_rounded,
+                          effectiveIsWeb
+                              ? Icons.mic_rounded
+                              : (isActive
+                                    ? Icons.settings_outlined
+                                    : Icons.download_rounded),
                           size: 20,
                         ),
                         label: Text(
-                          isActive
-                              ? 'View in Settings'
-                              : 'Download in Settings',
+                          effectiveIsWeb
+                              ? 'Start Voice Journaling'
+                              : (isActive
+                                    ? 'View in Settings'
+                                    : 'Download in Settings'),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -285,7 +331,9 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                           }
                         },
                         child: Text(
-                          isActive ? 'Cancel Download' : 'Not Now',
+                          effectiveIsWeb
+                              ? 'Dismiss'
+                              : (isActive ? 'Cancel Download' : 'Not Now'),
                           style: TextStyle(
                             color: isActive
                                 ? AppColors.danger

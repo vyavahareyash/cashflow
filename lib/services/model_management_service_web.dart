@@ -55,16 +55,16 @@ class ModelManagementService extends ChangeNotifier
     DatabaseHelper? databaseHelper,
   }) : downloadClient = downloadClient ?? DefaultModelDownloadClient();
 
-  ModelPackStatus get status => ModelPackStatus.notInstalled;
-  ModelMemoryState get memoryState => ModelMemoryState.unloaded;
-  bool get isModelLoadedInMemory => false;
+  ModelPackStatus get status => ModelPackStatus.installed;
+  ModelMemoryState get memoryState => ModelMemoryState.loaded;
+  bool get isModelLoadedInMemory => true;
   String? get errorMessage => null;
-  String get statusDetail => '';
+  String get statusDetail => 'Web speech engine ready (zero download)';
   int get bytesDownloaded => 0;
   int get totalBytes => 0;
-  double get progress => 0.0;
+  double get progress => 1.0;
   bool get isDownloading => false;
-  bool get isInstalled => false;
+  bool get isInstalled => true;
 
   AiModelPackManifest get effectiveManifest => AiModelPackManifest.defaultPack;
 
@@ -77,15 +77,15 @@ class ModelManagementService extends ChangeNotifier
 
   Future<ModelPackStatus> checkInstalledStatus({
     bool verifyChecksums = false,
-  }) async => ModelPackStatus.notInstalled;
+  }) async => ModelPackStatus.installed;
 
   Future<bool> isModelPackInstalled({bool verifyChecksums = false}) async =>
-      false;
+      true;
 
   Future<bool> downloadModelPack({
     bool allowCellular = false,
     DatabaseHelper? dbHelper,
-  }) async => false;
+  }) async => true;
 
   void cancelDownload() {}
 

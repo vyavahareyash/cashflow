@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/history_screen.dart';
@@ -765,8 +766,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _handleVoiceFabTap() async {
-    final isInstalled = await ModelManagementService.instance
-        .isModelPackInstalled();
+    final isInstalled =
+        kIsWeb || await ModelManagementService.instance.isModelPackInstalled();
     if (!mounted) return;
     if (!isInstalled) {
       unawaited(VoiceModelDownloadSheet.show(context));
