@@ -1,7 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+
+import 'stt_audio_reader.dart';
+
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -521,18 +523,17 @@ class MockSttEngine implements SttEngine {
       throw const SttEngineException('Mock STT engine is not initialized');
     }
 
-    final file = File(wavFilePath);
-    if (!file.existsSync()) {
+    if (!SttAudioReader.fileExists(wavFilePath)) {
       throw SttEngineException('Audio file not found: $wavFilePath');
     }
 
-    final len = file.lengthSync();
+    final len = SttAudioReader.fileLength(wavFilePath);
     if (len <= 44 || shouldThrowSilent) {
       throw const SttSilentAudioException('Audio contains only silence.');
     }
 
     if (silenceThreshold != null) {
-      final bytes = file.readAsBytesSync();
+      final bytes = SttAudioReader.readBytes(wavFilePath);
       int dataOffset = 44;
       for (int i = 12; i < bytes.length - 8; i++) {
         if (bytes[i] == 0x64 &&

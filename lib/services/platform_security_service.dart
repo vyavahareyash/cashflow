@@ -11,7 +11,7 @@ class PlatformSecurityService {
 
   /// Whether the device supports biometric or device-credential auth.
   Future<bool> canAuthenticate() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return false;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
     try {
       final result = await _channel.invokeMethod<bool>('canAuthenticate');
       return result ?? false;
@@ -23,7 +23,7 @@ class PlatformSecurityService {
   /// Shows the native biometric / PIN / pattern prompt.
   /// Returns `true` if authentication succeeded.
   Future<bool> authenticate() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
     try {
       final result = await _channel.invokeMethod<bool>('authenticate');
       return result ?? false;
@@ -34,7 +34,7 @@ class PlatformSecurityService {
 
   /// Enables or disables FLAG_SECURE (blocks screenshots / recent-apps preview).
   Future<void> setSecureFlag(bool enable) async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
       await _channel.invokeMethod('setSecureFlag', {'enable': enable});
     } catch (_) {
