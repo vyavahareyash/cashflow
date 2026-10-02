@@ -201,39 +201,89 @@ class _DashboardScreenState extends State<DashboardScreen>
     return RefreshIndicator(
       onRefresh: _loadAllData,
       color: AppColors.emerald700,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          100,
-        ),
-        children: [
-          // 1. HERO USABLE BALANCE CARD
-          _buildHeroBalanceCard(isDark),
-          const SizedBox(height: AppSpacing.lg),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = AppBreakpoints.isWideWidth(constraints.maxWidth);
 
-          // 2. QUICK ACTIONS BAR
-          _buildQuickActions(isDark),
-          const SizedBox(height: AppSpacing.xl),
+          if (!isWide) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                100,
+              ),
+              children: [
+                // 1. HERO USABLE BALANCE CARD
+                _buildHeroBalanceCard(isDark),
+                const SizedBox(height: AppSpacing.lg),
 
-          // 3. MONTHLY BUDGET PACE SNAPSHOT
-          _buildBudgetSnapshotCard(isDark),
-          const SizedBox(height: AppSpacing.xl),
+                // 2. QUICK ACTIONS BAR
+                _buildQuickActions(isDark),
+                const SizedBox(height: AppSpacing.xl),
 
-          // 4. SINKING FUNDS / GOALS SNAPSHOT
-          _buildGoalsSection(isDark),
-          const SizedBox(height: AppSpacing.xl),
+                // 3. MONTHLY BUDGET PACE SNAPSHOT
+                _buildBudgetSnapshotCard(isDark),
+                const SizedBox(height: AppSpacing.xl),
 
-          // 5. ACCOUNTS OVERVIEW
-          _buildAccountsSection(isDark),
-          const SizedBox(height: AppSpacing.xl),
+                // 4. SINKING FUNDS / GOALS SNAPSHOT
+                _buildGoalsSection(isDark),
+                const SizedBox(height: AppSpacing.xl),
 
-          // 6. RECENT TRANSACTIONS
-          _buildRecentTransactionsSection(isDark),
-          const SizedBox(height: AppSpacing.huge),
-        ],
+                // 5. ACCOUNTS OVERVIEW
+                _buildAccountsSection(isDark),
+                const SizedBox(height: AppSpacing.xl),
+
+                // 6. RECENT TRANSACTIONS
+                _buildRecentTransactionsSection(isDark),
+                const SizedBox(height: AppSpacing.huge),
+              ],
+            );
+          }
+
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.xxl,
+            ),
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildHeroBalanceCard(isDark),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildQuickActions(isDark),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildBudgetSnapshotCard(isDark),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xl),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildGoalsSection(isDark),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildAccountsSection(isDark),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildRecentTransactionsSection(isDark),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -263,40 +313,47 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: AppBorderRadius.smallBorder,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      color: Colors.white,
-                      size: 16,
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Text(
+                        'Safe-to-Spend Balance',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Safe-to-Spend Balance',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: AppSpacing.xs),
+                    Tooltip(
+                      message: 'After goal sinking funds; budgets remain tracking limits',
+                      triggerMode: TooltipTriggerMode.tap,
+                      child: Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Tooltip(
-                    message: 'After goal sinking funds; budgets remain tracking limits',
-                    triggerMode: TooltipTriggerMode.tap,
-                    child: Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: AppSpacing.xs),
               IconButton(
                 key: WalkthroughKeys.privacyToggleKey,
                 icon: Icon(
@@ -513,6 +570,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        mouseCursor: SystemMouseCursors.click,
         borderRadius: AppBorderRadius.mediumBorder,
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -594,30 +652,38 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.xs),
-                    decoration: BoxDecoration(
-                      color: AppColors.emerald500.withValues(alpha: 0.12),
-                      borderRadius: AppBorderRadius.smallBorder,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.xs),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald500.withValues(alpha: 0.12),
+                        borderRadius: AppBorderRadius.smallBorder,
+                      ),
+                      child: const Icon(
+                        Icons.donut_large_rounded,
+                        color: AppColors.emerald600,
+                        size: 18,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.donut_large_rounded,
-                      color: AppColors.emerald600,
-                      size: 18,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Monthly Budget Pace',
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Monthly Budget Pace',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: AppSpacing.xs),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Details',
@@ -654,8 +720,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: AppSpacing.md),
 
           // Metrics Breakdown
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            runSpacing: AppSpacing.xs,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,8 +769,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: AppSpacing.xs,
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -831,12 +901,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Sinking Funds & Goals',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.w700,
+            Expanded(
+              child: Text(
+                'Sinking Funds & Goals',
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: AppSpacing.xs),
             TextButton(
               onPressed: () {
                 if (widget.onNavigateTab != null) {
@@ -1007,12 +1082,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Physical Accounts',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.w700,
+            Expanded(
+              child: Text(
+                'Physical Accounts',
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: AppSpacing.xs),
             TextButton(
               onPressed: () {
                 if (widget.onNavigateTab != null) {
@@ -1183,12 +1263,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Recent Activity',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.w700,
+            Expanded(
+              child: Text(
+                'Recent Activity',
+                style: AppTypography.titleLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: AppSpacing.xs),
             TextButton(
               onPressed: () {
                 if (widget.onNavigateTab != null) widget.onNavigateTab!(1);

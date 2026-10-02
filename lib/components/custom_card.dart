@@ -71,7 +71,12 @@ class CustomCard extends StatelessWidget {
     if (onTap != null) {
       return Material(
         color: Colors.transparent,
-        child: InkWell(onTap: onTap, borderRadius: radius, child: cardContent),
+        child: InkWell(
+          onTap: onTap,
+          mouseCursor: SystemMouseCursors.click,
+          borderRadius: radius,
+          child: cardContent,
+        ),
       );
     }
 

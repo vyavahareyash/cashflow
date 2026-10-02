@@ -386,6 +386,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       selected: isSelected,
       onSelected: (_) => onTap(),
+      mouseCursor: SystemMouseCursors.click,
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.gray100,
       selectedColor: isDark
           ? AppColors.emerald700.withValues(alpha: 0.25)
@@ -988,6 +989,559 @@ class _HistoryScreenState extends State<HistoryScreen> {
         return dateB.compareTo(dateA);
       });
 
+    final filterAndSummaryWidgets = <Widget>[
+      // Search & Action Row
+      Row(
+        children: [
+          Expanded(
+            child: TextField(
+              key: const Key('activity_ledger_search_field'),
+              onChanged: (val) => setState(() => _searchQuery = val),
+              decoration: InputDecoration(
+                hintText: 'Search ledger by note, category...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                filled: true,
+                fillColor: isDark ? AppColors.darkSurface : AppColors.white,
+                border: OutlineInputBorder(
+                  borderRadius: AppBorderRadius.mediumBorder,
+                  borderSide: BorderSide(
+                    color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          IconButton(
+            key: const Key('activity_ledger_export_csv_btn'),
+            icon: const Icon(Icons.download_rounded),
+            tooltip: 'Export CSV',
+            style: IconButton.styleFrom(
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppBorderRadius.mediumBorder,
+                side: BorderSide(
+                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                ),
+              ),
+              minimumSize: const Size(48, 48),
+            ),
+            onPressed: _exportCSV,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          IconButton(
+            key: const Key('activity_ledger_open_filters_btn'),
+            icon: Icon(
+              Icons.tune_rounded,
+              color: (_selectedCategories.isNotEmpty || _startDate != null)
+                  ? AppColors.emerald600
+                  : null,
+            ),
+            tooltip: 'Advanced Filters',
+            style: IconButton.styleFrom(
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppBorderRadius.mediumBorder,
+                side: BorderSide(
+                  color: (_selectedCategories.isNotEmpty || _startDate != null)
+                      ? AppColors.emerald600
+                      : (isDark ? AppColors.darkBorder : AppColors.gray200),
+                ),
+              ),
+              minimumSize: const Size(48, 48),
+            ),
+            onPressed: _openFilters,
+          ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.sm),
+
+      // Horizontal Quick Filter Chips Row
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildQuickFilterChip('All', _selectedTypes.isEmpty, () {
+              setState(() => _selectedTypes.clear());
+              unawaited(_loadTransactions());
+            }, isDark),
+            const SizedBox(width: AppSpacing.xs),
+            _buildQuickFilterChip(
+              'Expenses',
+              _selectedTypes.length == 1 && _selectedTypes.contains('expense'),
+              () {
+                setState(() {
+                  if (_selectedTypes.contains('expense')) {
+                    _selectedTypes.clear();
+                  } else {
+                    _selectedTypes = {'expense'};
+                  }
+                });
+                unawaited(_loadTransactions());
+              },
+              isDark,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _buildQuickFilterChip(
+              'Income',
+              _selectedTypes.length == 1 && _selectedTypes.contains('income'),
+              () {
+                setState(() {
+                  if (_selectedTypes.contains('income')) {
+                    _selectedTypes.clear();
+                  } else {
+                    _selectedTypes = {'income'};
+                  }
+                });
+                unawaited(_loadTransactions());
+              },
+              isDark,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _buildQuickFilterChip(
+              'Transfers',
+              _selectedTypes.length == 1 && _selectedTypes.contains('transfer'),
+              () {
+                setState(() {
+                  if (_selectedTypes.contains('transfer')) {
+                    _selectedTypes.clear();
+                  } else {
+                    _selectedTypes = {'transfer'};
+                  }
+                });
+                unawaited(_loadTransactions());
+              },
+              isDark,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            _buildQuickFilterChip(
+              'Goal Locks',
+              _selectedTypes.contains('goal_lock') ||
+                  _selectedTypes.contains('goal_unlock'),
+              () {
+                setState(() {
+                  if (_selectedTypes.contains('goal_lock')) {
+                    _selectedTypes.clear();
+                  } else {
+                    _selectedTypes = {
+                      'goal_lock',
+                      'goal_unlock',
+                      'goal_payment',
+                    };
+                  }
+                });
+                unawaited(_loadTransactions());
+              },
+              isDark,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: AppSpacing.md),
+
+      // Period Selector & Summary Card
+      CustomCard(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: AppSpacing.xs,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: const Key('activity_ledger_prev_period_btn'),
+                      icon: const Icon(Icons.chevron_left_rounded),
+                      tooltip: 'Previous Month',
+                      onPressed: () => _stepPeriod(-1),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    InkWell(
+                      key: const Key('activity_ledger_pick_period_btn'),
+                      mouseCursor: SystemMouseCursors.click,
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: _pickPeriodMonthYear,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs,
+                          vertical: AppSpacing.xs,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _selectedPeriod == null
+                                  ? Icons.all_inclusive_rounded
+                                  : Icons.calendar_month_rounded,
+                              size: 18,
+                              color: AppColors.emerald600,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              _selectedPeriod == null
+                                  ? 'All Time'
+                                  : DateFormat('MMMM yyyy')
+                                        .format(_selectedPeriod!),
+                              style: AppTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      key: const Key('activity_ledger_next_period_btn'),
+                      icon: const Icon(Icons.chevron_right_rounded),
+                      tooltip: 'Next Month',
+                      onPressed: () => _stepPeriod(1),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                TextButton(
+                  key: const Key('activity_ledger_toggle_all_time_btn'),
+                  onPressed: () => _setPeriod(
+                    _selectedPeriod == null
+                        ? DateTime(DateTime.now().year, DateTime.now().month, 1)
+                        : null,
+                  ),
+                  child: Text(
+                    _selectedPeriod == null ? 'Show Month' : 'All Time',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: [
+                    Text(
+                      'Outflow',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '-${AppFormatters.compactCurrency(totalOutflow)}',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    Text(
+                      'Inflow',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '+${AppFormatters.compactCurrency(totalInflow)}',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    Text(
+                      'Net',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${netCashflow >= 0 ? '+' : ''}${AppFormatters.compactCurrency(netCashflow)}',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: netCashflow >= 0
+                            ? AppColors.emerald600
+                            : AppColors.danger,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    Text(
+                      'Count',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${filtered.length}',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ];
+
+    final transactionWidgets = <Widget>[
+      if (filtered.isEmpty)
+        CustomCard(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Text(
+                'No transactions found',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: isDark ? AppColors.gray400 : AppColors.gray600,
+                ),
+              ),
+            ),
+          ),
+        )
+      else
+        ...sortedMonths.map((month) {
+          final txs = grouped[month]!;
+          double monthTotal = 0;
+          for (var t in txs) {
+            monthTotal += (t['amount'] as num?)?.toDouble() ?? 0.0;
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      month,
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.emerald700,
+                      ),
+                    ),
+                    Text(
+                      'Total: ₹${monthTotal.toStringAsFixed(0)}',
+                      style: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ...txs.map((tx) {
+                final date = DateTime.tryParse(tx['date']) ?? DateTime.now();
+                final categoryName = tx['category_name'] ?? 'General';
+                final accountName = tx['account_name'] ?? 'Account';
+                final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
+                final note = tx['note'] as String?;
+                final type = tx['type'] as String? ?? 'expense';
+                final goalName = tx['goal_name'] as String?;
+                final destinationName =
+                    tx['destination_account_name'] as String?;
+                final detail = destinationName == null
+                    ? accountName
+                    : '$accountName → $destinationName';
+                final label = _transactionLabel(type);
+
+                final isGoalTx =
+                    type == 'goal_lock' ||
+                    type == 'goal_unlock' ||
+                    type == 'goal_payment';
+                final dateFormatted = DateFormat('MMM dd').format(date);
+                String tileTitle;
+                String tileSubtitle;
+
+                if (isGoalTx) {
+                  final planDisplay = goalName ?? label;
+                  final catInfo =
+                      (type == 'goal_payment' &&
+                          categoryName != 'General' &&
+                          categoryName.isNotEmpty)
+                      ? ' • $categoryName'
+                      : '';
+                  if (note != null && note.isNotEmpty) {
+                    tileTitle = note;
+                    tileSubtitle =
+                        '$label • Goal: $planDisplay$catInfo • $detail • $dateFormatted';
+                  } else {
+                    tileTitle = planDisplay;
+                    tileSubtitle = '$label$catInfo • $detail • $dateFormatted';
+                  }
+                } else {
+                  if (note != null && note.isNotEmpty) {
+                    tileTitle = note;
+                    tileSubtitle =
+                        '${type == 'expense' ? categoryName : label} • $detail • $dateFormatted';
+                  } else {
+                    tileTitle = type == 'expense' ? categoryName : label;
+                    tileSubtitle = '$detail • $dateFormatted';
+                  }
+                }
+
+                return CustomCard(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    children: [
+                      CategoryBadge(
+                        label: type == 'expense' ? categoryName : label,
+                        iconOnly: true,
+                      ),
+                      const SizedBox(width: AppSpacing.sm + 2),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tileTitle,
+                              style: AppTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              tileSubtitle,
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        '${_isCredit(type)
+                            ? '+'
+                            : _isEarmarkOrTransfer(type)
+                            ? ''
+                            : '-'}${AppFormatters.currency(amount)}',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: _isCredit(type)
+                              ? AppColors.success
+                              : _isEarmarkOrTransfer(type)
+                              ? AppColors.info
+                              : AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        key: Key('options_tx_${tx['id']}'),
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          size: 18,
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                        ),
+                        tooltip: 'Transaction options',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        splashRadius: 16,
+                        color: isDark ? AppColors.darkSurface : AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppBorderRadius.mediumBorder,
+                          side: BorderSide(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray200,
+                            width: 1,
+                          ),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            unawaited(_showEditTransactionDialog(tx));
+                          } else if (value == 'delete') {
+                            unawaited(_deleteTransaction(tx));
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          if (tx['type'] != 'cc_payment' &&
+                              tx['type'] != 'cc_lock' &&
+                              tx['type'] != 'cc_unlock')
+                            PopupMenuItem(
+                              value: 'edit',
+                              height: 36,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 16,
+                                    color: isDark
+                                        ? AppColors.gray300
+                                        : AppColors.gray700,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text(
+                                    'Edit',
+                                    style: AppTypography.labelMedium.copyWith(
+                                      color: isDark
+                                          ? AppColors.darkText
+                                          : AppColors.gray900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            height: 36,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 16,
+                                  color: AppColors.danger,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  'Delete',
+                                  style: AppTypography.labelMedium.copyWith(
+                                    color: AppColors.danger,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          );
+        }),
+    ];
+
     return Scaffold(
       appBar: Navigator.canPop(context)
           ? AppBar(
@@ -1016,645 +1570,54 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
             )
-          : RefreshIndicator(
-              onRefresh: _loadTransactions,
-              color: AppColors.emerald700,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  100,
-                ),
-                children: [
-                  // Search & Action Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          key: const Key('activity_ledger_search_field'),
-                          onChanged: (val) =>
-                              setState(() => _searchQuery = val),
-                          decoration: InputDecoration(
-                            hintText: 'Search ledger by note, category...',
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            filled: true,
-                            fillColor: isDark
-                                ? AppColors.darkSurface
-                                : AppColors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: AppBorderRadius.mediumBorder,
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppColors.darkBorder
-                                    : AppColors.gray200,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.sm,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      IconButton(
-                        key: const Key('activity_ledger_export_csv_btn'),
-                        icon: const Icon(Icons.download_rounded),
-                        tooltip: 'Export CSV',
-                        style: IconButton.styleFrom(
-                          backgroundColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            side: BorderSide(
-                              color: isDark
-                                  ? AppColors.darkBorder
-                                  : AppColors.gray200,
-                            ),
-                          ),
-                          minimumSize: const Size(48, 48),
-                        ),
-                        onPressed: _exportCSV,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      IconButton(
-                        key: const Key('activity_ledger_open_filters_btn'),
-                        icon: Icon(
-                          Icons.tune_rounded,
-                          color:
-                              (_selectedCategories.isNotEmpty ||
-                                  _startDate != null)
-                              ? AppColors.emerald600
-                              : null,
-                        ),
-                        tooltip: 'Advanced Filters',
-                        style: IconButton.styleFrom(
-                          backgroundColor: isDark
-                              ? AppColors.darkSurface
-                              : AppColors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppBorderRadius.mediumBorder,
-                            side: BorderSide(
-                              color:
-                                  (_selectedCategories.isNotEmpty ||
-                                      _startDate != null)
-                                  ? AppColors.emerald600
-                                  : (isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.gray200),
-                            ),
-                          ),
-                          minimumSize: const Size(48, 48),
-                        ),
-                        onPressed: _openFilters,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = AppBreakpoints.isWideWidth(constraints.maxWidth);
 
-                  // Horizontal Quick Filter Chips Row
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildQuickFilterChip(
-                          'All',
-                          _selectedTypes.isEmpty,
-                          () {
-                            setState(() => _selectedTypes.clear());
-                            unawaited(_loadTransactions());
-                          },
-                          isDark,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        _buildQuickFilterChip(
-                          'Expenses',
-                          _selectedTypes.length == 1 &&
-                              _selectedTypes.contains('expense'),
-                          () {
-                            setState(() {
-                              if (_selectedTypes.contains('expense')) {
-                                _selectedTypes.clear();
-                              } else {
-                                _selectedTypes = {'expense'};
-                              }
-                            });
-                            unawaited(_loadTransactions());
-                          },
-                          isDark,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        _buildQuickFilterChip(
-                          'Income',
-                          _selectedTypes.length == 1 &&
-                              _selectedTypes.contains('income'),
-                          () {
-                            setState(() {
-                              if (_selectedTypes.contains('income')) {
-                                _selectedTypes.clear();
-                              } else {
-                                _selectedTypes = {'income'};
-                              }
-                            });
-                            unawaited(_loadTransactions());
-                          },
-                          isDark,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        _buildQuickFilterChip(
-                          'Transfers',
-                          _selectedTypes.length == 1 &&
-                              _selectedTypes.contains('transfer'),
-                          () {
-                            setState(() {
-                              if (_selectedTypes.contains('transfer')) {
-                                _selectedTypes.clear();
-                              } else {
-                                _selectedTypes = {'transfer'};
-                              }
-                            });
-                            unawaited(_loadTransactions());
-                          },
-                          isDark,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        _buildQuickFilterChip(
-                          'Goal Locks',
-                          _selectedTypes.contains('goal_lock') ||
-                              _selectedTypes.contains('goal_unlock'),
-                          () {
-                            setState(() {
-                              if (_selectedTypes.contains('goal_lock')) {
-                                _selectedTypes.clear();
-                              } else {
-                                _selectedTypes = {
-                                  'goal_lock',
-                                  'goal_unlock',
-                                  'goal_payment',
-                                };
-                              }
-                            });
-                            unawaited(_loadTransactions());
-                          },
-                          isDark,
-                        ),
-                      ],
+                return RefreshIndicator(
+                  onRefresh: _loadTransactions,
+                  color: AppColors.emerald700,
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      isWide ? AppSpacing.xl : AppSpacing.lg,
+                      isWide ? AppSpacing.lg : AppSpacing.lg,
+                      isWide ? AppSpacing.xl : AppSpacing.lg,
+                      isWide ? AppSpacing.xxl : 100,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Period Selector & Summary Card
-                  CustomCard(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
+                    children: isWide
+                        ? [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                IconButton(
-                                  key: const Key(
-                                    'activity_ledger_prev_period_btn',
-                                  ),
-                                  icon: const Icon(Icons.chevron_left_rounded),
-                                  tooltip: 'Previous Month',
-                                  onPressed: () => _stepPeriod(-1),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                InkWell(
-                                  key: const Key(
-                                    'activity_ledger_pick_period_btn',
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  onTap: _pickPeriodMonthYear,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xs,
-                                      vertical: AppSpacing.xs,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          _selectedPeriod == null
-                                              ? Icons.all_inclusive_rounded
-                                              : Icons.calendar_month_rounded,
-                                          size: 18,
-                                          color: AppColors.emerald600,
-                                        ),
-                                        const SizedBox(width: AppSpacing.xs),
-                                        Text(
-                                          _selectedPeriod == null
-                                              ? 'All Time'
-                                              : DateFormat('MMMM yyyy')
-                                                    .format(_selectedPeriod!),
-                                          style: AppTypography.titleMedium
-                                              .copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
+                                Expanded(
+                                  flex: 5,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: filterAndSummaryWidgets,
                                   ),
                                 ),
-                                IconButton(
-                                  key: const Key(
-                                    'activity_ledger_next_period_btn',
+                                const SizedBox(width: AppSpacing.xl),
+                                Expanded(
+                                  flex: 7,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: transactionWidgets,
                                   ),
-                                  icon: const Icon(Icons.chevron_right_rounded),
-                                  tooltip: 'Next Month',
-                                  onPressed: () => _stepPeriod(1),
-                                  visualDensity: VisualDensity.compact,
                                 ),
                               ],
                             ),
-                            TextButton(
-                              key: const Key(
-                                'activity_ledger_toggle_all_time_btn',
-                              ),
-                              onPressed: () => _setPeriod(
-                                _selectedPeriod == null
-                                    ? DateTime(
-                                        DateTime.now().year,
-                                        DateTime.now().month,
-                                        1,
-                                      )
-                                    : null,
-                              ),
-                              child: Text(
-                                _selectedPeriod == null
-                                    ? 'Show Month'
-                                    : 'All Time',
-                              ),
-                            ),
+                          ]
+                        : [
+                            ...filterAndSummaryWidgets,
+                            const SizedBox(height: AppSpacing.md),
+                            ...transactionWidgets,
+                            const SizedBox(height: AppSpacing.huge),
                           ],
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        const Divider(height: 1),
-                        const SizedBox(height: AppSpacing.sm),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Column(
-                              children: [
-                                Text(
-                                  'Outflow',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: isDark
-                                        ? AppColors.gray400
-                                        : AppColors.gray600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '-${AppFormatters.compactCurrency(totalOutflow)}',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  'Inflow',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: isDark
-                                        ? AppColors.gray400
-                                        : AppColors.gray600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '+${AppFormatters.compactCurrency(totalInflow)}',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  'Net',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: isDark
-                                        ? AppColors.gray400
-                                        : AppColors.gray600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${netCashflow >= 0 ? '+' : ''}${AppFormatters.compactCurrency(netCashflow)}',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    color: netCashflow >= 0
-                                        ? AppColors.emerald600
-                                        : AppColors.danger,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  'Count',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: isDark
-                                        ? AppColors.gray400
-                                        : AppColors.gray600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${filtered.length}',
-                                  style: AppTypography.titleMedium.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  if (filtered.isEmpty)
-                    CustomCard(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Text(
-                            'No transactions found',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.gray400
-                                  : AppColors.gray600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    ...sortedMonths.map((month) {
-                      final txs = grouped[month]!;
-                      double monthTotal = 0;
-                      for (var t in txs) {
-                        monthTotal += (t['amount'] as num?)?.toDouble() ?? 0.0;
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.sm,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  month,
-                                  style: AppTypography.titleMedium.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.emerald700,
-                                  ),
-                                ),
-                                Text(
-                                  'Total: ₹${monthTotal.toStringAsFixed(0)}',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? AppColors.gray400
-                                        : AppColors.gray600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ...txs.map((tx) {
-                            final date =
-                                DateTime.tryParse(tx['date']) ?? DateTime.now();
-                            final categoryName =
-                                tx['category_name'] ?? 'General';
-                            final accountName = tx['account_name'] ?? 'Account';
-                            final amount =
-                                (tx['amount'] as num?)?.toDouble() ?? 0.0;
-                            final note = tx['note'] as String?;
-                            final type = tx['type'] as String? ?? 'expense';
-                            final goalName = tx['goal_name'] as String?;
-                            final destinationName =
-                                tx['destination_account_name'] as String?;
-                            final detail = destinationName == null
-                                ? accountName
-                                : '$accountName → $destinationName';
-                            final label = _transactionLabel(type);
-
-                            final isGoalTx =
-                                type == 'goal_lock' ||
-                                type == 'goal_unlock' ||
-                                type == 'goal_payment';
-                            final dateFormatted = DateFormat('MMM dd')
-                                .format(date);
-                            String tileTitle;
-                            String tileSubtitle;
-
-                            if (isGoalTx) {
-                              final planDisplay = goalName ?? label;
-                              final catInfo =
-                                  (type == 'goal_payment' &&
-                                      categoryName != 'General' &&
-                                      categoryName.isNotEmpty)
-                                  ? ' • $categoryName'
-                                  : '';
-                              if (note != null && note.isNotEmpty) {
-                                tileTitle = note;
-                                tileSubtitle =
-                                    '$label • Goal: $planDisplay$catInfo • $detail • $dateFormatted';
-                              } else {
-                                tileTitle = planDisplay;
-                                tileSubtitle =
-                                    '$label$catInfo • $detail • $dateFormatted';
-                              }
-                            } else {
-                              if (note != null && note.isNotEmpty) {
-                                tileTitle = note;
-                                tileSubtitle =
-                                    '${type == 'expense' ? categoryName : label} • $detail • $dateFormatted';
-                              } else {
-                                tileTitle = type == 'expense'
-                                    ? categoryName
-                                    : label;
-                                tileSubtitle = '$detail • $dateFormatted';
-                              }
-                            }
-
-                            return CustomCard(
-                              margin: const EdgeInsets.only(
-                                bottom: AppSpacing.sm,
-                              ),
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              child: Row(
-                                children: [
-                                  CategoryBadge(
-                                    label: type == 'expense'
-                                        ? categoryName
-                                        : label,
-                                    iconOnly: true,
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm + 2),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          tileTitle,
-                                          style: AppTypography.bodyMedium
-                                              .copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          tileSubtitle,
-                                          style: AppTypography.labelSmall
-                                              .copyWith(
-                                                color: isDark
-                                                    ? AppColors.gray400
-                                                    : AppColors.gray600,
-                                              ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.xs),
-                                  Text(
-                                    '${_isCredit(type)
-                                        ? '+'
-                                        : _isEarmarkOrTransfer(type)
-                                        ? ''
-                                        : '-'}${AppFormatters.currency(amount)}',
-                                    style: AppTypography.titleMedium.copyWith(
-                                      color: _isCredit(type)
-                                          ? AppColors.success
-                                          : _isEarmarkOrTransfer(type)
-                                          ? AppColors.info
-                                          : AppColors.danger,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  PopupMenuButton<String>(
-                                    key: Key('options_tx_${tx['id']}'),
-                                    icon: Icon(
-                                      Icons.more_vert_rounded,
-                                      size: 18,
-                                      color: isDark
-                                          ? AppColors.gray400
-                                          : AppColors.gray600,
-                                    ),
-                                    tooltip: 'Transaction options',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    splashRadius: 16,
-                                    color: isDark
-                                        ? AppColors.darkSurface
-                                        : AppColors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          AppBorderRadius.mediumBorder,
-                                      side: BorderSide(
-                                        color: isDark
-                                            ? AppColors.darkBorder
-                                            : AppColors.gray200,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    onSelected: (value) {
-                                      if (value == 'edit') {
-                                        unawaited(
-                                          _showEditTransactionDialog(tx),
-                                        );
-                                      } else if (value == 'delete') {
-                                        unawaited(_deleteTransaction(tx));
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      if (tx['type'] != 'cc_payment' &&
-                                          tx['type'] != 'cc_lock' &&
-                                          tx['type'] != 'cc_unlock')
-                                        PopupMenuItem(
-                                          value: 'edit',
-                                          height: 36,
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.edit_outlined,
-                                                size: 16,
-                                                color: isDark
-                                                    ? AppColors.gray300
-                                                    : AppColors.gray700,
-                                              ),
-                                              const SizedBox(
-                                                width: AppSpacing.sm,
-                                              ),
-                                              Text(
-                                                'Edit',
-                                                style: AppTypography.labelMedium
-                                                    .copyWith(
-                                                      color: isDark
-                                                          ? AppColors.darkText
-                                                          : AppColors.gray900,
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        height: 36,
-                                        child: Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.delete_outline_rounded,
-                                              size: 16,
-                                              color: AppColors.danger,
-                                            ),
-                                            const SizedBox(
-                                              width: AppSpacing.sm,
-                                            ),
-                                            Text(
-                                              'Delete',
-                                              style: AppTypography.labelMedium
-                                                  .copyWith(
-                                                    color: AppColors.danger,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
-                      );
-                    }),
-                  const SizedBox(height: AppSpacing.huge),
-                ],
-              ),
+                );
+              },
             ),
     );
   }
