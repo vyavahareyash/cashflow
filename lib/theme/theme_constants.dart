@@ -59,6 +59,29 @@ class AppColors {
   static const Color darkTextSecondary = Color(0xFF94A3B8);
 }
 
+/// Responsive Layout Breakpoint Constants
+class AppBreakpoints {
+  /// Viewports narrower than 640px are compact (mobile) layouts.
+  static const double compactMaxWidth = 640.0;
+
+  /// Viewports between 640px and 1024px are medium (tablet/compact desktop).
+  static const double mediumMaxWidth = 1024.0;
+
+  /// Readable max content constraints for dialogs and sheets on desktop web.
+  static const double maxDialogWidth = 560.0;
+  static const double maxModalSheetWidth = 640.0;
+  static const double maxContentWidth = 1200.0;
+
+  static bool isCompact(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < compactMaxWidth;
+
+  static bool isWide(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= compactMaxWidth;
+
+  static bool isCompactWidth(double width) => width < compactMaxWidth;
+  static bool isWideWidth(double width) => width >= compactMaxWidth;
+}
+
 /// Spacing Constants (4px / 8px grid)
 class AppSpacing {
   static const double xxs = 2.0;

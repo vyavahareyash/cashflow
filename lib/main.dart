@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cashflow/screens/dashboard_screen.dart';
 import 'package:cashflow/screens/history_screen.dart';
 import 'package:cashflow/screens/accounts_screen.dart';
@@ -219,16 +218,9 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
       debugShowCheckedModeBanner: false,
       title: 'Cashflow',
       builder: (context, child) {
-        if (!kIsWeb) return child ?? const SizedBox.shrink();
-
         return ColoredBox(
           color: Theme.of(context).scaffoldBackgroundColor,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 390),
-              child: child ?? const SizedBox.shrink(),
-            ),
-          ),
+          child: child ?? const SizedBox.shrink(),
         );
       },
       theme: ThemeData(
@@ -246,6 +238,9 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
           elevation: 0,
           scrolledUnderElevation: 0.5,
           centerTitle: false,
+        ),
+        dialogTheme: const DialogThemeData(
+          constraints: BoxConstraints(maxWidth: AppBreakpoints.maxDialogWidth),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: AppColors.white,
@@ -274,6 +269,9 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: AppColors.white,
           surfaceTintColor: Colors.transparent,
+          constraints: BoxConstraints(
+            maxWidth: AppBreakpoints.maxModalSheetWidth,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
@@ -294,6 +292,9 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
           elevation: 0,
           scrolledUnderElevation: 0.5,
           centerTitle: false,
+        ),
+        dialogTheme: const DialogThemeData(
+          constraints: BoxConstraints(maxWidth: AppBreakpoints.maxDialogWidth),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: AppColors.darkSurface,
@@ -322,6 +323,9 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: AppColors.darkSurface,
           surfaceTintColor: Colors.transparent,
+          constraints: BoxConstraints(
+            maxWidth: AppBreakpoints.maxModalSheetWidth,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
@@ -382,6 +386,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isWide = AppBreakpoints.isWide(context);
 
     final List<Widget> screens = [
       DashboardScreen(onNavigateTab: _onItemTapped),
@@ -408,41 +413,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           : 'My Accounts',
     ];
 
-    final scaffold = Scaffold(
-      extendBody: true,
+    final contentScaffold = Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            ClipRRect(
-              borderRadius: AppBorderRadius.smallBorder,
-              child: Image.asset(
-                'assets/icon/app_icon.jpeg',
-                width: 28,
-                height: 28,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald500.withValues(alpha: 0.15),
-                    borderRadius: AppBorderRadius.smallBorder,
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: AppColors.emerald600,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              titles[_selectedIndex],
-              style: AppTypography.headlineMedium.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 20,
-              ),
-            ),
-          ],
+        title: Text(
+          titles[_selectedIndex],
+          style: AppTypography.headlineMedium.copyWith(
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+          ),
         ),
         actions: [
           IconButton(
@@ -470,7 +448,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               size: 22,
             ),
           ),
-          const SizedBox(width: AppSpacing.xs),
+          const SizedBox(width: AppSpacing.sm),
         ],
       ),
       body: AnimatedBuilder(
@@ -491,86 +469,188 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         },
         child: IndexedStack(index: _selectedIndex, children: screens),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Container(
-            height: 68,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(34),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
-                  blurRadius: 24,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 6),
+    );
+
+    final scaffold = isWide
+        ? Scaffold(
+            body: Row(
+              children: [
+                _buildNavigationRail(isDark),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: isDark ? AppColors.darkBorder : AppColors.gray200,
                 ),
-                if (isDark)
-                  BoxShadow(
-                    color: AppColors.emerald500.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 2),
-                  ),
+                Expanded(child: contentScaffold),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(34),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF14201C).withValues(alpha: 0.78)
-                        : Colors.white.withValues(alpha: 0.82),
-                    borderRadius: BorderRadius.circular(34),
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF284136).withValues(alpha: 0.85)
-                          : Colors.white.withValues(alpha: 0.9),
-                      width: 1.5,
+          )
+        : Scaffold(
+            extendBody: true,
+            appBar: AppBar(
+              title: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: AppBorderRadius.smallBorder,
+                    child: Image.asset(
+                      'assets/icon/app_icon.jpeg',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald500.withValues(alpha: 0.15),
+                          borderRadius: AppBorderRadius.smallBorder,
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          color: AppColors.emerald600,
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      _buildNavItem(
-                        index: 0,
-                        icon: Icons.dashboard_outlined,
-                        selectedIcon: Icons.dashboard_rounded,
-                        label: 'Home',
-                        isDark: isDark,
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    titles[_selectedIndex],
+                    style: AppTypography.headlineMedium.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Settings & Data Backup',
+                  icon: Icon(
+                    Icons.settings_outlined,
+                    color: isDark ? AppColors.darkText : AppColors.gray700,
+                    size: 22,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BackupRestoreScreen(),
                       ),
-                      _buildNavItem(
-                        index: 1,
-                        icon: Icons.receipt_long_outlined,
-                        selectedIcon: Icons.receipt_long_rounded,
-                        label: 'Activity',
-                        isDark: isDark,
+                    );
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Toggle Theme',
+                  onPressed: widget.onThemeToggle,
+                  icon: Icon(
+                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    color: isDark ? AppColors.warning : AppColors.gray700,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+            ),
+            body: AnimatedBuilder(
+              animation: ModelManagementService.instance,
+              builder: (context, child) {
+                final modelService = ModelManagementService.instance;
+                final isDownloading =
+                    modelService.isDownloading ||
+                    modelService.status == ModelPackStatus.verifying;
+
+                return Column(
+                  children: [
+                    if (isDownloading)
+                      _buildGlobalDownloadBanner(context, modelService, isDark),
+                    Expanded(child: child!),
+                  ],
+                );
+              },
+              child: IndexedStack(index: _selectedIndex, children: screens),
+            ),
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Container(
+                  height: 68,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(34),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.40 : 0.08,
+                        ),
+                        blurRadius: 24,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 6),
                       ),
-                      _buildVoiceCenterButton(isDark),
-                      _buildNavItem(
-                        index: 2,
-                        icon: Icons.pie_chart_outline_rounded,
-                        selectedIcon: Icons.pie_chart_rounded,
-                        label: 'Analytics',
-                        isDark: isDark,
-                      ),
-                      _buildNavItem(
-                        index: 3,
-                        icon: Icons.account_balance_outlined,
-                        selectedIcon: Icons.account_balance_rounded,
-                        label: 'Accounts',
-                        isDark: isDark,
-                      ),
+                      if (isDark)
+                        BoxShadow(
+                          color: AppColors.emerald500.withValues(alpha: 0.12),
+                          blurRadius: 16,
+                          offset: const Offset(0, 2),
+                        ),
                     ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(34),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF14201C).withValues(alpha: 0.78)
+                              : Colors.white.withValues(alpha: 0.82),
+                          borderRadius: BorderRadius.circular(34),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF284136)
+                                      .withValues(alpha: 0.85)
+                                : Colors.white.withValues(alpha: 0.9),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildNavItem(
+                              index: 0,
+                              icon: Icons.dashboard_outlined,
+                              selectedIcon: Icons.dashboard_rounded,
+                              label: 'Home',
+                              isDark: isDark,
+                            ),
+                            _buildNavItem(
+                              index: 1,
+                              icon: Icons.receipt_long_outlined,
+                              selectedIcon: Icons.receipt_long_rounded,
+                              label: 'Activity',
+                              isDark: isDark,
+                            ),
+                            _buildVoiceCenterButton(isDark),
+                            _buildNavItem(
+                              index: 2,
+                              icon: Icons.pie_chart_outline_rounded,
+                              selectedIcon: Icons.pie_chart_rounded,
+                              label: 'Analytics',
+                              isDark: isDark,
+                            ),
+                            _buildNavItem(
+                              index: 3,
+                              icon: Icons.account_balance_outlined,
+                              selectedIcon: Icons.account_balance_rounded,
+                              label: 'Accounts',
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      ),
-    );
+          );
 
     return ListenableBuilder(
       listenable: WalkthroughController.instance,
@@ -684,6 +764,205 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  Future<void> _handleVoiceFabTap() async {
+    final isInstalled = await ModelManagementService.instance
+        .isModelPackInstalled();
+    if (!mounted) return;
+    if (!isInstalled) {
+      unawaited(VoiceModelDownloadSheet.show(context));
+    } else {
+      unawaited(
+        VoiceRecordingModal.show(context, coordinator: widget.voiceCoordinator),
+      );
+    }
+  }
+
+  Widget _buildVoiceRailButton(bool isDark) {
+    return Tooltip(
+      message: 'AI Voice Transaction Journaling',
+      child: Container(
+        key: WalkthroughKeys.voiceFabKey,
+        child: InkWell(
+          key: const Key('dashboard_voice_entry_fab'),
+          mouseCursor: SystemMouseCursors.click,
+          onTap: _handleVoiceFabTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xs,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 38,
+                  width: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF34D399),
+                        Color(0xFF10B981),
+                        Color(0xFF059669),
+                        Color(0xFF047857),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF6EE7B7) : Colors.white,
+                      width: 2.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981)
+                            .withValues(alpha: isDark ? 0.55 : 0.40),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/icon/ai_voice_icon.jpg',
+                      width: 38,
+                      height: 38,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.mic_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Voice',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.emerald300 : AppColors.emerald800,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationRail(bool isDark) {
+    return NavigationRail(
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: _onItemTapped,
+      labelType: NavigationRailLabelType.all,
+      minWidth: 72,
+      groupAlignment: -0.85,
+      leading: Padding(
+        padding: const EdgeInsets.only(
+          top: AppSpacing.sm,
+          bottom: AppSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: AppBorderRadius.smallBorder,
+              child: Image.asset(
+                'assets/icon/app_icon.jpeg',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald500.withValues(alpha: 0.15),
+                    borderRadius: AppBorderRadius.smallBorder,
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: AppColors.emerald600,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildVoiceRailButton(isDark),
+          ],
+        ),
+      ),
+      selectedIconTheme: IconThemeData(
+        color: isDark ? AppColors.emerald400 : AppColors.emerald800,
+        size: 24,
+      ),
+      unselectedIconTheme: IconThemeData(
+        color: isDark ? AppColors.gray400 : AppColors.gray500,
+        size: 24,
+      ),
+      selectedLabelTextStyle: AppTypography.labelSmall.copyWith(
+        color: isDark ? AppColors.emerald400 : AppColors.emerald800,
+        fontWeight: FontWeight.bold,
+      ),
+      unselectedLabelTextStyle: AppTypography.labelSmall.copyWith(
+        color: isDark ? AppColors.gray400 : AppColors.gray500,
+      ),
+      indicatorColor: isDark
+          ? AppColors.emerald900.withValues(alpha: 0.5)
+          : AppColors.emerald100,
+      destinations: const [
+        NavigationRailDestination(
+          icon: KeyedSubtree(
+            key: Key('nav_item_0'),
+            child: Icon(Icons.dashboard_outlined),
+          ),
+          selectedIcon: KeyedSubtree(
+            key: Key('nav_item_0'),
+            child: Icon(Icons.dashboard_rounded),
+          ),
+          label: Text('Home'),
+        ),
+        NavigationRailDestination(
+          icon: KeyedSubtree(
+            key: Key('nav_item_1'),
+            child: Icon(Icons.receipt_long_outlined),
+          ),
+          selectedIcon: KeyedSubtree(
+            key: Key('nav_item_1'),
+            child: Icon(Icons.receipt_long_rounded),
+          ),
+          label: Text('Activity'),
+        ),
+        NavigationRailDestination(
+          icon: KeyedSubtree(
+            key: Key('nav_item_2'),
+            child: Icon(Icons.pie_chart_outline_rounded),
+          ),
+          selectedIcon: KeyedSubtree(
+            key: Key('nav_item_2'),
+            child: Icon(Icons.pie_chart_rounded),
+          ),
+          label: Text('Analytics'),
+        ),
+        NavigationRailDestination(
+          icon: KeyedSubtree(
+            key: Key('nav_item_3'),
+            child: Icon(Icons.account_balance_outlined),
+          ),
+          selectedIcon: KeyedSubtree(
+            key: Key('nav_item_3'),
+            child: Icon(Icons.account_balance_rounded),
+          ),
+          label: Text('Accounts'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildVoiceCenterButton(bool isDark) {
     return Expanded(
       child: Tooltip(
@@ -692,21 +971,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           key: WalkthroughKeys.voiceFabKey,
           child: InkWell(
             key: const Key('dashboard_voice_entry_fab'),
-            onTap: () async {
-              final isInstalled = await ModelManagementService.instance
-                  .isModelPackInstalled();
-              if (!mounted) return;
-              if (!isInstalled) {
-                unawaited(VoiceModelDownloadSheet.show(context));
-              } else {
-                unawaited(
-                  VoiceRecordingModal.show(
-                    context,
-                    coordinator: widget.voiceCoordinator,
-                  ),
-                );
-              }
-            },
+            mouseCursor: SystemMouseCursors.click,
+            onTap: _handleVoiceFabTap,
             borderRadius: BorderRadius.circular(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -811,6 +1077,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         color: Colors.transparent,
         child: InkWell(
           key: Key('nav_item_$index'),
+          mouseCursor: SystemMouseCursors.click,
           onTap: () => _onItemTapped(index),
           borderRadius: BorderRadius.circular(20),
           child: Column(

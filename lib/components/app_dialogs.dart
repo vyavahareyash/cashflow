@@ -15,55 +15,62 @@ class AppDialogs {
 
     return showDialog<void>(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppBorderRadius.largeBorder,
-        ),
-        titlePadding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.xs,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        icon: const Icon(
-          Icons.warning_amber_rounded,
-          color: AppColors.warning,
-          size: 38,
-        ),
-        title: Text(
-          title,
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.darkText : AppColors.gray900,
+      builder: (dialogCtx) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppBreakpoints.maxDialogWidth,
           ),
-          textAlign: TextAlign.center,
-        ),
-        content: Text(
-          message,
-          style: AppTypography.bodyMedium.copyWith(
-            color: isDark ? AppColors.gray300 : AppColors.gray700,
+          child: AlertDialog(
+            backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: AppBorderRadius.largeBorder,
+            ),
+            titlePadding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            icon: const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.warning,
+              size: 38,
+            ),
+            title: Text(
+              title,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.darkText : AppColors.gray900,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            content: Text(
+              message,
+              style: AppTypography.bodyMedium.copyWith(
+                color: isDark ? AppColors.gray300 : AppColors.gray700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              CustomButton(
+                label: 'OK',
+                width: 110,
+                onPressed: () => Navigator.pop(dialogCtx),
+              ),
+            ],
           ),
-          textAlign: TextAlign.center,
         ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          CustomButton(
-            label: 'OK',
-            width: 110,
-            onPressed: () => Navigator.pop(dialogCtx),
-          ),
-        ],
       ),
     );
   }
