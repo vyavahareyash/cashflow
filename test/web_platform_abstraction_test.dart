@@ -134,4 +134,35 @@ void main() {
       expect(engine.isInitialized, isFalse);
     });
   });
+
+  group('Web Content Security Policy (index.html)', () {
+    test('CSP allows Google Fonts in connect-src, font-src, and style-src for CanvasKit', () {
+      final indexHtml = File('web/index.html').readAsStringSync();
+      final cspMatch = RegExp(
+        r'<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"',
+        caseSensitive: false,
+      ).firstMatch(indexHtml);
+      expect(cspMatch, isNotNull);
+      final csp = cspMatch!.group(1)!;
+
+      // connect-src must allow fonts.gstatic.com for CanvasKit JS fetch()
+      final connectSrcMatch = RegExp(r'connect-src\s+([^;]+);').firstMatch(csp);
+      expect(connectSrcMatch, isNotNull);
+      expect(connectSrcMatch!.group(1), contains('https://fonts.gstatic.com'));
+      expect(
+        connectSrcMatch.group(1),
+        contains('https://fonts.googleapis.com'),
+      );
+
+      // font-src must allow fonts.gstatic.com
+      final fontSrcMatch = RegExp(r'font-src\s+([^;]+);').firstMatch(csp);
+      expect(fontSrcMatch, isNotNull);
+      expect(fontSrcMatch!.group(1), contains('https://fonts.gstatic.com'));
+
+      // style-src must allow fonts.googleapis.com
+      final styleSrcMatch = RegExp(r'style-src\s+([^;]+);').firstMatch(csp);
+      expect(styleSrcMatch, isNotNull);
+      expect(styleSrcMatch!.group(1), contains('https://fonts.googleapis.com'));
+    });
+  });
 }
