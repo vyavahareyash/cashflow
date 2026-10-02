@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/audio_capture_service.dart';
@@ -22,12 +23,14 @@ class VoiceRecordingModal extends StatefulWidget {
   final VoicePipelineCoordinator? coordinator;
   final DateTime? anchorDate;
   final bool previewMode;
+  final bool? isWeb;
 
   const VoiceRecordingModal({
     super.key,
     this.coordinator,
     this.anchorDate,
     this.previewMode = false,
+    this.isWeb,
   });
 
   /// Displays the voice recording modal bottom sheet.
@@ -36,6 +39,7 @@ class VoiceRecordingModal extends StatefulWidget {
     VoicePipelineCoordinator? coordinator,
     DateTime? anchorDate,
     bool previewMode = false,
+    bool? isWeb,
   }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     await showModalBottomSheet<void>(
@@ -49,6 +53,7 @@ class VoiceRecordingModal extends StatefulWidget {
         coordinator: coordinator,
         anchorDate: anchorDate,
         previewMode: previewMode,
+        isWeb: isWeb,
       ),
     );
   }
@@ -61,19 +66,33 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
   late final VoicePipelineCoordinator _coordinator;
   late final TextEditingController _transcriptTextController;
   StreamSubscription<double>? _amplitudeSubscription;
+  StreamSubscription<String>? _errorSubscription;
   double _currentAmplitude = 0.0;
   bool _isMicActive = true;
 
+  bool get _effectiveIsWeb => widget.isWeb ?? kIsWeb;
+
   VoiceModalState _state = VoiceModalState.initiating;
-  String _statusMessage = 'Preparing offline voice models...';
+  late String _statusMessage;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _statusMessage = _effectiveIsWeb
+        ? 'Web speech engine ready (zero download)'
+        : 'Preparing offline voice models...';
     _coordinator = widget.coordinator ?? VoicePipelineCoordinator();
     _transcriptTextController = TextEditingController();
     _coordinator.isMicActiveListenable.addListener(_handleMicActiveChanged);
+    _errorSubscription = _coordinator.errorStream.listen((err) {
+      if (mounted) {
+        setState(() {
+          _state = VoiceModalState.error;
+          _errorMessage = err;
+        });
+      }
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initSession());
@@ -85,6 +104,7 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     _coordinator.isMicActiveListenable.removeListener(_handleMicActiveChanged);
     _transcriptTextController.dispose();
     unawaited(_amplitudeSubscription?.cancel());
+    unawaited(_errorSubscription?.cancel());
     if (_coordinator.isRecording) {
       unawaited(_coordinator.cancelRecording());
     }
@@ -136,7 +156,9 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
     }
     try {
       setState(() {
-        _statusMessage = 'Preparing offline voice models...';
+        _statusMessage = _effectiveIsWeb
+            ? 'Web speech engine ready (zero download)'
+            : 'Preparing offline voice models...';
       });
       await _coordinator.prepareSession();
       await _coordinator.startRecording();
@@ -158,6 +180,12 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
         }
       });
     } on AudioCapturePermissionException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _state = VoiceModalState.error;
+        _errorMessage = e.message;
+      });
+    } on SttPermissionDeniedException catch (e) {
       if (!mounted) return;
       setState(() {
         _state = VoiceModalState.error;
@@ -273,6 +301,12 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
         _errorMessage = 'No decipherable speech detected. Please speak clearly into the microphone.';
       });
     } on AudioCapturePermissionException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _state = VoiceModalState.error;
+        _errorMessage = e.message;
+      });
+    } on SttPermissionDeniedException catch (e) {
       if (!mounted) return;
       setState(() {
         _state = VoiceModalState.error;
@@ -443,30 +477,43 @@ class _VoiceRecordingModalState extends State<VoiceRecordingModal> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 14,
-                        color: _isMicActive
-                            ? AppColors.emerald500
-                            : (isDark ? AppColors.gray500 : AppColors.gray400),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Offline AI Voice Engine',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : (_isMicActive
-                                    ? AppColors.emerald700
-                                    : AppColors.gray600),
-                          fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 14,
+                          color: _isMicActive
+                              ? AppColors.emerald500
+                              : (isDark
+                                    ? AppColors.gray500
+                                    : AppColors.gray400),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.xs),
+                        Flexible(
+                          child: Text(
+                            _effectiveIsWeb
+                                ? 'Web Speech Voice Engine (Zero Download)'
+                                : 'Offline AI Voice Engine',
+                            key: const Key('voice_recording_engine_badge'),
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : (_isMicActive
+                                        ? AppColors.emerald700
+                                        : AppColors.gray600),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         width: 8,

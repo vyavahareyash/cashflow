@@ -43,6 +43,18 @@ class SttSilentAudioException implements Exception {
   String toString() => 'SttSilentAudioException: $message';
 }
 
+/// Thrown when Speech-to-Text is not supported on the current platform/browser.
+class SttNotSupportedException implements Exception {
+  final String message;
+  const SttNotSupportedException([
+    this.message =
+        'Speech recognition is not supported on this platform/browser.',
+  ]);
+
+  @override
+  String toString() => 'SttNotSupportedException: $message';
+}
+
 /// Thrown when a low-level STT engine failure occurs.
 class SttEngineException implements Exception {
   final String message;
@@ -151,6 +163,45 @@ class NativePlatformSttEngine implements SttEngine {
   static String combineTranscripts(String base, String addition) =>
       _combineTranscripts(base, addition);
 
+  static String formatSttErrorMessage(String raw, {bool? isWeb}) {
+    final lower = raw.toLowerCase();
+    final effectiveIsWeb = isWeb ?? kIsWeb;
+    if (lower.contains('not-allowed') ||
+        lower.contains('permission') ||
+        lower.contains('denied')) {
+      return effectiveIsWeb
+          ? 'Microphone permission denied. Grant permission in your browser to use voice journaling.'
+          : 'Microphone permission denied. Grant permission in Settings to use voice journaling.';
+    }
+    if (lower.contains('not supported') ||
+        lower.contains('not-supported') ||
+        lower.contains('speech_not_supported')) {
+      return 'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.';
+    }
+    return raw;
+  }
+
+  static Exception? mapSttErrorToException(String raw, {bool? isWeb}) {
+    final lower = raw.toLowerCase();
+    final effectiveIsWeb = isWeb ?? kIsWeb;
+    if (lower.contains('not-allowed') ||
+        lower.contains('permission') ||
+        lower.contains('denied')) {
+      final msg = effectiveIsWeb
+          ? 'Microphone permission denied. Grant permission in your browser to use voice journaling.'
+          : 'Microphone permission denied. Grant permission in Settings to use voice journaling.';
+      return SttPermissionDeniedException(msg);
+    }
+    if (lower.contains('not supported') ||
+        lower.contains('not-supported') ||
+        lower.contains('speech_not_supported')) {
+      return const SttNotSupportedException(
+        'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.',
+      );
+    }
+    return null;
+  }
+
   @override
   Future<void> initialize({String? modelDirPath}) async {
     if (_initialized && _speech.isAvailable) return;
@@ -163,7 +214,7 @@ class NativePlatformSttEngine implements SttEngine {
           );
           _isListening = false;
           _onListeningStateChangedCallback?.call(false);
-          _onErrorCallback?.call(error.errorMsg);
+          _onErrorCallback?.call(formatSttErrorMessage(error.errorMsg));
         },
         onStatus: (String status) {
           if (status == 'notListening' ||
@@ -242,6 +293,19 @@ class NativePlatformSttEngine implements SttEngine {
     }
 
     if (!_speech.isAvailable) {
+      final hasPerm = await _speech.hasPermission;
+      if (!hasPerm) {
+        throw const SttPermissionDeniedException(
+          kIsWeb
+              ? 'Microphone permission denied. Grant permission in your browser to use voice journaling.'
+              : 'Microphone permission denied. Grant permission in Settings to use voice journaling.',
+        );
+      }
+      if (kIsWeb) {
+        throw const SttEngineException(
+          'Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.',
+        );
+      }
       throw const SttEngineException(
         'Native speech recognition is not available on this device.',
       );
@@ -298,7 +362,11 @@ class NativePlatformSttEngine implements SttEngine {
     } catch (e) {
       _isListening = false;
       _onListeningStateChangedCallback?.call(false);
-      _onErrorCallback?.call(e.toString());
+      final formatted = formatSttErrorMessage(e.toString());
+      _onErrorCallback?.call(formatted);
+      if (formatted.contains('permission') || formatted.contains('denied')) {
+        throw SttPermissionDeniedException(formatted);
+      }
     }
   }
 
@@ -588,6 +656,12 @@ class SpeechToTextService {
   static void resetInstance() {
     _instance = null;
   }
+
+  static String formatSttErrorMessage(String raw, {bool? isWeb}) =>
+      NativePlatformSttEngine.formatSttErrorMessage(raw, isWeb: isWeb);
+
+  static Exception? mapSttErrorToException(String raw, {bool? isWeb}) =>
+      NativePlatformSttEngine.mapSttErrorToException(raw, isWeb: isWeb);
 
   final SttEngine _engine;
   final ModelManagementService _modelManager;

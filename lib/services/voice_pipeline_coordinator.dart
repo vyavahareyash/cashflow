@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import '../models/account_model.dart';
 import '../models/category_model.dart';
 import '../models/draft_transaction.dart';
+import 'audio_capture_service.dart';
 import 'database_helper.dart';
 import 'model_management_service.dart';
 import 'slm_inference_service.dart';
@@ -32,9 +33,13 @@ class VoicePipelineCoordinator {
   final ValueNotifier<bool> _isMicActiveNotifier = ValueNotifier<bool>(false);
   final StreamController<double> _amplitudeController =
       StreamController<double>.broadcast();
+  final StreamController<String> _errorController =
+      StreamController<String>.broadcast();
   StreamSubscription<double>? _audioPipelineAmpSubscription;
   Timer? _partialTranscribeTimer;
   bool _isTranscribingPartial = false;
+  final bool? isWeb;
+  bool get _effectiveIsWeb => isWeb ?? kIsWeb;
 
   VoicePipelineCoordinator({
     VoiceAudioPipeline? audioPipeline,
@@ -42,6 +47,7 @@ class VoicePipelineCoordinator {
     SlmInferenceService? slmService,
     ModelManagementService? modelManager,
     DatabaseHelper? dbHelper,
+    this.isWeb,
   }) : speechToTextService =
            speechToTextService ?? SpeechToTextService.instance,
        modelManager = modelManager ?? ModelManagementService.instance,
@@ -84,14 +90,21 @@ class VoicePipelineCoordinator {
   /// Stream of normalized amplitude values [0.0, 1.0] for voice-driven UI animations.
   Stream<double> get amplitudeStream => _amplitudeController.stream;
 
+  /// Stream of user-facing error messages emitted during speech capture or processing.
+  Stream<String> get errorStream => _errorController.stream;
+
   /// Verifies model installation and prepares RAM resources (US 16).
   Future<void> prepareSession() async {
-    final installed = await modelManager.isModelPackInstalled();
-    if (!installed) {
-      throw const SttModelNotInstalledException();
+    if (!_effectiveIsWeb) {
+      final installed = await modelManager.isModelPackInstalled();
+      if (!installed) {
+        throw const SttModelNotInstalledException();
+      }
     }
     await speechToTextService.initializeEngine();
-    await modelManager.loadModelsIntoMemory();
+    if (!_effectiveIsWeb) {
+      await modelManager.loadModelsIntoMemory();
+    }
   }
 
   /// Starts recording and begins live speech recognition.
@@ -101,7 +114,7 @@ class VoicePipelineCoordinator {
     _liveTranscriptNotifier.value = '';
     final isNative = speechToTextService.isNativeEngine;
     String path = '';
-    if (!isNative) {
+    if (!isNative && !_effectiveIsWeb) {
       path = await audioPipeline.startRecording();
     } else {
       _isNativeRecording = true;
@@ -119,6 +132,21 @@ class VoicePipelineCoordinator {
             _amplitudeController.add(level);
           }
         },
+        onError: (error) {
+          debugPrint('STT startListening error: $error');
+          if (!_errorController.isClosed) {
+            final lower = error.toLowerCase();
+            final msg =
+                lower.contains('not-allowed') ||
+                    lower.contains('permission') ||
+                    lower.contains('denied')
+                ? (_effectiveIsWeb
+                      ? 'Microphone permission denied. Grant permission in your browser to use voice journaling.'
+                      : 'Microphone permission denied. Grant permission in Settings to use voice journaling.')
+                : error;
+            _errorController.add(msg);
+          }
+        },
         onListeningStateChanged: (isListening) {
           _isMicActiveNotifier.value = isListening;
           _isMicPaused = !isListening;
@@ -129,6 +157,21 @@ class VoicePipelineCoordinator {
       );
     } catch (e) {
       debugPrint('STT startListening warning (fallback to pipeline): $e');
+      if (e is AudioCapturePermissionException ||
+          e is SttPermissionDeniedException) {
+        rethrow;
+      }
+      if (_effectiveIsWeb) {
+        final msg = e.toString().toLowerCase();
+        if (msg.contains('permission') ||
+            msg.contains('not-allowed') ||
+            msg.contains('denied')) {
+          throw const AudioCapturePermissionException(
+            'Microphone permission denied. Grant permission in your browser to use voice journaling.',
+          );
+        }
+        rethrow;
+      }
       if (isNative) {
         _isNativeRecording = false;
         path = await audioPipeline.startRecording();
@@ -255,22 +298,24 @@ class VoicePipelineCoordinator {
 
     // 4. Execute token-level GBNF grammar inference with fallback
     List<DraftTransaction> drafts = [];
-    try {
-      final slmOutput = await slmService.generate(prompt: prompt);
-      drafts = VoiceEntityParser.parseJsonOutput(
-        slmOutput,
-        anchorDate: effectiveAnchor,
-        accounts: accounts,
-        categories: categories,
-      );
-    } catch (e) {
-      debugPrint(
-        'SLM inference failed or unavailable, falling back to deterministic parser: $e',
-      );
-      drafts = [];
+    if (!_effectiveIsWeb) {
+      try {
+        final slmOutput = await slmService.generate(prompt: prompt);
+        drafts = VoiceEntityParser.parseJsonOutput(
+          slmOutput,
+          anchorDate: effectiveAnchor,
+          accounts: accounts,
+          categories: categories,
+        );
+      } catch (e) {
+        debugPrint(
+          'SLM inference failed or unavailable, falling back to deterministic parser: $e',
+        );
+        drafts = [];
+      }
     }
 
-    // 5. Fallback to deterministic heuristic parser if SLM yielded no drafts
+    // 5. Fallback to deterministic heuristic parser if SLM yielded no drafts (or on Web)
     if (drafts.isEmpty) {
       drafts = VoiceEntityParser.parseTranscriptionSample(
         trimmedTranscript,
@@ -306,8 +351,18 @@ class VoicePipelineCoordinator {
     _isNativeRecording = false;
     _isMicPaused = false;
     _isMicActiveNotifier.value = false;
-    await modelManager.unloadModelsFromMemory();
-    await audioPipeline.purgeLingeringCache();
+    if (!_effectiveIsWeb) {
+      await modelManager.unloadModelsFromMemory();
+      await audioPipeline.purgeLingeringCache();
+    }
+  }
+
+  /// Emits an error message into [errorStream] (for testing and manual error injection).
+  @visibleForTesting
+  void emitError(String error) {
+    if (!_errorController.isClosed) {
+      _errorController.add(error);
+    }
   }
 
   /// Releases resources.
@@ -319,11 +374,16 @@ class VoicePipelineCoordinator {
     _isMicActiveNotifier.value = false;
     await _audioPipelineAmpSubscription?.cancel();
     if (!_amplitudeController.isClosed) {
-      await _amplitudeController.close();
+      unawaited(_amplitudeController.close());
+    }
+    if (!_errorController.isClosed) {
+      unawaited(_errorController.close());
     }
     _liveTranscriptNotifier.dispose();
     _isMicActiveNotifier.dispose();
-    await audioPipeline.dispose();
-    await slmService.dispose();
+    if (!_effectiveIsWeb) {
+      await audioPipeline.dispose();
+      await slmService.dispose();
+    }
   }
 }
