@@ -1,0 +1,346 @@
+{
+  "generated_at": "2026-10-02T13:33:09.996Z",
+  "viewports": [
+    "mobile",
+    "tablet",
+    "desktop"
+  ],
+  "captures": [
+    {
+      "viewport": "mobile",
+      "marker_id": "01-dashboard-light",
+      "name": "Dashboard Overview",
+      "theme": "light",
+      "path": "web/mobile/01-dashboard-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "01b-dashboard-privacy-light",
+      "name": "Dashboard Privacy Mode",
+      "theme": "light",
+      "path": "web/mobile/01b-dashboard-privacy-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "05-budget-light",
+      "name": "Monthly Budgets",
+      "theme": "light",
+      "path": "web/mobile/05-budget-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "08-goals-light",
+      "name": "Sinking Funds & Goals",
+      "theme": "light",
+      "path": "web/mobile/08-goals-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "12-accounts-light",
+      "name": "My Accounts",
+      "theme": "light",
+      "path": "web/mobile/12-accounts-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "15-activity-ledger-light",
+      "name": "Activity Ledger",
+      "theme": "light",
+      "path": "web/mobile/15-activity-ledger-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "16-analytics-trends-light",
+      "name": "Spending Analytics",
+      "theme": "light",
+      "path": "web/mobile/16-analytics-trends-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "18-backup-restore-light",
+      "name": "Settings & Data Backup",
+      "theme": "light",
+      "path": "web/mobile/18-backup-restore-light.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "19-dashboard-dark",
+      "name": "Dashboard Overview (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/19-dashboard-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "19b-dashboard-privacy-dark",
+      "name": "Dashboard Privacy Mode (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/19b-dashboard-privacy-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "21-budget-dark",
+      "name": "Monthly Budgets (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/21-budget-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "22-goals-dark",
+      "name": "Sinking Funds & Goals (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/22-goals-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "24-accounts-dark",
+      "name": "My Accounts (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/24-accounts-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "26-activity-ledger-dark",
+      "name": "Activity Ledger (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/26-activity-ledger-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "27-analytics-trends-dark",
+      "name": "Spending Analytics (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/27-analytics-trends-dark.png"
+    },
+    {
+      "viewport": "mobile",
+      "marker_id": "29-backup-restore-dark",
+      "name": "Settings & Data Backup (Dark)",
+      "theme": "dark",
+      "path": "web/mobile/29-backup-restore-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "01-dashboard-light",
+      "name": "Dashboard Overview",
+      "theme": "light",
+      "path": "web/tablet/01-dashboard-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "01b-dashboard-privacy-light",
+      "name": "Dashboard Privacy Mode",
+      "theme": "light",
+      "path": "web/tablet/01b-dashboard-privacy-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "05-budget-light",
+      "name": "Monthly Budgets",
+      "theme": "light",
+      "path": "web/tablet/05-budget-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "08-goals-light",
+      "name": "Sinking Funds & Goals",
+      "theme": "light",
+      "path": "web/tablet/08-goals-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "12-accounts-light",
+      "name": "My Accounts",
+      "theme": "light",
+      "path": "web/tablet/12-accounts-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "15-activity-ledger-light",
+      "name": "Activity Ledger",
+      "theme": "light",
+      "path": "web/tablet/15-activity-ledger-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "16-analytics-trends-light",
+      "name": "Spending Analytics",
+      "theme": "light",
+      "path": "web/tablet/16-analytics-trends-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "18-backup-restore-light",
+      "name": "Settings & Data Backup",
+      "theme": "light",
+      "path": "web/tablet/18-backup-restore-light.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "19-dashboard-dark",
+      "name": "Dashboard Overview (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/19-dashboard-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "19b-dashboard-privacy-dark",
+      "name": "Dashboard Privacy Mode (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/19b-dashboard-privacy-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "21-budget-dark",
+      "name": "Monthly Budgets (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/21-budget-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "22-goals-dark",
+      "name": "Sinking Funds & Goals (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/22-goals-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "24-accounts-dark",
+      "name": "My Accounts (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/24-accounts-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "26-activity-ledger-dark",
+      "name": "Activity Ledger (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/26-activity-ledger-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "27-analytics-trends-dark",
+      "name": "Spending Analytics (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/27-analytics-trends-dark.png"
+    },
+    {
+      "viewport": "tablet",
+      "marker_id": "29-backup-restore-dark",
+      "name": "Settings & Data Backup (Dark)",
+      "theme": "dark",
+      "path": "web/tablet/29-backup-restore-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "01-dashboard-light",
+      "name": "Dashboard Overview",
+      "theme": "light",
+      "path": "web/desktop/01-dashboard-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "01b-dashboard-privacy-light",
+      "name": "Dashboard Privacy Mode",
+      "theme": "light",
+      "path": "web/desktop/01b-dashboard-privacy-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "05-budget-light",
+      "name": "Monthly Budgets",
+      "theme": "light",
+      "path": "web/desktop/05-budget-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "08-goals-light",
+      "name": "Sinking Funds & Goals",
+      "theme": "light",
+      "path": "web/desktop/08-goals-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "12-accounts-light",
+      "name": "My Accounts",
+      "theme": "light",
+      "path": "web/desktop/12-accounts-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "15-activity-ledger-light",
+      "name": "Activity Ledger",
+      "theme": "light",
+      "path": "web/desktop/15-activity-ledger-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "16-analytics-trends-light",
+      "name": "Spending Analytics",
+      "theme": "light",
+      "path": "web/desktop/16-analytics-trends-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "18-backup-restore-light",
+      "name": "Settings & Data Backup",
+      "theme": "light",
+      "path": "web/desktop/18-backup-restore-light.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "19-dashboard-dark",
+      "name": "Dashboard Overview (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/19-dashboard-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "19b-dashboard-privacy-dark",
+      "name": "Dashboard Privacy Mode (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/19b-dashboard-privacy-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "21-budget-dark",
+      "name": "Monthly Budgets (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/21-budget-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "22-goals-dark",
+      "name": "Sinking Funds & Goals (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/22-goals-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "24-accounts-dark",
+      "name": "My Accounts (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/24-accounts-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "26-activity-ledger-dark",
+      "name": "Activity Ledger (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/26-activity-ledger-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "27-analytics-trends-dark",
+      "name": "Spending Analytics (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/27-analytics-trends-dark.png"
+    },
+    {
+      "viewport": "desktop",
+      "marker_id": "29-backup-restore-dark",
+      "name": "Settings & Data Backup (Dark)",
+      "theme": "dark",
+      "path": "web/desktop/29-backup-restore-dark.png"
+    }
+  ]
+}

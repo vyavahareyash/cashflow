@@ -19,6 +19,7 @@ import 'package:cashflow/services/platform_security_service.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_controller.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_spotlight_overlay.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_keys.dart';
+import 'package:cashflow/navigation/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,8 +42,17 @@ Future<void> main() async {
 
 class MoneyTrackerApp extends StatefulWidget {
   final bool initialAppLockEnabled;
+  final AppRouterDelegate? routerDelegate;
+  final AppRouteInformationParser? routeInformationParser;
+  final RouteInformationProvider? routeInformationProvider;
 
-  const MoneyTrackerApp({super.key, this.initialAppLockEnabled = false});
+  const MoneyTrackerApp({
+    super.key,
+    this.initialAppLockEnabled = false,
+    this.routerDelegate,
+    this.routeInformationParser,
+    this.routeInformationProvider,
+  });
 
   @override
   State<MoneyTrackerApp> createState() => _MoneyTrackerAppState();
@@ -53,12 +63,30 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
   ThemeMode _themeMode = ThemeMode.system;
   late bool _locked;
   late bool _appLockEnabled;
+  late final AppRouterDelegate _routerDelegate;
+  late final AppRouteInformationParser _routeInformationParser;
 
   @override
   void initState() {
     super.initState();
     _appLockEnabled = widget.initialAppLockEnabled;
     _locked = widget.initialAppLockEnabled;
+    _routeInformationParser =
+        widget.routeInformationParser ?? const AppRouteInformationParser();
+    _routerDelegate =
+        widget.routerDelegate ??
+        AppRouterDelegate(
+          mainScreenBuilder: (context, routePath, onNavigate, onOpenSettings) {
+            return MainNavigationScreen(
+              onThemeToggle: _toggleTheme,
+              initialIndex: routePath.tabIndex >= 0 ? routePath.tabIndex : 0,
+              initialAccountsSubTabIndex: routePath.accountsSubTabIndex,
+              onTabChanged: onNavigate,
+              onOpenSettings: onOpenSettings,
+            );
+          },
+          settingsScreenBuilder: (context) => const BackupRestoreScreen(),
+        );
     WidgetsBinding.instance.addObserver(this);
     if (_locked) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _tryUnlock());
@@ -215,9 +243,12 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
         ),
       );
     }
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Cashflow',
+      routeInformationParser: _routeInformationParser,
+      routerDelegate: _routerDelegate,
+      routeInformationProvider: widget.routeInformationProvider,
       builder: (context, child) {
         return ColoredBox(
           color: Theme.of(context).scaffoldBackgroundColor,
@@ -333,7 +364,6 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
         ),
       ),
       themeMode: _themeMode,
-      home: MainNavigationScreen(onThemeToggle: _toggleTheme),
     );
   }
 }
@@ -341,11 +371,19 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
 class MainNavigationScreen extends StatefulWidget {
   final VoidCallback onThemeToggle;
   final VoicePipelineCoordinator? voiceCoordinator;
+  final int initialIndex;
+  final int initialAccountsSubTabIndex;
+  final void Function(int index, {int? subTabIndex})? onTabChanged;
+  final VoidCallback? onOpenSettings;
 
   const MainNavigationScreen({
     super.key,
     required this.onThemeToggle,
     this.voiceCoordinator,
+    this.initialIndex = 0,
+    this.initialAccountsSubTabIndex = 0,
+    this.onTabChanged,
+    this.onOpenSettings,
   });
 
   @override
@@ -353,14 +391,29 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _selectedIndex = 0;
-  int _accountsSubTabIndex = 0;
+  late int _selectedIndex;
+  late int _accountsSubTabIndex;
 
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
+    _accountsSubTabIndex = widget.initialAccountsSubTabIndex;
     WalkthroughController.instance.registerNavigationCallback(_onItemTapped);
     unawaited(_checkFirstInstallWalkthrough());
+  }
+
+  @override
+  void didUpdateWidget(MainNavigationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialIndex != oldWidget.initialIndex ||
+        widget.initialAccountsSubTabIndex !=
+            oldWidget.initialAccountsSubTabIndex) {
+      setState(() {
+        _selectedIndex = widget.initialIndex;
+        _accountsSubTabIndex = widget.initialAccountsSubTabIndex;
+      });
+    }
   }
 
   Future<void> _checkFirstInstallWalkthrough() async {
@@ -382,6 +435,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       }
       _selectedIndex = index;
     });
+    widget.onTabChanged?.call(index, subTabIndex: subTabIndex);
   }
 
   @override
@@ -432,14 +486,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               size: 22,
             ),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BackupRestoreScreen(),
-                ),
-              );
+              if (widget.onOpenSettings != null) {
+                widget.onOpenSettings!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BackupRestoreScreen(),
+                  ),
+                );
+              }
             },
           ),
+
           IconButton(
             tooltip: 'Toggle Theme',
             onPressed: widget.onThemeToggle,
