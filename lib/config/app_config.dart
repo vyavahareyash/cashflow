@@ -49,9 +49,24 @@ class AppConfig {
   /// Visible-for-testing override for Play Store tips visibility.
   static bool? _overrideEnablePlayStoreTips;
 
-  /// Whether external donation/support links should be rendered in UI.
-  /// Automatically active in debug mode (local emulators) for easy previewing.
-  /// Strictly requires explicit flag in release builds.
+  /// Visible-for-testing override for desktop/web platform detection.
+  static bool? _overrideIsDesktopOrWeb;
+
+  /// Whether the current platform is desktop (macOS, Windows, Linux) or web.
+  static bool get isDesktopOrWeb {
+    if (_overrideIsDesktopOrWeb != null) {
+      return _overrideIsDesktopOrWeb!;
+    }
+    return kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  /// Whether external donation/support links (e.g. Buy Me a Coffee) should be rendered in UI.
+  /// - Enabled by default on Desktop and Web apps (both debug and release).
+  /// - On Android Play Store release builds, strictly disabled for Google Play compliance.
+  /// - Enabled in debug mode for local previewing unless explicitly disabled.
   static bool get enableExternalDonations {
     if (_overrideEnableExternalDonations != null) {
       return _overrideEnableExternalDonations!;
@@ -59,15 +74,22 @@ class AppConfig {
     if (_hasEnvDonations) {
       return _envEnableDonations;
     }
+    if (isDesktopOrWeb) {
+      return true;
+    }
     return kDebugMode;
   }
 
   /// Whether Google Play Store In-App Purchases (tip jar) should be active.
-  /// When external donation links are active (e.g. GitHub/F-Droid builds),
-  /// Play Store IAP is disabled by default to avoid duplicate support mechanisms.
+  /// - Strictly disabled on Desktop and Web apps (which use Buy Me a Coffee).
+  /// - Kept active for Android Google Play Store release builds.
+  /// - When external donation links are active, Play Store IAP is disabled by default to avoid duplicate support mechanisms.
   static bool get enablePlayStoreTips {
     if (_overrideEnablePlayStoreTips != null) {
       return _overrideEnablePlayStoreTips!;
+    }
+    if (isDesktopOrWeb) {
+      return false;
     }
     if (_hasEnvPlayStoreTips) {
       return _envEnablePlayStoreTips;
@@ -95,5 +117,10 @@ class AppConfig {
   /// Sets an override for [enablePlayStoreTips] during testing.
   static void setOverrideEnablePlayStoreTips(bool? value) {
     _overrideEnablePlayStoreTips = value;
+  }
+
+  /// Sets an override for [isDesktopOrWeb] during testing.
+  static void setOverrideIsDesktopOrWeb(bool? value) {
+    _overrideIsDesktopOrWeb = value;
   }
 }
