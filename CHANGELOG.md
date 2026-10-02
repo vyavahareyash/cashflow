@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.14.0] - 2026-10-02
+
+### Added
+- **Desktop Platform Support**: Added macOS, Windows, and Linux support with platform installers (6c918d0).
+- **Web Snapshot Persistence and Routing**: Added client-side snapshot persistence, routing, Playwright end-to-end coverage, and screenshots (f2988a3).
+- **Web Voice Journaling**: Added client-side voice journaling using the Web Speech API (#150, #158).
+- **Responsive Web Navigation**: Added responsive viewport handling and a desktop navigation rail (#151, #157).
+- **Web Database Import and Export**: Added raw SQLite binary database export and import support (#148, #156).
+- **Web-Safe Compilation**: Added web-safe compilation, CSP support, and core platform stubs (#155).
+
+### Changed
+- **Cross-Platform Release Pipeline**: Updated CI and release workflows for expanded desktop and web platform support (51222ea).
+
+---
+
 ## [4.13.0] - 2026-09-29
 
 ### Added
