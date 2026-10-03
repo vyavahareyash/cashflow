@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.15.0] - 2026-10-03
+
+### Added
+- **Offline Peer-to-Peer Live Sync**: Added local Wi-Fi and mobile hotspot sync between devices with QR code and 6-digit PIN zero-cloud authentication, safe additive database merge, force push, and 1-tap undo (#165).
+- **Timestamped Backups**: Backup exports now include timestamps in filenames with overwrite confirmation (#165).
+
+### Changed
+- **Cross-Platform Billing Links**: Desktop and web now use the Buy Me a Coffee link for support; Android retains the Google Play Store billing flow (#163).
+
+---
+
 ## [4.14.0] - 2026-10-02
 
 ### Added
