@@ -313,6 +313,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           initialFormat: ExportFormat.csv,
           fixedFormat: true,
           title: 'Export Transactions CSV',
+          initialFileName: 'cashflow_transactions.csv',
         ),
       );
 

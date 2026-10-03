@@ -16,6 +16,10 @@ import '../components/walkthrough/walkthrough_controller.dart';
 import '../config/app_config.dart';
 import '../services/billing_service.dart';
 
+import 'package:cashflow/screens/live_sync_screen.dart';
+import 'package:cashflow/services/sync/live_sync_service.dart';
+import 'package:cashflow/services/sync/sync_models.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 export '../components/export_backup_dialog.dart' show ExportFormat;
@@ -720,6 +724,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             _buildSectionHeader('Storage & Record Count', isDark),
             const SizedBox(height: AppSpacing.xs),
             _buildStorageOverviewCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+
+            // LIVE DEVICE SYNC
+            _buildSectionHeader('Live Device Sync', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildLiveSyncCard(isDark),
             const SizedBox(height: AppSpacing.xl),
 
             // 3. BACKUP & EXPORT ACTIONS
@@ -1508,6 +1518,102 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLiveSyncCard(bool isDark) {
+    return ValueListenableBuilder<SyncStatus>(
+      valueListenable: LiveSyncService.instance.statusNotifier,
+      builder: (context, status, _) {
+        final isConnected = status == SyncStatus.connected;
+        final peerName =
+            LiveSyncService.instance.peerDeviceNameNotifier.value ?? 'Device';
+
+        return CustomCard(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LiveSyncScreen()),
+            );
+          },
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color:
+                      (isConnected ? AppColors.emerald500 : AppColors.gray500)
+                          .withValues(alpha: isDark ? 0.2 : 0.1),
+                  borderRadius: AppBorderRadius.mediumBorder,
+                ),
+                child: Icon(
+                  isConnected ? Icons.sync_alt_rounded : Icons.devices_rounded,
+                  color: isConnected ? AppColors.emerald600 : AppColors.gray600,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Live Device Sync',
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (isConnected
+                                        ? AppColors.emerald500
+                                        : AppColors.gray400)
+                                    .withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isConnected ? 'ACTIVE' : 'P2P',
+                            style: AppTypography.bodySmall.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isConnected
+                                  ? AppColors.emerald600
+                                  : AppColors.gray600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isConnected
+                          ? 'Synced live with $peerName'
+                          : 'Pair desktop & mobile over Wi-Fi / Hotspot',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark ? AppColors.gray500 : AppColors.gray400,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

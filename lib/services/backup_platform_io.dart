@@ -40,6 +40,28 @@ Future<String?> saveBackupBytes(
   return file.path;
 }
 
+bool backupFileExists(String filename, {String? destinationDirectory}) {
+  final safeName = basename(filename);
+  String resolvedPath;
+  if (destinationDirectory != null && destinationDirectory.isNotEmpty) {
+    resolvedPath = join(destinationDirectory, safeName);
+  } else {
+    String docsPath;
+    if (Platform.environment.containsKey('FLUTTER_TEST')) {
+      docsPath = Directory.systemTemp.path;
+    } else {
+      try {
+        final documentsDir = Directory.systemTemp;
+        docsPath = documentsDir.path;
+      } catch (_) {
+        docsPath = Directory.systemTemp.path;
+      }
+    }
+    resolvedPath = join(docsPath, safeName);
+  }
+  return File(resolvedPath).existsSync();
+}
+
 Future<String?> pickBackupDirectory({String? initialDirectory}) async {
   return await FilePicker.getDirectoryPath(
     dialogTitle: 'Select Backup Directory',

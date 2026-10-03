@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/backup_platform.dart';
@@ -21,6 +24,8 @@ class ExportBackupDialog extends StatefulWidget {
   final bool fixedFormat;
   final String? title;
 
+  final String? initialFileName;
+
   const ExportBackupDialog({
     super.key,
     required this.isDark,
@@ -29,6 +34,7 @@ class ExportBackupDialog extends StatefulWidget {
     this.initialFormat = ExportFormat.sqlite,
     this.fixedFormat = false,
     this.title,
+    this.initialFileName,
   });
 
   @override
@@ -50,7 +56,7 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
     }
     _selectedDirectory = widget.initialDirectory;
     _fileNameController = TextEditingController(
-      text: _getDefaultName(_selectedFormat),
+      text: widget.initialFileName ?? _getDefaultName(_selectedFormat),
     );
   }
 
@@ -61,13 +67,14 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
   }
 
   String _getDefaultName(ExportFormat fmt) {
+    final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     switch (fmt) {
       case ExportFormat.sqlite:
-        return 'cashflow_backup.db';
+        return 'cashflow_backup_$ts.db';
       case ExportFormat.json:
-        return 'cashflow_backup.json';
+        return 'cashflow_backup_$ts.json';
       case ExportFormat.csv:
-        return 'cashflow_transactions.csv';
+        return 'cashflow_transactions_$ts.csv';
     }
   }
 
@@ -290,10 +297,25 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
           key: const Key('export_confirm_button'),
           onPressed: () {
             final name = _fileNameController.text.trim();
+            final fileName = name.isEmpty
+                ? _getDefaultName(_selectedFormat)
+                : name;
+
+            if (!kIsWeb) {
+              final exists = backupFileExists(
+                fileName,
+                destinationDirectory: _selectedDirectory,
+              );
+              if (exists) {
+                unawaited(_showOverwriteConfirmation(fileName));
+                return;
+              }
+            }
+
             Navigator.of(context).pop((
               format: _selectedFormat,
               directory: _selectedDirectory,
-              fileName: name.isEmpty ? _getDefaultName(_selectedFormat) : name,
+              fileName: fileName,
             ));
           },
           style: FilledButton.styleFrom(backgroundColor: AppColors.emerald600),
@@ -301,6 +323,41 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
         ),
       ],
     );
+  }
+
+  Future<void> _showOverwriteConfirmation(String fileName) async {
+    final shouldOverwrite = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isDark
+            ? AppColors.darkSurface
+            : AppColors.white,
+        title: const Text('Replace Existing File?'),
+        content: Text(
+          'The file "$fileName" already exists in the selected destination.\n\nDo you want to overwrite it?',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('overwrite_cancel_button'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('overwrite_replace_button'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    if (shouldOverwrite == true && mounted) {
+      Navigator.of(context).pop((
+        format: _selectedFormat,
+        directory: _selectedDirectory,
+        fileName: fileName,
+      ));
+    }
   }
 
   Widget _buildOptionCard({
