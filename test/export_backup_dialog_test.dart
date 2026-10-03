@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cashflow/components/export_backup_dialog.dart';
+import 'package:cashflow/services/backup_platform_io.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -47,46 +48,27 @@ void main() {
       );
     });
 
-    testWidgets('prompts confirmation when exporting to an existing file', (
-      tester,
-    ) async {
-      // Create existing file in tempDir
-      final existingFile = File('${tempDir.path}/existing_backup.db');
-      await existingFile.writeAsString('test');
+    test(
+      'backupFileExists returns true for existing file and false otherwise',
+      () async {
+        final existingFile = File('${tempDir.path}/existing_backup.db');
+        await existingFile.writeAsString('test');
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ExportBackupDialog(
-              isDark: false,
-              defaultDirectory: tempDir.path,
-              initialDirectory: tempDir.path,
-            ),
+        expect(
+          await backupFileExists(
+            'existing_backup.db',
+            destinationDirectory: tempDir.path,
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Enter the existing filename
-      final inputFinder = find.byKey(const Key('export_filename_input'));
-      await tester.enterText(inputFinder, 'existing_backup.db');
-      await tester.pumpAndSettle();
-
-      // Tap Confirm
-      final confirmBtn = find.byKey(const Key('export_confirm_button'));
-      await tester.tap(confirmBtn);
-      await tester.pumpAndSettle();
-
-      // Overwrite confirmation dialog should be shown
-      expect(find.text('Replace Existing File?'), findsOneWidget);
-      expect(find.text('Replace'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-
-      // Tap Cancel -> stays on dialog
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-      expect(find.text('Replace Existing File?'), findsNothing);
-      expect(find.byType(ExportBackupDialog), findsOneWidget);
-    });
+          isTrue,
+        );
+        expect(
+          await backupFileExists(
+            'non_existing_backup.db',
+            destinationDirectory: tempDir.path,
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 }

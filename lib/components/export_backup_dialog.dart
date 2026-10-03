@@ -314,10 +314,12 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
                     ),
                     actions: [
                       TextButton(
+                        key: const Key('overwrite_cancel_button'),
                         onPressed: () => Navigator.of(ctx).pop(false),
                         child: const Text('Cancel'),
                       ),
                       FilledButton(
+                        key: const Key('overwrite_replace_button'),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.danger,
                         ),
