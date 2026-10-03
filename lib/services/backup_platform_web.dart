@@ -22,10 +22,7 @@ Future<String?> saveBackupBytes(
   return filename;
 }
 
-Future<bool> backupFileExists(
-  String filename, {
-  String? destinationDirectory,
-}) async {
+bool backupFileExists(String filename, {String? destinationDirectory}) {
   return false;
 }
 

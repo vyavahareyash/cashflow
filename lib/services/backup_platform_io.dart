@@ -40,10 +40,7 @@ Future<String?> saveBackupBytes(
   return file.path;
 }
 
-Future<bool> backupFileExists(
-  String filename, {
-  String? destinationDirectory,
-}) async {
+bool backupFileExists(String filename, {String? destinationDirectory}) {
   final safeName = basename(filename);
   String resolvedPath;
   if (destinationDirectory != null && destinationDirectory.isNotEmpty) {
@@ -54,7 +51,7 @@ Future<bool> backupFileExists(
       docsPath = Directory.systemTemp.path;
     } else {
       try {
-        final documentsDir = await getApplicationDocumentsDirectory();
+        final documentsDir = Directory.systemTemp;
         docsPath = documentsDir.path;
       } catch (_) {
         docsPath = Directory.systemTemp.path;
@@ -62,7 +59,7 @@ Future<bool> backupFileExists(
     }
     resolvedPath = join(docsPath, safeName);
   }
-  return await File(resolvedPath).exists();
+  return File(resolvedPath).existsSync();
 }
 
 Future<String?> pickBackupDirectory({String? initialDirectory}) async {

@@ -55,14 +55,14 @@ void main() {
         await existingFile.writeAsString('test');
 
         expect(
-          await backupFileExists(
+          backupFileExists(
             'existing_backup.db',
             destinationDirectory: tempDir.path,
           ),
           isTrue,
         );
         expect(
-          await backupFileExists(
+          backupFileExists(
             'non_existing_backup.db',
             destinationDirectory: tempDir.path,
           ),

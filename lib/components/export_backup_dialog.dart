@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +24,8 @@ class ExportBackupDialog extends StatefulWidget {
   final bool fixedFormat;
   final String? title;
 
+  final String? initialFileName;
+
   const ExportBackupDialog({
     super.key,
     required this.isDark,
@@ -30,6 +34,7 @@ class ExportBackupDialog extends StatefulWidget {
     this.initialFormat = ExportFormat.sqlite,
     this.fixedFormat = false,
     this.title,
+    this.initialFileName,
   });
 
   @override
@@ -51,7 +56,7 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
     }
     _selectedDirectory = widget.initialDirectory;
     _fileNameController = TextEditingController(
-      text: _getDefaultName(_selectedFormat),
+      text: widget.initialFileName ?? _getDefaultName(_selectedFormat),
     );
   }
 
@@ -290,62 +295,69 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
         ),
         FilledButton(
           key: const Key('export_confirm_button'),
-          onPressed: () async {
+          onPressed: () {
             final name = _fileNameController.text.trim();
             final fileName = name.isEmpty
                 ? _getDefaultName(_selectedFormat)
                 : name;
 
             if (!kIsWeb) {
-              final exists = await backupFileExists(
+              final exists = backupFileExists(
                 fileName,
                 destinationDirectory: _selectedDirectory,
               );
-              if (exists && context.mounted) {
-                final shouldOverwrite = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: widget.isDark
-                        ? AppColors.darkSurface
-                        : AppColors.white,
-                    title: const Text('Replace Existing File?'),
-                    content: Text(
-                      'The file "$fileName" already exists in the selected destination.\n\nDo you want to overwrite it?',
-                    ),
-                    actions: [
-                      TextButton(
-                        key: const Key('overwrite_cancel_button'),
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        key: const Key('overwrite_replace_button'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.danger,
-                        ),
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: const Text('Replace'),
-                      ),
-                    ],
-                  ),
-                );
-                if (shouldOverwrite != true) return;
+              if (exists) {
+                unawaited(_showOverwriteConfirmation(fileName));
+                return;
               }
             }
 
-            if (context.mounted) {
-              Navigator.of(context).pop((
-                format: _selectedFormat,
-                directory: _selectedDirectory,
-                fileName: fileName,
-              ));
-            }
+            Navigator.of(context).pop((
+              format: _selectedFormat,
+              directory: _selectedDirectory,
+              fileName: fileName,
+            ));
           },
           style: FilledButton.styleFrom(backgroundColor: AppColors.emerald600),
           child: const Text('Confirm & Save'),
         ),
       ],
     );
+  }
+
+  Future<void> _showOverwriteConfirmation(String fileName) async {
+    final shouldOverwrite = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isDark
+            ? AppColors.darkSurface
+            : AppColors.white,
+        title: const Text('Replace Existing File?'),
+        content: Text(
+          'The file "$fileName" already exists in the selected destination.\n\nDo you want to overwrite it?',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('overwrite_cancel_button'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('overwrite_replace_button'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    if (shouldOverwrite == true && mounted) {
+      Navigator.of(context).pop((
+        format: _selectedFormat,
+        directory: _selectedDirectory,
+        fileName: fileName,
+      ));
+    }
   }
 
   Widget _buildOptionCard({
