@@ -3621,6 +3621,270 @@ class DatabaseHelper {
     }
   }
 
+  String? _preSyncSnapshot;
+
+  /// Saves an in-memory safety snapshot before performing any sync operations.
+  Future<void> createPreSyncBackup() async {
+    try {
+      _preSyncSnapshot = await exportDatabaseToJSONString();
+    } catch (e) {
+      developer.log(
+        'Failed to create pre-sync backup: $e',
+        name: 'DatabaseHelper',
+      );
+    }
+  }
+
+  /// Restores the last pre-sync safety snapshot (Undo sync).
+  Future<bool> restorePreSyncBackup() async {
+    final snapshot = _preSyncSnapshot;
+    if (snapshot == null) return false;
+    final success = await importDatabaseFromJSON(
+      jsonContentForTesting: snapshot,
+    );
+    if (success) {
+      _preSyncSnapshot = null;
+    }
+    return success;
+  }
+
+  bool get hasPreSyncBackup => _preSyncSnapshot != null;
+
+  /// Safely performs an additive union merge from a JSON string.
+  /// Preserves existing local records and adds any missing accounts, categories, goals, and transactions.
+  Future<Map<String, int>> mergeDatabaseFromJSON(String jsonString) async {
+    await createPreSyncBackup();
+    final data = BackupCodec.decode(jsonString);
+    final db = await database;
+
+    var addedAccounts = 0;
+    var addedCategories = 0;
+    var addedGoals = 0;
+    var addedTransactions = 0;
+
+    await db.transaction((txn) async {
+      // 1. ACCOUNTS (Match by name)
+      final existingAccounts = await txn.query('accounts');
+      final accountIdMap = <int, int>{};
+      final localAccountNames = <String, int>{};
+      for (final a in existingAccounts) {
+        localAccountNames[(a['name'] as String).toLowerCase().trim()] =
+            a['id'] as int;
+      }
+
+      for (final rawAcc in (data['accounts'] as List<Map<String, dynamic>>)) {
+        final remoteId = rawAcc['id'] as int;
+        final name = (rawAcc['name'] as String).trim();
+        final lowerName = name.toLowerCase();
+
+        if (localAccountNames.containsKey(lowerName)) {
+          accountIdMap[remoteId] = localAccountNames[lowerName]!;
+        } else {
+          final insertMap = Map<String, dynamic>.from(rawAcc)..remove('id');
+          final newId = await txn.insert('accounts', insertMap);
+          accountIdMap[remoteId] = newId;
+          localAccountNames[lowerName] = newId;
+          addedAccounts++;
+        }
+      }
+
+      // 2. CATEGORIES (Match by name & type)
+      final existingCategories = await txn.query('categories');
+      final categoryIdMap = <int, int>{};
+      final localCategoryKeys = <String, int>{};
+      for (final c in existingCategories) {
+        final name = (c['name'] as String).toLowerCase().trim();
+        final type = (c['type'] as String? ?? 'expense').toLowerCase().trim();
+        localCategoryKeys['$name|$type'] = c['id'] as int;
+      }
+
+      for (final rawCat in (data['categories'] as List<Map<String, dynamic>>)) {
+        final remoteId = rawCat['id'] as int;
+        final name = (rawCat['name'] as String).trim();
+        final type = (rawCat['type'] as String? ?? 'expense')
+            .toLowerCase()
+            .trim();
+        final key = '${name.toLowerCase()}|$type';
+
+        if (localCategoryKeys.containsKey(key)) {
+          categoryIdMap[remoteId] = localCategoryKeys[key]!;
+        } else {
+          final insertMap = Map<String, dynamic>.from(rawCat)..remove('id');
+          final newId = await txn.insert('categories', insertMap);
+          categoryIdMap[remoteId] = newId;
+          localCategoryKeys[key] = newId;
+          addedCategories++;
+        }
+      }
+
+      // 3. GOALS (Match by name)
+      final existingGoals = await txn.query('goals');
+      final goalIdMap = <int, int>{};
+      final localGoalNames = <String, Map<String, dynamic>>{};
+      for (final g in existingGoals) {
+        localGoalNames[(g['name'] as String).toLowerCase().trim()] = g;
+      }
+
+      for (final rawGoal in (data['goals'] as List<Map<String, dynamic>>)) {
+        final remoteId = rawGoal['id'] as int;
+        final name = (rawGoal['name'] as String).trim();
+        final lowerName = name.toLowerCase();
+
+        if (localGoalNames.containsKey(lowerName)) {
+          final existing = localGoalNames[lowerName]!;
+          final localId = existing['id'] as int;
+          goalIdMap[remoteId] = localId;
+
+          final localSaved =
+              (existing['current_saved'] as num?)?.toDouble() ?? 0.0;
+          final remoteSaved =
+              (rawGoal['current_saved'] as num?)?.toDouble() ?? 0.0;
+          if (remoteSaved > localSaved) {
+            await txn.update(
+              'goals',
+              {'current_saved': remoteSaved},
+              where: 'id = ?',
+              whereArgs: [localId],
+            );
+          }
+        } else {
+          final insertMap = Map<String, dynamic>.from(rawGoal)..remove('id');
+          final newId = await txn.insert('goals', insertMap);
+          goalIdMap[remoteId] = newId;
+          localGoalNames[lowerName] = {...rawGoal, 'id': newId};
+          addedGoals++;
+        }
+      }
+
+      // 4. TRANSACTIONS (Match by date, amount, type, and note)
+      final existingTransactions = await txn.query('transactions');
+      final localTxKeys = <String>{};
+      for (final t in existingTransactions) {
+        final key =
+            '${t['date']}|${t['amount']}|${t['type']}|${t['note'] ?? ''}';
+        localTxKeys.add(key);
+      }
+
+      for (final rawTx
+          in (data['transactions'] as List<Map<String, dynamic>>)) {
+        final key =
+            '${rawTx['date']}|${rawTx['amount']}|${rawTx['type']}|${rawTx['note'] ?? ''}';
+        if (!localTxKeys.contains(key)) {
+          final insertMap = Map<String, dynamic>.from(rawTx)..remove('id');
+
+          final remoteAccId = insertMap['account_id'] as int?;
+          if (remoteAccId != null && accountIdMap.containsKey(remoteAccId)) {
+            insertMap['account_id'] = accountIdMap[remoteAccId];
+          }
+
+          final remoteDestId = insertMap['destination_account_id'] as int?;
+          if (remoteDestId != null && accountIdMap.containsKey(remoteDestId)) {
+            insertMap['destination_account_id'] = accountIdMap[remoteDestId];
+          }
+
+          final remoteCatId = insertMap['category_id'] as int?;
+          if (remoteCatId != null && categoryIdMap.containsKey(remoteCatId)) {
+            insertMap['category_id'] = categoryIdMap[remoteCatId];
+          }
+
+          final remoteGoalId = insertMap['goal_id'] as int?;
+          if (remoteGoalId != null && goalIdMap.containsKey(remoteGoalId)) {
+            insertMap['goal_id'] = goalIdMap[remoteGoalId];
+          }
+
+          await txn.insert('transactions', insertMap);
+          localTxKeys.add(key);
+          addedTransactions++;
+
+          final amount = (insertMap['amount'] as num).toDouble();
+          final type = insertMap['type'] as String? ?? 'expense';
+          final accId = insertMap['account_id'] as int?;
+          final destId = insertMap['destination_account_id'] as int?;
+
+          if (accId != null) {
+            final acc = await txn.query(
+              'accounts',
+              columns: ['type'],
+              where: 'id = ?',
+              whereArgs: [accId],
+            );
+            final isCc = acc.isNotEmpty && acc.first['type'] == 'Credit Card';
+
+            if (type == 'expense' || type == 'goal_payment') {
+              if (isCc) {
+                await txn.rawUpdate(
+                  'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                  [amount, accId],
+                );
+              } else {
+                await txn.rawUpdate(
+                  'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+                  [amount, accId],
+                );
+              }
+            } else if (type == 'income') {
+              if (isCc) {
+                await txn.rawUpdate(
+                  'UPDATE accounts SET balance = MAX(0.0, balance - ?) WHERE id = ?',
+                  [amount, accId],
+                );
+              } else {
+                await txn.rawUpdate(
+                  'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                  [amount, accId],
+                );
+              }
+            } else if (type == 'transfer') {
+              if (isCc) {
+                await txn.rawUpdate(
+                  'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                  [amount, accId],
+                );
+              } else {
+                await txn.rawUpdate(
+                  'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+                  [amount, accId],
+                );
+              }
+              if (destId != null) {
+                final destAcc = await txn.query(
+                  'accounts',
+                  columns: ['type'],
+                  where: 'id = ?',
+                  whereArgs: [destId],
+                );
+                final isDestCc =
+                    destAcc.isNotEmpty &&
+                    destAcc.first['type'] == 'Credit Card';
+                if (isDestCc) {
+                  await txn.rawUpdate(
+                    'UPDATE accounts SET balance = MAX(0.0, balance - ?) WHERE id = ?',
+                    [amount, destId],
+                  );
+                } else {
+                  await txn.rawUpdate(
+                    'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                    [amount, destId],
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+
+      await _consolidateDuplicateGoalAllocations(txn);
+    });
+
+    notifyDataChanged();
+    return {
+      'accounts': addedAccounts,
+      'categories': addedCategories,
+      'goals': addedGoals,
+      'transactions': addedTransactions,
+    };
+  }
+
   // --- CSV EXPORT ---
   /// Exports transactions to a CSV file.
   Future<String?> exportTransactionsAsCSV({

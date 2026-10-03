@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/backup_platform.dart';
@@ -61,13 +62,14 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
   }
 
   String _getDefaultName(ExportFormat fmt) {
+    final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     switch (fmt) {
       case ExportFormat.sqlite:
-        return 'cashflow_backup.db';
+        return 'cashflow_backup_$ts.db';
       case ExportFormat.json:
-        return 'cashflow_backup.json';
+        return 'cashflow_backup_$ts.json';
       case ExportFormat.csv:
-        return 'cashflow_transactions.csv';
+        return 'cashflow_transactions_$ts.csv';
     }
   }
 
@@ -288,13 +290,54 @@ class _ExportBackupDialogState extends State<ExportBackupDialog> {
         ),
         FilledButton(
           key: const Key('export_confirm_button'),
-          onPressed: () {
+          onPressed: () async {
             final name = _fileNameController.text.trim();
-            Navigator.of(context).pop((
-              format: _selectedFormat,
-              directory: _selectedDirectory,
-              fileName: name.isEmpty ? _getDefaultName(_selectedFormat) : name,
-            ));
+            final fileName = name.isEmpty
+                ? _getDefaultName(_selectedFormat)
+                : name;
+
+            if (!kIsWeb) {
+              final exists = await backupFileExists(
+                fileName,
+                destinationDirectory: _selectedDirectory,
+              );
+              if (exists && context.mounted) {
+                final shouldOverwrite = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: widget.isDark
+                        ? AppColors.darkSurface
+                        : AppColors.white,
+                    title: const Text('Replace Existing File?'),
+                    content: Text(
+                      'The file "$fileName" already exists in the selected destination.\n\nDo you want to overwrite it?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.danger,
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Replace'),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldOverwrite != true) return;
+              }
+            }
+
+            if (context.mounted) {
+              Navigator.of(context).pop((
+                format: _selectedFormat,
+                directory: _selectedDirectory,
+                fileName: fileName,
+              ));
+            }
           },
           style: FilledButton.styleFrom(backgroundColor: AppColors.emerald600),
           child: const Text('Confirm & Save'),

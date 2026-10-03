@@ -22,6 +22,13 @@ Future<String?> saveBackupBytes(
   return filename;
 }
 
+Future<bool> backupFileExists(
+  String filename, {
+  String? destinationDirectory,
+}) async {
+  return false;
+}
+
 Future<String?> pickBackupDirectory({String? initialDirectory}) async {
   return null;
 }
