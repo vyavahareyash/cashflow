@@ -720,51 +720,54 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: AppSpacing.md),
 
           // Metrics Breakdown
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            runSpacing: AppSpacing.xs,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Spent so far',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Spent so far',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    AppFormatters.currency(
-                      _totalSpentThisMonth,
-                      isPrivate: _isPrivate,
+                    Text(
+                      AppFormatters.currency(
+                        _totalSpentThisMonth,
+                        isPrivate: _isPrivate,
+                      ),
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: progress > 1.0
+                            ? AppColors.danger
+                            : (isDark ? AppColors.darkText : AppColors.gray900),
+                      ),
                     ),
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: progress > 1.0
-                          ? AppColors.danger
-                          : (isDark ? AppColors.darkText : AppColors.gray900),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Remaining',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: isDark ? AppColors.gray400 : AppColors.gray600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Remaining',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isDark ? AppColors.gray400 : AppColors.gray600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${AppFormatters.compactCurrency(remainingBudget, isPrivate: _isPrivate)} left of ${AppFormatters.compactCurrency(_totalBudgetLimit, isPrivate: _isPrivate)}',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.emerald600,
+                    Text(
+                      '${AppFormatters.compactCurrency(remainingBudget, isPrivate: _isPrivate)} left of ${AppFormatters.compactCurrency(_totalBudgetLimit, isPrivate: _isPrivate)}',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.emerald600,
+                      ),
+                      textAlign: TextAlign.end,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
