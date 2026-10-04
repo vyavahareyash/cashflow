@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.15.1] - 2026-10-04
+
+### Fixed
+- **Budget Pace card alignment**: "Remaining" label and amount are now correctly right-aligned in the Monthly Budget Pace card on the home screen. The metrics row used `Wrap` instead of `Row + Expanded`, which gave children only their intrinsic width and prevented `CrossAxisAlignment.end` from taking effect (#167).
+
+---
+
 ## [4.15.0] - 2026-10-03
 
 ### Added
