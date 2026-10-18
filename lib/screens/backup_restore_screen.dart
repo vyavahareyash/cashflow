@@ -26,15 +26,21 @@ import '../components/voice_model_download_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 export '../components/export_backup_dialog.dart' show ExportFormat;
+export 'settings/settings_privacy_screen.dart';
+export 'settings/settings_cycle_screen.dart';
+
+enum SettingsSection { privacy, cycle, dataBackup, voiceAi, about }
 
 class BackupRestoreScreen extends StatefulWidget {
   final bool scrollToVoiceModels;
   final bool? isWeb;
+  final SettingsSection? initialSection;
 
   const BackupRestoreScreen({
     super.key,
     this.scrollToVoiceModels = false,
     this.isWeb,
+    this.initialSection,
   });
 
   @override
@@ -45,6 +51,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   static const Color bmcYellow = Color(0xFFFFDD00);
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _voiceModelSectionKey = GlobalKey();
+  final ValueNotifier<int> _revisionNotifier = ValueNotifier<int>(0);
 
   bool _isProcessing = false;
   String _statusMessage = '';
@@ -92,6 +99,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   @override
   void dispose() {
+    _revisionNotifier.dispose();
     _scrollController.dispose();
     ModelManagementService.instance.removeListener(_onModelManagementChanged);
     BillingService.instance.onPurchaseCompleted = null;
@@ -693,136 +701,367 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveSection =
+        widget.initialSection ??
+        (widget.scrollToVoiceModels ? SettingsSection.voiceAi : null);
+
+    if (effectiveSection != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _sectionTitle(effectiveSection),
+            style: AppTypography.titleLarge,
+          ),
+        ),
+        body: SingleChildScrollView(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _buildSubScreenContent(effectiveSection, isDark),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings & Data', style: AppTypography.titleLarge),
       ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. PRIVACY HERO CARD
-            _buildPrivacyHeroCard(isDark),
-            const SizedBox(height: AppSpacing.md),
-            _buildPrivacyPreferencesCard(isDark),
-            if (_canUseBiometric) ...[
-              const SizedBox(height: AppSpacing.md),
-              _buildAppLockCard(isDark),
-            ],
-            const SizedBox(height: AppSpacing.xl),
+      body: _buildRootSettings(context, isDark),
+    );
+  }
 
-            // 2. FINANCIAL & CYCLE PREFERENCES
-            _buildSectionHeader('Financial & Cycle Preferences', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildSalaryPreferencesCard(isDark),
-            const SizedBox(height: AppSpacing.xl),
+  String _sectionTitle(SettingsSection section) {
+    switch (section) {
+      case SettingsSection.privacy:
+        return 'Privacy & Security';
+      case SettingsSection.cycle:
+        return 'Financial Cycle & Storage';
+      case SettingsSection.dataBackup:
+        return 'Data, Sync & Backups';
+      case SettingsSection.voiceAi:
+        return 'Voice AI & Offline Models';
+      case SettingsSection.about:
+        return 'About & Support';
+    }
+  }
 
-            // 3. LOCAL STORAGE SNAPSHOT
-            _buildSectionHeader('Storage & Record Count', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildStorageOverviewCard(isDark),
-            const SizedBox(height: AppSpacing.xl),
-
-            // LIVE DEVICE SYNC
-            _buildSectionHeader('Live Device Sync', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildLiveSyncCard(isDark),
-            const SizedBox(height: AppSpacing.xl),
-
-            // 3. BACKUP & EXPORT ACTIONS
-            _buildSectionHeader('Backup & Data Portability', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildBackupGroupCard(isDark),
-            if (_statusMessage.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                key: const Key('backup_status_message_banner'),
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.darkSurfaceElevated
-                      : AppColors.emerald50,
-                  border: Border.all(
-                    color: AppColors.emerald500.withValues(alpha: 0.3),
-                  ),
-                  borderRadius: AppBorderRadius.mediumBorder,
-                ),
-                child: Text(
-                  _statusMessage,
-                  textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.emerald400 : AppColors.emerald800,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-
-            // 4. OFFLINE VOICE AI MODEL PACK
-            KeyedSubtree(
-              key: _voiceModelSectionKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader('Voice & SMS AI Offline Models', isDark),
-                  const SizedBox(height: AppSpacing.xs),
-                  _buildVoiceAiModelPackCard(isDark),
-                ],
+  void _openSection(BuildContext context, SettingsSection section) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (routeContext) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(
+                _sectionTitle(section),
+                style: AppTypography.titleLarge,
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // SMS TRANSACTION TRACKING (OFFLINE-FIRST)
-            _buildSectionHeader('SMS Transaction Tracking (Offline)', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildSmsTrackingCard(isDark),
-            const SizedBox(height: AppSpacing.xl),
-
-            // 5. APP WALKTHROUGH & CONCEPTS
-            _buildSectionHeader('App Walkthrough & Concepts', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildWalkthroughCard(isDark),
-            const SizedBox(height: AppSpacing.xl),
-
-            // 6. DEMO DATA GENERATOR
-            _buildSectionHeader('Demo & Testing', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildDemoDataCard(isDark),
-            const SizedBox(height: AppSpacing.xxl),
-
-            // 5. DANGER ZONE
-            _buildSectionHeader('Danger Zone', isDark, isDanger: true),
-            const SizedBox(height: AppSpacing.xs),
-            _buildDangerZoneCard(isDark),
-            const SizedBox(height: AppSpacing.xl),
-
-            // 6. SUPPORT & OPEN SOURCE (Conditional on compile-time flag)
-            if (AppConfig.enableExternalDonations ||
-                AppConfig.enablePlayStoreTips) ...[
-              _buildSectionHeader('Support & Open Source', isDark),
-              const SizedBox(height: AppSpacing.xs),
-              _buildSupportDevelopmentCard(isDark),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-
-            // 7. APP INFO & SYSTEM FOOTER
-            _buildSectionHeader('System & About', isDark),
-            const SizedBox(height: AppSpacing.xs),
-            _buildAboutSystemCard(isDark),
-            const SizedBox(height: AppSpacing.md),
-            _buildDeveloperFooter(isDark),
-            const SizedBox(height: AppSpacing.huge),
-          ],
-        ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              child: AnimatedBuilder(
+                animation: _revisionNotifier,
+                builder: (ctx, _) {
+                  final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _buildSubScreenContent(section, isDark),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildRootSettings(BuildContext context, bool isDark) {
+    final freshnessText = _formatBackupFreshness(_lastBackupTimestamp);
+    final hasBackup =
+        _lastBackupTimestamp != null && _lastBackupTimestamp!.isNotEmpty;
+
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildPrivacyHeroCard(isDark),
+          const SizedBox(height: AppSpacing.lg),
+
+          _buildSectionHeader('Preferences', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildRootCategoryCard(
+            context: context,
+            key: const Key('settings_category_privacy'),
+            title: 'Privacy & Security',
+            subtitle: 'Start in privacy mode, app lock & biometrics',
+            icon: Icons.shield_outlined,
+            section: SettingsSection.privacy,
+            isDark: isDark,
+            badge: _startInPrivacyMode ? 'Masked' : null,
+          ),
+          _buildRootCategoryCard(
+            context: context,
+            key: const Key('settings_category_cycle'),
+            title: 'Financial Cycle & Storage',
+            subtitle:
+                'Monthly payday (Day $_salaryDay) & stored records snapshot',
+            icon: Icons.calendar_month_outlined,
+            section: SettingsSection.cycle,
+            isDark: isDark,
+            badge: 'Day $_salaryDay',
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          _buildSectionHeader('Data & Automation', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildRootCategoryCard(
+            context: context,
+            key: const Key('settings_category_data_backup'),
+            title: 'Data, Sync & Backups',
+            subtitle: 'Export (JSON/CSV/DB), import, live sync & danger zone',
+            icon: Icons.backup_outlined,
+            section: SettingsSection.dataBackup,
+            isDark: isDark,
+            badge: hasBackup ? freshnessText : 'Unsaved',
+            badgeColor: hasBackup ? AppColors.emerald600 : AppColors.gray500,
+          ),
+          _buildRootCategoryCard(
+            context: context,
+            key: const Key('settings_category_voice_ai'),
+            title: 'Voice AI & Offline Models',
+            subtitle: 'Offline Whisper STT, SLM parsing & SMS tracking',
+            icon: Icons.psychology_outlined,
+            section: SettingsSection.voiceAi,
+            isDark: isDark,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          // App Walkthrough
+          _buildSectionHeader('App Walkthrough & Concepts', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildWalkthroughCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Support & Open Source
+          if (AppConfig.enableExternalDonations ||
+              AppConfig.enablePlayStoreTips) ...[
+            _buildSectionHeader('Support & Open Source', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildSupportDevelopmentCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+
+          // System & About
+          _buildSectionHeader('System & About', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildAboutSystemCard(isDark),
+          const SizedBox(height: AppSpacing.md),
+          _buildDeveloperFooter(isDark),
+          const SizedBox(height: AppSpacing.huge),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRootCategoryCard({
+    required BuildContext context,
+    required Key key,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required SettingsSection section,
+    required bool isDark,
+    String? badge,
+    Color? badgeColor,
+  }) {
+    return CustomCard(
+      key: key,
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      onTap: () => _openSection(context, section),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.emerald500.withValues(alpha: 0.12),
+              borderRadius: AppBorderRadius.mediumBorder,
+            ),
+            child: Icon(icon, color: AppColors.emerald600, size: 24),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (badge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xxs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (badgeColor ?? AppColors.emerald600)
+                              .withValues(alpha: 0.15),
+                          borderRadius: AppBorderRadius.pillBorder,
+                        ),
+                        child: Text(
+                          badge,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: badgeColor ?? AppColors.emerald600,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: isDark ? AppColors.gray500 : AppColors.gray400,
+            size: 22,
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildSubScreenContent(SettingsSection section, bool isDark) {
+    switch (section) {
+      case SettingsSection.privacy:
+        return [
+          _buildPrivacyHeroCard(isDark),
+          const SizedBox(height: AppSpacing.md),
+          _buildPrivacyPreferencesCard(isDark),
+          if (_canUseBiometric) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildAppLockCard(isDark),
+          ],
+        ];
+      case SettingsSection.cycle:
+        return [
+          _buildSectionHeader('Financial & Cycle Preferences', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildSalaryPreferencesCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
+          _buildSectionHeader('Storage & Record Count', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildStorageOverviewCard(isDark),
+        ];
+      case SettingsSection.dataBackup:
+        return [
+          _buildSectionHeader('Backup & Data Portability', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildBackupGroupCard(isDark),
+          if (_statusMessage.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              key: const Key('backup_status_message_banner'),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.emerald50,
+                border: Border.all(
+                  color: AppColors.emerald500.withValues(alpha: 0.3),
+                ),
+                borderRadius: AppBorderRadius.mediumBorder,
+              ),
+              child: Text(
+                _statusMessage,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.emerald400 : AppColors.emerald800,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.xl),
+          _buildSectionHeader('Live Device Sync', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildLiveSyncCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
+          _buildSectionHeader('Demo & Testing', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildDemoDataCard(isDark),
+          const SizedBox(height: AppSpacing.xxl),
+          _buildSectionHeader('Danger Zone', isDark, isDanger: true),
+          const SizedBox(height: AppSpacing.xs),
+          _buildDangerZoneCard(isDark),
+        ];
+      case SettingsSection.voiceAi:
+        return [
+          KeyedSubtree(
+            key: _voiceModelSectionKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader('Voice & SMS AI Offline Models', isDark),
+                const SizedBox(height: AppSpacing.xs),
+                _buildVoiceAiModelPackCard(isDark),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _buildSectionHeader('SMS Transaction Tracking (Offline)', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildSmsTrackingCard(isDark),
+        ];
+      case SettingsSection.about:
+        return [
+          _buildSectionHeader('App Walkthrough & Concepts', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildWalkthroughCard(isDark),
+          const SizedBox(height: AppSpacing.xl),
+          if (AppConfig.enableExternalDonations ||
+              AppConfig.enablePlayStoreTips) ...[
+            _buildSectionHeader('Support & Open Source', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildSupportDevelopmentCard(isDark),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+          _buildSectionHeader('System & About', isDark),
+          const SizedBox(height: AppSpacing.xs),
+          _buildAboutSystemCard(isDark),
+          const SizedBox(height: AppSpacing.md),
+          _buildDeveloperFooter(isDark),
+          const SizedBox(height: AppSpacing.huge),
+        ];
+    }
   }
 
   Widget _buildSectionHeader(
