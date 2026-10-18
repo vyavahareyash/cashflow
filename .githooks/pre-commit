@@ -5,7 +5,6 @@
 # 2. Code formatting (dart format)
 # 3. Static analysis with zero fatal infos (flutter analyze --fatal-infos)
 # 4. Script integrity (python py_compile)
-# Note: Unit tests & coverage run in pre-push hook to keep local commits instant.
 
 set -eo pipefail
 
