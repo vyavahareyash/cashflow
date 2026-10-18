@@ -163,6 +163,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final creditLimitController = TextEditingController();
     final statementDayController = TextEditingController(text: '1');
     final dueDayController = TextEditingController(text: '20');
+    final suffixController = TextEditingController();
     String selectedType = 'Bank';
     int? defaultLockAccountId = _accounts
         .where((a) => !a.isCreditCard)
@@ -276,6 +277,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        CustomInputField(
+                          controller: suffixController,
+                          label: 'Account/Card Last 4 Digits (Optional)',
+                          hint: 'e.g. 1234 (for bank SMS auto-matching)',
+                          prefixIcon: Icons.pin_rounded,
+                          keyboardType: TextInputType.number,
                         ),
                         if (isCC) ...[
                           const SizedBox(height: AppSpacing.md),
@@ -399,8 +408,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                     ) ??
                                     0.0,
                                 type: selectedType,
+                                accountNumberSuffix:
+                                    suffixController.text.trim().isNotEmpty
+                                    ? suffixController.text.trim()
+                                    : null,
                               ),
                             );
+
                         if (selectedType == 'Credit Card') {
                           await DatabaseHelper.instance.createCreditCard(
                             CreditCard(
@@ -1894,6 +1908,7 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
   late final TextEditingController _creditLimitController;
   late final TextEditingController _statementDayController;
   late final TextEditingController _dueDayController;
+  late final TextEditingController _suffixController;
   int? _defaultLockAccountId;
   late bool _autoLock;
   final _formKey = GlobalKey<FormState>();
@@ -1915,6 +1930,9 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
     _dueDayController = TextEditingController(
       text: widget.creditCard?.dueDay.toString() ?? '20',
     );
+    _suffixController = TextEditingController(
+      text: widget.account.accountNumberSuffix ?? '',
+    );
     _defaultLockAccountId = widget.creditCard?.defaultLockAccountId;
     _autoLock = widget.creditCard?.autoLock ?? true;
   }
@@ -1926,6 +1944,7 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
     _creditLimitController.dispose();
     _statementDayController.dispose();
     _dueDayController.dispose();
+    _suffixController.dispose();
     super.dispose();
   }
 
@@ -2024,6 +2043,21 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                   }
                   if (double.tryParse(value) == null) {
                     return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              CustomInputField(
+                controller: _suffixController,
+                label: 'Account/Card Last 4 Digits (Optional)',
+                hint: 'e.g. 1234 (Used for SMS match)',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value != null &&
+                      value.trim().isNotEmpty &&
+                      value.trim().length != 4) {
+                    return 'Must be 4 digits';
                   }
                   return null;
                 },
@@ -2177,6 +2211,9 @@ class _EditAccountDialogState extends State<EditAccountDialog> {
                   balance:
                       double.tryParse(_balanceController.text.trim()) ?? 0.0,
                   type: _selectedType,
+                  accountNumberSuffix: _suffixController.text.trim().isNotEmpty
+                      ? _suffixController.text.trim()
+                      : null,
                 ),
               );
               if (isCC && widget.creditCard != null) {

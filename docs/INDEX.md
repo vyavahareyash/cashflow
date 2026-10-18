@@ -36,6 +36,7 @@ This directory is the central documentation hub for Cashflow, containing user gu
 ## 📋 Product & Planning
 
 - [Product Specification](product/SPECIFICATION.md) — Locked behavioral contracts, 6-transaction type system, and feature inventory.
+- [App Redesign & Stitch AI Context](product/REDESIGN_STITCH_AI_CONTEXT.md) — Screen-by-screen inventory, UI tokens, and prompt context for Stitch AI redesign.
 - [Offline Voice Journaling Specification](product/SPEC_OFFLINE_VOICE_JOURNALING.md) — Architectural spec, user stories, GBNF schema, and testing seams for offline voice logging.
 - [Implementation Roadmap](product/ROADMAP.md) — Milestone phases, delivery sequencing, and acceptance principles.
 

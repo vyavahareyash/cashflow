@@ -22,6 +22,8 @@ class VoiceTransactionStagingSheet extends StatefulWidget {
   final bool? isPrivate;
   final Future<void> Function(List<DraftTransaction> approvedDrafts)? onCommit;
   final VoidCallback? onDismiss;
+  final Future<void> Function(DraftTransaction draft)? onDiscardDraft;
+  final Future<void> Function(List<DraftTransaction> drafts)? onDiscardAll;
 
   const VoiceTransactionStagingSheet({
     super.key,
@@ -31,6 +33,8 @@ class VoiceTransactionStagingSheet extends StatefulWidget {
     this.isPrivate,
     this.onCommit,
     this.onDismiss,
+    this.onDiscardDraft,
+    this.onDiscardAll,
   });
 
   /// Displays the staging sheet modal.
@@ -42,6 +46,8 @@ class VoiceTransactionStagingSheet extends StatefulWidget {
     bool? isPrivate,
     Future<void> Function(List<DraftTransaction> approvedDrafts)? onCommit,
     VoidCallback? onDismiss,
+    Future<void> Function(DraftTransaction draft)? onDiscardDraft,
+    Future<void> Function(List<DraftTransaction> drafts)? onDiscardAll,
   }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     try {
@@ -59,6 +65,8 @@ class VoiceTransactionStagingSheet extends StatefulWidget {
           isPrivate: isPrivate,
           onCommit: onCommit,
           onDismiss: onDismiss,
+          onDiscardDraft: onDiscardDraft,
+          onDiscardAll: onDiscardAll,
         ),
       );
     } finally {
@@ -120,9 +128,12 @@ class _VoiceTransactionStagingSheetState
 
   void _dismissDraft(int index) {
     if (index >= 0 && index < _drafts.length) {
-      setState(() {
-        _drafts.removeAt(index);
-      });
+      final removed = _drafts.removeAt(index);
+      setState(() {});
+      final onDiscard = widget.onDiscardDraft;
+      if (onDiscard != null) {
+        unawaited(onDiscard(removed));
+      }
     }
   }
 
@@ -716,10 +727,7 @@ class _VoiceTransactionStagingSheetState
                 ),
               )
             else
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.55,
-                ),
+              Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: _drafts.length,
@@ -774,39 +782,92 @@ class _VoiceTransactionStagingSheetState
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.md,
+                    child: SizedBox(
+                      height: 44,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: AppBorderRadius.mediumBorder,
+                          ),
                         ),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
+                        onPressed: () async {
+                          final draftsToDiscard = List<DraftTransaction>.from(
+                            _drafts,
+                          );
+                          setState(() => _drafts.clear());
+                          if (widget.onDiscardAll != null) {
+                            await widget.onDiscardAll!(draftsToDiscard);
+                          }
+                          widget.onDismiss?.call();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Discard All'),
                         ),
                       ),
-                      onPressed: () {
-                        widget.onDismiss?.call();
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Discard All'),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   if (!allValid && validDrafts.isNotEmpty) ...[
                     Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.emerald700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AppBorderRadius.mediumBorder,
+                            ),
+                          ),
+                          onPressed: _isCommitting
+                              ? null
+                              : () => _commitDrafts(validDrafts),
+                          child: _isCommitting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'Approve Valid (${validDrafts.length})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.emerald700,
+                          backgroundColor: allValid
+                              ? AppColors.emerald700
+                              : AppColors.gray400,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
                           shape: const RoundedRectangleBorder(
                             borderRadius: AppBorderRadius.mediumBorder,
                           ),
                         ),
-                        onPressed: _isCommitting
-                            ? null
-                            : () => _commitDrafts(validDrafts),
+                        onPressed: (allValid && !_isCommitting)
+                            ? () => _commitDrafts(_drafts)
+                            : null,
                         child: _isCommitting
                             ? const SizedBox(
                                 width: 16,
@@ -816,43 +877,21 @@ class _VoiceTransactionStagingSheetState
                                   color: Colors.white,
                                 ),
                               )
-                            : Text('Approve Valid (${validDrafts.length})'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                  ],
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: allValid
-                            ? AppColors.emerald700
-                            : AppColors.gray400,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.md,
-                        ),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: AppBorderRadius.mediumBorder,
-                        ),
-                      ),
-                      onPressed: (allValid && !_isCommitting)
-                          ? () => _commitDrafts(_drafts)
-                          : null,
-                      child: _isCommitting
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+                            : FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Approve All (${_drafts.length})',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            )
-                          : Text('Approve All (${_drafts.length})'),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
             ],
           ],
         ),
@@ -1127,19 +1166,26 @@ class _VoiceTransactionStagingSheetState
         borderRadius: AppBorderRadius.smallBorder,
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isError ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
-            size: 14,
-            color: color,
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              isError
+                  ? Icons.error_outline_rounded
+                  : Icons.warning_amber_rounded,
+              size: 14,
+              color: color,
+            ),
           ),
           const SizedBox(width: AppSpacing.xs),
-          Text(
-            message,
-            style: AppTypography.labelSmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.labelSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

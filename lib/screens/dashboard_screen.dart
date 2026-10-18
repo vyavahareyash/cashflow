@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../services/database_helper.dart';
 import '../models/account_model.dart';
 import '../models/category_model.dart';
-import '../models/transaction_model.dart';
 import '../models/credit_card_model.dart';
 import '../models/goal_model.dart';
 import '../models/salary_cycle.dart';
@@ -16,6 +15,9 @@ import '../components/custom_input.dart';
 import '../components/category_badge.dart';
 import '../components/choice_picker_field.dart';
 import '../components/app_dialogs.dart';
+import '../models/tracked_sms_message.dart';
+import '../services/sms_tracker_service.dart';
+import '../components/voice_transaction_staging_sheet.dart';
 import '../components/walkthrough/walkthrough_keys.dart';
 import 'accounts_screen.dart';
 
@@ -57,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _showAllAccounts = false;
   int _salaryDay = 1;
   DateTime _selectedDate = DateTime.now();
+  List<TrackedSmsMessage> _pendingSmsMessages = [];
 
   @override
   void initState() {
@@ -64,13 +67,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     WidgetsBinding.instance.addObserver(this);
     unawaited(_loadAllData());
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
+    SmsTrackerService.instance.addListener(_onSmsDataChanged);
+    unawaited(SmsTrackerService.instance.initialize());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     DatabaseHelper.dataRevision.removeListener(_onDataChanged);
+    SmsTrackerService.instance.removeListener(_onSmsDataChanged);
     super.dispose();
+  }
+
+  void _onSmsDataChanged() {
+    if (mounted) {
+      setState(() {
+        _pendingSmsMessages = SmsTrackerService.instance.pendingSmsMessages;
+      });
+    }
   }
 
   @override
@@ -175,6 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _totalSpentThisMonth = totalSpent;
         _isPrivate = isPrivate;
         _salaryDay = salaryDay;
+        _pendingSmsMessages = SmsTrackerService.instance.pendingSmsMessages;
         _isLoading = false;
       });
     }
@@ -215,6 +230,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                 100,
               ),
               children: [
+                // UNREVIEWED SMS TRANSACTIONS BANNER
+                _buildSmsPendingBanner(isDark),
+
                 // 1. HERO USABLE BALANCE CARD
                 _buildHeroBalanceCard(isDark),
                 const SizedBox(height: AppSpacing.lg),
@@ -251,6 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               AppSpacing.xxl,
             ),
             children: [
+              _buildSmsPendingBanner(isDark),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -266,6 +285,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ],
                     ),
                   ),
+
                   const SizedBox(width: AppSpacing.xl),
                   Expanded(
                     child: Column(
@@ -611,6 +631,141 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
       ),
+    );
+  }
+
+  // --- UNREVIEWED SMS DRAFTS BANNER ---
+  Widget _buildSmsPendingBanner(bool isDark) {
+    final validDraftsCount = _pendingSmsMessages
+        .where((m) => m.draft != null)
+        .length;
+    if (validDraftsCount == 0) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.info.withValues(alpha: 0.15)
+            : const Color(0xFFEFF6FF),
+        borderRadius: AppBorderRadius.mediumBorder,
+        border: Border.all(
+          color: AppColors.info.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xs + 2),
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.sms_outlined,
+              color: AppColors.info,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$validDraftsCount Unreviewed SMS Transaction${validDraftsCount > 1 ? 's' : ''}',
+                  style: AppTypography.labelMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppColors.darkText
+                        : const Color(0xFF1E3A8A),
+                  ),
+                ),
+                Text(
+                  'Tap to review, edit details, and approve',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : const Color(0xFF3B82F6),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _openSmsStagingSheet,
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.info,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppBorderRadius.smallBorder,
+              ),
+            ),
+            child: const Text(
+              'Review',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openSmsStagingSheet() async {
+    final draftsWithMessages = _pendingSmsMessages
+        .where((m) => m.draft != null)
+        .toList();
+    if (draftsWithMessages.isEmpty) return;
+
+    final drafts = draftsWithMessages.map((m) => m.draft!).toList();
+
+    await VoiceTransactionStagingSheet.show(
+      context,
+      drafts: drafts,
+      accounts: _accounts,
+      categories: _categories,
+      isPrivate: _isPrivate,
+      onCommit: (approvedDrafts) async {
+        for (final approved in approvedDrafts) {
+          final matched = draftsWithMessages
+              .where((m) => m.draft?.id == approved.id)
+              .firstOrNull;
+          if (matched != null) {
+            await SmsTrackerService.instance.commitDraft(matched, approved);
+          } else {
+            await DatabaseHelper.instance.createTransaction(
+              approved.toTransactionModel(),
+            );
+          }
+        }
+        await SmsTrackerService.instance.refreshPendingMessages();
+        await _loadAllData();
+      },
+      onDiscardDraft: (discardedDraft) async {
+        final matched = draftsWithMessages
+            .where((m) => m.draft?.id == discardedDraft.id)
+            .firstOrNull;
+        if (matched != null) {
+          await SmsTrackerService.instance.dismissMessage(matched.id);
+        }
+      },
+      onDiscardAll: (discardedDrafts) async {
+        for (final draft in discardedDrafts) {
+          final matched = draftsWithMessages
+              .where((m) => m.draft?.id == draft.id)
+              .firstOrNull;
+          if (matched != null) {
+            await SmsTrackerService.instance.dismissMessage(matched.id);
+          }
+        }
+      },
     );
   }
 
@@ -2102,19 +2257,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     );
                                   }
                                   await DatabaseHelper.instance
-                                      .insertTransaction(
-                                        TransactionModel(
-                                          accountId: selectedAccountId!,
-                                          categoryId: selectedCategoryId!,
-                                          amount: amount,
-                                          date: _selectedDate.toIso8601String(),
-                                          note: noteController.text.trim(),
-                                        ),
-                                      );
-                                  await DatabaseHelper.instance
-                                      .subtractFromAccount(
-                                        selectedAccountId!,
-                                        amount,
+                                      .createExpenseTransaction(
+                                        accountId: selectedAccountId!,
+                                        categoryId: selectedCategoryId!,
+                                        amount: amount,
+                                        date: _selectedDate.toIso8601String(),
+                                        note: noteController.text.trim(),
                                       );
                                 }
                               }

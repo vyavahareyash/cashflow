@@ -69,3 +69,7 @@ windows/installer/Output/
 *.exe
 *play-service-account*.json
 *.aab
+
+# Local Personal SMS Dumps & Fixtures
+test/fixtures/raw_sms*
+raw_sms*

@@ -19,6 +19,9 @@ import '../services/billing_service.dart';
 import 'package:cashflow/screens/live_sync_screen.dart';
 import 'package:cashflow/services/sync/live_sync_service.dart';
 import 'package:cashflow/services/sync/sync_models.dart';
+import 'package:cashflow/services/sms_tracker_service.dart';
+
+import '../components/voice_model_download_sheet.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -768,12 +771,18 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionHeader('Voice AI & Offline Models', isDark),
+                  _buildSectionHeader('Voice & SMS AI Offline Models', isDark),
                   const SizedBox(height: AppSpacing.xs),
                   _buildVoiceAiModelPackCard(isDark),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // SMS TRANSACTION TRACKING (OFFLINE-FIRST)
+            _buildSectionHeader('SMS Transaction Tracking (Offline)', isDark),
+            const SizedBox(height: AppSpacing.xs),
+            _buildSmsTrackingCard(isDark),
             const SizedBox(height: AppSpacing.xl),
 
             // 5. APP WALKTHROUGH & CONCEPTS
@@ -1798,6 +1807,541 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         ),
       ),
     );
+  }
+
+  // --- SMS TRANSACTION TRACKING CARD ---
+  Widget _buildSmsTrackingCard(bool isDark) {
+    final smsService = SmsTrackerService.instance;
+
+    return AnimatedBuilder(
+      animation: smsService,
+      builder: (context, _) {
+        final isEnabled = smsService.isTrackingEnabled;
+        final isScanning = smsService.isScanning;
+        final pendingCount = smsService.pendingSmsMessages.length;
+
+        return CustomCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withValues(alpha: 0.12),
+                      borderRadius: AppBorderRadius.mediumBorder,
+                    ),
+                    child: const Icon(
+                      Icons.sms_rounded,
+                      color: AppColors.info,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Background SMS Tracking',
+                          style: AppTypography.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '100% offline parsing of bank debit/credit messages',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: isEnabled,
+                    activeTrackColor: AppColors.emerald700,
+                    onChanged: (val) async {
+                      if (val) {
+                        final granted = await smsService.requestPermissions();
+                        if (!granted && mounted) {
+                          _showFeedback(
+                            'SMS permissions are required to enable tracking.',
+                            isError: true,
+                          );
+                          return;
+                        }
+                      }
+                      await smsService.setTrackingEnabled(val);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Detects bank transactions from SMS (HDFC, SBI, ICICI, Axis, UPI) locally on your device without sending any messages over the network. Transactions are drafted for your approval in the staging sheet.',
+                style: AppTypography.bodySmall.copyWith(
+                  color: isDark ? AppColors.gray300 : AppColors.gray700,
+                  height: 1.35,
+                ),
+              ),
+              if (smsService.isSlmDownloaded) ...[
+                const SizedBox(height: AppSpacing.md),
+                const Divider(height: 1),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 16,
+                                color: AppColors.emerald600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Use Offline SLM for SMS',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark
+                                      ? AppColors.darkText
+                                      : AppColors.gray900,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Intelligently classifies complex messages and maps to accounts & categories',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark
+                                  ? AppColors.gray400
+                                  : AppColors.gray600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch.adaptive(
+                      key: const Key('sms_use_slm_switch'),
+                      value: smsService.useSlm,
+                      activeTrackColor: AppColors.emerald700,
+                      onChanged: smsService.setUseSlm,
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              'Unreviewed SMS drafts',
+                              style: AppTypography.labelMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppColors.darkText
+                                    : AppColors.gray900,
+                              ),
+                            ),
+                            if (smsService.isSlmActive)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.emerald600.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: AppBorderRadius.pillBorder,
+                                  border: Border.all(
+                                    color: AppColors.emerald600.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      size: 11,
+                                      color: AppColors.emerald600,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'SLM AI Active',
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: AppColors.emerald600,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        Text(
+                          '$pendingCount message${pendingCount == 1 ? '' : 's'} waiting for review',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Tooltip(
+                    message: smsService.isSlmDownloaded
+                        ? 'Scan SMS messages using on-device SLM AI'
+                        : 'Scan SMS messages (Hint: Download Offline AI Model to improve accuracy & categorization)',
+                    child: OutlinedButton.icon(
+                      key: const Key('sms_sync_messages_button'),
+                      onPressed: (isScanning || !isEnabled)
+                          ? null
+                          : () => _showSmsScanOptionsDialog(isDark),
+                      icon: isScanning
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync_rounded, size: 16),
+                      label: Text(isScanning ? 'Scanning...' : 'Scan Messages'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.info,
+                        side: const BorderSide(color: AppColors.info),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (!smsService.isSlmDownloaded) ...[
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.darkSurfaceElevated
+                        : AppColors.gray50,
+                    borderRadius: AppBorderRadius.smallBorder,
+                    border: Border.all(
+                      color: isDark ? AppColors.darkBorder : AppColors.gray200,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald500.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppColors.emerald600,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Improve SMS Handling with SLM',
+                              style: AppTypography.labelSmall.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppColors.darkText
+                                    : AppColors.gray900,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              'Download the on-device AI model to handle complex message types, extract transactions, and map them to custom accounts and categories.',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark
+                                    ? AppColors.gray400
+                                    : AppColors.gray600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      TextButton(
+                        key: const Key('sms_download_slm_hint_button'),
+                        onPressed: () {
+                          final sectionContext =
+                              _voiceModelSectionKey.currentContext;
+                          if (sectionContext != null) {
+                            Scrollable.ensureVisible(
+                              sectionContext,
+                              duration: const Duration(milliseconds: 600),
+                              curve: Curves.easeInOutCubic,
+                            );
+                          } else {
+                            unawaited(VoiceModelDownloadSheet.show(context));
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: AppColors.emerald600,
+                        ),
+                        child: const Text('Download'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showSmsScanOptionsDialog(bool isDark) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.gray700 : AppColors.gray300,
+                      borderRadius: AppBorderRadius.pillBorder,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Scan SMS Messages',
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Choose a timeframe or select custom dates to detect bank transactions offline.',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: isDark ? AppColors.gray400 : AppColors.gray600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Builder(
+                  builder: (_) {
+                    final smsService = SmsTrackerService.instance;
+                    if (smsService.isSlmActive) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald500.withValues(alpha: 0.1),
+                          borderRadius: AppBorderRadius.smallBorder,
+                          border: Border.all(
+                            color: AppColors.emerald500.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 16,
+                              color: AppColors.emerald600,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                'SLM Active: Enhanced extraction & auto-categorization',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.emerald400
+                                      : AppColors.emerald800,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else if (!smsService.isSlmDownloaded) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkSurfaceElevated
+                              : AppColors.gray50,
+                          borderRadius: AppBorderRadius.smallBorder,
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.darkBorder
+                                : AppColors.gray200,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.tips_and_updates_outlined,
+                              size: 16,
+                              color: AppColors.emerald600,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                'Tip: Download offline SLM to improve recognition & category mapping.',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.gray400
+                                      : AppColors.gray600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.today_rounded,
+                    color: AppColors.info,
+                  ),
+                  title: const Text('Today'),
+                  subtitle: const Text('Scan transactions received today'),
+                  dense: true,
+                  onTap: () async {
+                    Navigator.pop(bottomSheetCtx);
+                    final now = DateTime.now();
+                    final startOfToday = DateTime(now.year, now.month, now.day);
+                    await _executeScan(
+                      days: 1,
+                      startDate: startOfToday,
+                      endDate: now,
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.edit_calendar_rounded,
+                    color: AppColors.purple,
+                  ),
+                  title: const Text('Custom Date Range...'),
+                  subtitle: const Text('Pick start & end date'),
+                  dense: true,
+                  onTap: () async {
+                    Navigator.pop(bottomSheetCtx);
+                    final now = DateTime.now();
+                    final pickedRange = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(now.year - 2),
+                      lastDate: now,
+                      initialDateRange: DateTimeRange(
+                        start: now.subtract(const Duration(days: 7)),
+                        end: now,
+                      ),
+                      builder: (pickerCtx, child) {
+                        return Theme(
+                          data: Theme.of(pickerCtx).copyWith(
+                            colorScheme: Theme.of(pickerCtx).colorScheme
+                                .copyWith(primary: AppColors.emerald700),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (pickedRange != null) {
+                      await _executeScan(
+                        startDate: pickedRange.start,
+                        endDate: pickedRange.end,
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _executeScan({
+    int days = 14,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final smsService = SmsTrackerService.instance;
+    final count = await smsService.scanInbox(
+      days: days,
+      startDate: startDate,
+      endDate: endDate,
+    );
+    if (mounted) {
+      if (count > 0) {
+        _showFeedback('Scanned messages: found $count new transactions!');
+      } else if (smsService.unreviewedDraftCount > 0) {
+        _showFeedback(
+          'Scan complete: no new transactions found (${smsService.unreviewedDraftCount} draft${smsService.unreviewedDraftCount == 1 ? '' : 's'} waiting for review).',
+        );
+      } else {
+        _showFeedback('Scan complete: no new bank transactions found.');
+      }
+    }
   }
 
   // --- APP WALKTHROUGH & CONCEPTS CARD ---
@@ -3080,12 +3624,12 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Voice AI Model Pack',
+                      'Voice & SMS AI Model Pack',
                       style: AppTypography.titleMedium,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'On-device SmolLM2 neural model (~270 MB)',
+                      'On-device SmolLM2 neural model (~270 MB) for voice & bank SMS',
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
@@ -3156,7 +3700,36 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
               ),
             ],
           ),
-
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceElevated : AppColors.gray50,
+              borderRadius: AppBorderRadius.smallBorder,
+              border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.gray200,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 16,
+                  color: AppColors.emerald600,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    'Powers voice speech-to-draft extraction and offline bank SMS intelligence with automatic account & category mapping.',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: isDark ? AppColors.gray300 : AppColors.gray700,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
 
           // Download over Wi-Fi only switch

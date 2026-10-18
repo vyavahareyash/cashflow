@@ -1,4 +1,4 @@
-import 'dart:convert' show utf8;
+import 'dart:convert' show jsonEncode, utf8;
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
@@ -4283,6 +4283,18 @@ class DatabaseHelper {
     notifyDataChanged();
   }
 
+  /// Retrieves SMS SLM preference (defaults to true).
+  Future<bool> getSmsUseSlm() async {
+    final val = await getSetting('sms_use_slm', defaultValue: 'true');
+    return val == 'true';
+  }
+
+  /// Persists SMS SLM preference.
+  Future<void> setSmsUseSlm(bool enabled) async {
+    await setSetting('sms_use_slm', enabled ? 'true' : 'false');
+    notifyDataChanged();
+  }
+
   /// Synchronizes runtime dashboard privacy mode on application startup
   /// according to the startup privacy mode preference.
   Future<void> initStartupPrivacyMode() async {
@@ -4540,6 +4552,18 @@ class DatabaseHelper {
     final res = await db.update(
       'tracked_sms_messages',
       {'status': status.name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    notifyDataChanged();
+    return res;
+  }
+
+  Future<int> updateTrackedSmsDraft(String id, DraftTransaction draft) async {
+    final db = await instance.database;
+    final res = await db.update(
+      'tracked_sms_messages',
+      {'draft_json': jsonEncode(draft.toMap())},
       where: 'id = ?',
       whereArgs: [id],
     );
