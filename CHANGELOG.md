@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.16.0] - 2026-10-19
+
+### Added
+- **Offline SLM SMS Extraction and Staging**: Parse bank SMS on-device using SmolLM2-360M with GBNF grammar constraints, with an offline rule-based fallback when model is unavailable. Includes transaction staging review sheet, unreviewed draft banner, account/category heuristic mapping, cycle spend chips on budget, and period selector on analytics (a908222).
+
+### Changed
+- **Settings Category Hub**: Reorganized settings into a category hub with dedicated sub-screens (privacy, financial cycle, data/sync, voice AI) with reactive state synchronization across child routes (d9432dc).
+- **Git Quality Hooks**: Removed slow local pre-push test hook to speed up development workflow while preserving pre-commit verification gates (0e10324).
+
+### Fixed
+- **Reverse-Then-Apply Transaction Mutations**: Resolved duplicate reductions and orphaned allocations during transaction updates and deletions across accounts and categories. Added v6 schema migration linking credit card auto-locks to originating transactions via `transaction_id`, and unified RTA pattern across mutations (db8f41d).
+
+---
+
 ## [4.15.1] - 2026-10-04
 
 ### Fixed
