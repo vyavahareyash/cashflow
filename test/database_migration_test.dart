@@ -294,4 +294,60 @@ void main() {
     expect(incomeCategories.isNotEmpty, isTrue);
     expect(incomeCategories.any((c) => c['name'] == 'Salary'), isTrue);
   });
+
+  test('v5 database upgrades to v6 schema and adds transaction_id to locked_allocations', () async {
+    final dbPath = await getDatabasesPath();
+    final filePath = join(dbPath, databaseFileName);
+
+    final v5Db = await openDatabase(
+      filePath,
+      version: 5,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            balance REAL NOT NULL,
+            type TEXT NOT NULL,
+            account_number_suffix TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE locked_allocations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            goal_id INTEGER DEFAULT NULL,
+            credit_card_id INTEGER DEFAULT NULL,
+            account_id INTEGER NOT NULL,
+            amount REAL NOT NULL
+          )
+        ''');
+      },
+    );
+
+    final accId = await v5Db.insert('accounts', {
+      'name': 'Checking',
+      'balance': 10000.0,
+      'type': 'Bank',
+    });
+    await v5Db.insert('locked_allocations', {
+      'goal_id': null,
+      'credit_card_id': 1,
+      'account_id': accId,
+      'amount': 2500.0,
+    });
+    await v5Db.close();
+
+    // Trigger upgrade to v6
+    final upgradedDb = await DatabaseHelper.instance.database;
+
+    final lockCols = await upgradedDb.rawQuery(
+      "PRAGMA table_info('locked_allocations')",
+    );
+    expect(lockCols.any((col) => col['name'] == 'transaction_id'), isTrue);
+
+    final locks = await upgradedDb.query('locked_allocations');
+    expect(locks, hasLength(1));
+    expect(locks.first['amount'], 2500.0);
+    expect(locks.first['transaction_id'], isNull);
+  });
 }

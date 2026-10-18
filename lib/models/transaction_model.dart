@@ -37,6 +37,7 @@ class TransactionModel {
 
   Map<String, dynamic> toMap() {
     return {
+      if (id != null) 'id': id,
       'account_id': accountId,
       'destination_account_id': destinationAccountId,
       'category_id': categoryId,
@@ -46,5 +47,29 @@ class TransactionModel {
       'note': note,
       'type': type,
     };
+  }
+
+  TransactionModel copyWith({
+    int? id,
+    int? accountId,
+    int? destinationAccountId,
+    int? categoryId,
+    int? goalId,
+    double? amount,
+    String? date,
+    String? note,
+    String? type,
+  }) {
+    return TransactionModel(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      destinationAccountId: destinationAccountId ?? this.destinationAccountId,
+      categoryId: categoryId ?? this.categoryId,
+      goalId: goalId ?? this.goalId,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      type: type ?? this.type,
+    );
   }
 }
