@@ -194,7 +194,13 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: BackupRestoreScreen(
+              initialSection: SettingsSection.dataBackup,
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(find.text('Export Data & Backups'), findsOneWidget);
@@ -210,7 +216,11 @@ void main() {
           addTearDown(() => tester.view.resetPhysicalSize());
 
           await tester.pumpWidget(
-            const MaterialApp(home: BackupRestoreScreen()),
+            const MaterialApp(
+              home: BackupRestoreScreen(
+                initialSection: SettingsSection.dataBackup,
+              ),
+            ),
           );
           await tester.runAsync(() async {
             await Future.delayed(const Duration(milliseconds: 300));
@@ -279,7 +289,11 @@ void main() {
           });
 
           await tester.pumpWidget(
-            const MaterialApp(home: BackupRestoreScreen()),
+            const MaterialApp(
+              home: BackupRestoreScreen(
+                initialSection: SettingsSection.dataBackup,
+              ),
+            ),
           );
           await tester.runAsync(() async {
             await Future.delayed(const Duration(milliseconds: 300));
@@ -352,7 +366,11 @@ void main() {
           addTearDown(() => tester.view.resetPhysicalSize());
 
           await tester.pumpWidget(
-            const MaterialApp(home: BackupRestoreScreen()),
+            const MaterialApp(
+              home: BackupRestoreScreen(
+                initialSection: SettingsSection.dataBackup,
+              ),
+            ),
           );
           await tester.runAsync(() async {
             await Future.delayed(const Duration(milliseconds: 300));
@@ -398,7 +416,11 @@ void main() {
           });
 
           await tester.pumpWidget(
-            const MaterialApp(home: BackupRestoreScreen()),
+            const MaterialApp(
+              home: BackupRestoreScreen(
+                initialSection: SettingsSection.dataBackup,
+              ),
+            ),
           );
           for (int i = 0; i < 30; i++) {
             await tester.runAsync(() async {

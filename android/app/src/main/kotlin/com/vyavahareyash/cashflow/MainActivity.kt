@@ -1,20 +1,94 @@
 package com.vyavahareyash.cashflow
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.view.WindowManager
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
-    private val CHANNEL = "com.vyavahareyash.cashflow/security"
+    private val SECURITY_CHANNEL = "com.vyavahareyash.cashflow/security"
+    private val SMS_CHANNEL = "com.vyavahareyash.cashflow/sms"
+
+    companion object {
+        private var smsMethodChannel: MethodChannel? = null
+        private const val NOTIFICATION_CHANNEL_ID = "cashflow_transactions"
+
+        fun notifySmsReceived(context: android.content.Context, sender: String, body: String, timestamp: Long) {
+            val payload = mapOf(
+                "sender" to sender,
+                "body" to body,
+                "timestamp" to timestamp.toString()
+            )
+            val channel = smsMethodChannel
+            if (channel != null) {
+                channel.invokeMethod("onSmsReceived", payload)
+            }
+
+            // Post notification if message resembles a transaction
+            if (body.contains(Regex("(?i)(debited|spent|paid|credited|transferred|withdrawn|purchase)"))) {
+                showTransactionNotification(context, body)
+            }
+        }
+
+        private fun showTransactionNotification(context: android.content.Context, body: String) {
+            val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager ?: return
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    "Transaction Alerts",
+                    android.app.NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Prompts to review and draft bank transactions from SMS"
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                context,
+                0,
+                launchIntent,
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                else
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            // Extract approximate amount if possible for notification preview
+            val amountMatch = Regex("""(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)""", RegexOption.IGNORE_CASE).find(body)
+            val amountText = amountMatch?.groupValues?.get(1) ?: ""
+            val title = if (amountText.isNotEmpty()) "₹$amountText Transaction Detected" else "New Bank Transaction Detected"
+
+            val notification = androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText("Tap to review and add this transaction to Cashflow.")
+                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .build()
+
+            notificationManager.notify((System.currentTimeMillis() % 100000).toInt(), notification)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        // Security channel handler
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURITY_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "authenticate" -> authenticate(result)
@@ -27,6 +101,101 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // SMS tracking channel handler
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SMS_CHANNEL)
+        smsMethodChannel = channel
+        channel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasPermissions" -> {
+                    val readGranted = ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.READ_SMS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    val receiveGranted = ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.RECEIVE_SMS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    result.success(readGranted && receiveGranted)
+                }
+                "requestPermissions" -> {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS),
+                        101
+                    )
+                    result.success(true)
+                }
+                "readInboxMessages" -> {
+                    val days = (call.argument<Any>("days") as? Number)?.toInt() ?: 14
+                    val startTimestamp = (call.argument<Any>("startTimestamp") as? Number)?.toLong()
+                    val endTimestamp = (call.argument<Any>("endTimestamp") as? Number)?.toLong()
+                    val messages = readSmsInbox(days = days, startTimestamp = startTimestamp, endTimestamp = endTimestamp)
+                    result.success(messages)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun readSmsInbox(days: Int, startTimestamp: Long?, endTimestamp: Long?): List<Map<String, String>> {
+        val messageList = mutableListOf<Map<String, String>>()
+        val readGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!readGranted) return messageList
+
+        val uri = Uri.parse("content://sms/inbox")
+        val selection: String
+        val selectionArgs: Array<String>
+
+        if (startTimestamp != null && endTimestamp != null) {
+            selection = "date >= ? AND date <= ?"
+            selectionArgs = arrayOf(startTimestamp.toString(), endTimestamp.toString())
+        } else if (startTimestamp != null) {
+            selection = "date >= ?"
+            selectionArgs = arrayOf(startTimestamp.toString())
+        } else {
+            val cutoffTime = System.currentTimeMillis() - (days.toLong() * 24 * 60 * 60 * 1000)
+            selection = "date >= ?"
+            selectionArgs = arrayOf(cutoffTime.toString())
+        }
+
+        try {
+            val cursor = contentResolver.query(
+                uri,
+                arrayOf("address", "body", "date", "date_sent"),
+                selection,
+                selectionArgs,
+                "date DESC"
+            )
+
+            cursor?.use {
+                val addressIdx = it.getColumnIndex("address")
+                val bodyIdx = it.getColumnIndex("body")
+                val dateIdx = it.getColumnIndex("date")
+                val dateSentIdx = it.getColumnIndex("date_sent")
+
+                while (it.moveToNext()) {
+                    val address = if (addressIdx != -1) it.getString(addressIdx) ?: "" else ""
+                    val body = if (bodyIdx != -1) it.getString(bodyIdx) ?: "" else ""
+                    val dateSent = if (dateSentIdx != -1 && !it.isNull(dateSentIdx)) it.getLong(dateSentIdx) else 0L
+                    val dateReceived = if (dateIdx != -1 && !it.isNull(dateIdx)) it.getLong(dateIdx) else 0L
+                    val timestamp = if (dateSent > 0L) dateSent.toString() else dateReceived.toString()
+
+                    messageList.add(
+                        mapOf(
+                            "sender" to address,
+                            "body" to body,
+                            "timestamp" to timestamp
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {}
+
+        return messageList
     }
 
     private fun authenticate(result: MethodChannel.Result) {
@@ -50,7 +219,7 @@ class MainActivity : FlutterFragmentActivity() {
                 }
 
                 override fun onAuthenticationFailed() {
-                    // Individual attempt failed; BiometricPrompt retries automatically
+                    // BiometricPrompt handles retries automatically
                 }
             }
         )

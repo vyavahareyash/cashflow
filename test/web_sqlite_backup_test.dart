@@ -322,7 +322,13 @@ void main() {
     testWidgets(
       'BackupRestoreScreen settings tiles display SQLite (.db) option and subtitle',
       (tester) async {
-        await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: BackupRestoreScreen(
+              initialSection: SettingsSection.dataBackup,
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(

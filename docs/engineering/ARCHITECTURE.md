@@ -154,7 +154,8 @@ erDiagram
 | `categories` | `id AUTOINCREMENT` | None | Default fallback category reassignment on delete |
 | `transactions` | `id AUTOINCREMENT` | `account_id` $\to$ `accounts.id`<br>`destination_account_id` $\to$ `accounts.id`<br>`category_id` $\to$ `categories.id` | Cascades or handles balance reversal atomically |
 | `goals` | `id AUTOINCREMENT` | None | `CASCADE` deletes `locked_allocations` |
-| `locked_allocations`| `id AUTOINCREMENT` | `goal_id` $\to$ `goals.id`<br>`account_id` $\to$ `accounts.id` | `CASCADE` on goal deletion |
+| `credit_cards` | `id AUTOINCREMENT` | `account_id` $\to$ `accounts.id`<br>`default_lock_account_id` $\to$ `accounts.id` | `CASCADE` on account deletion |
+| `locked_allocations`| `id AUTOINCREMENT` | `goal_id` $\to$ `goals.id`<br>`credit_card_id` $\to$ `credit_cards.id`<br>`account_id` $\to$ `accounts.id`<br>`transaction_id` $\to$ `transactions.id` | `CASCADE` on goal/card/tx deletion |
 | `app_settings` | `key` | None | Simple key-value store |
 
 ---
@@ -167,16 +168,24 @@ $$\text{Usable Balance} = \max\left(\sum \text{Physical Accounts Balance} - \sum
 
 ### 2. Atomic Balance Updates
 Transaction mutations must be executed inside database transactions:
-- **Expense**: Deducts `amount` from `accounts.balance` where `id = account_id`.
+- **Expense**: Deducts `amount` from `accounts.balance` where `id = account_id`. If spending on a credit card with auto-lock enabled, creates a linked locked allocation on the designated bank account tagged with `transaction_id`.
 - **Income**: Adds `amount` to `accounts.balance` where `id = account_id`.
 - **Account Transfer**: Simultaneously deducts from source account and credits destination account within the same SQLite transaction.
-- **Transaction Deletion**: Performs exact mathematical reversal on affected accounts before deleting the row.
+- **Transaction Deletion**: Performs exact mathematical reversal on affected accounts and removes linked allocations before deleting the row.
 
 ### 3. Virtual Envelopes (No Inter-Bank Movement)
 - Locking funds toward a goal inserts a row in `locked_allocations` ([ADR-0002](../adr/0002-logical-goal-allocation.md)).
 - The physical account balance in `accounts` is unaffected.
 - The total locked for that goal increments, and usable balance decrements.
 - Allocating more than the account's physical balance or more than the goal's remaining target is rejected.
+
+### 4. Reverse-Then-Apply (RTA) Transaction Mutation Pattern
+Every `updateTransaction` and `deleteTransaction` adheres strictly to the Reverse-Then-Apply (RTA) pattern inside a single SQLite transaction:
+1. **Reverse**: Reverses the previous transaction's full balance and lock effects (restoring original physical balances and deleting/reducing associated locked allocations).
+2. **Apply** (updates only): Applies the modified transaction's full balance and lock effects as a fresh transaction (including creating credit card auto-locks or goal reservations on newly selected accounts).
+3. **Commit**: Updates or deletes the transaction record and broadcasts `DatabaseHelper.dataRevision`.
+
+This eliminates incremental delta edge cases when transactions transition between accounts (e.g., Credit Card $\leftrightarrow$ Bank Account) or categories, guaranteeing stable usable balances without orphaned lock allocations or duplicate reductions.
 
 ---
 

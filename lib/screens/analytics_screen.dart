@@ -5,9 +5,12 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 import '../models/category_model.dart';
+import '../models/salary_cycle.dart';
 import '../services/database_helper.dart';
 import '../theme/theme_constants.dart';
 import '../components/custom_card.dart';
+
+enum AnalyticsPeriodMode { cycle, custom, ytd }
 
 class AnalyticsScreen extends StatefulWidget {
   final int? initialIndex;
@@ -26,7 +29,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   List<Category> _categories = [];
   int? _selectedTrendCategoryId;
   int _trendMonths = 6;
+  AnalyticsPeriodMode _periodMode = AnalyticsPeriodMode.cycle;
   bool _isYtd = false;
+  SalaryCycle? _currentCycle;
   Map<String, double> _ytdCashflow = {};
   DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime _endDate = DateTime.now();
@@ -62,8 +67,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final db = DatabaseHelper.instance;
     final now = DateTime.now();
     final categories = await db.readAllCategories(type: 'expense');
+    final salaryDay = await db.getSalaryDay();
+    final cycle = SalaryCycle.resolve(salaryDay: salaryDay, today: now);
 
-    if (_isYtd) {
+    if (_periodMode == AnalyticsPeriodMode.cycle) {
+      _startDate = cycle.cycleStart;
+      _endDate = cycle.cycleEnd;
+    }
+
+    if (_periodMode == AnalyticsPeriodMode.ytd) {
       final categoryData = await db.getYtdSpendingByCategory(year: now.year);
       final monthlyData = await db.getYtdMonthlySpendings(year: now.year);
       final cashflowData = await db.getYtdCashflowSummary(year: now.year);
@@ -76,6 +88,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       if (mounted) {
         setState(() {
           _categories = categories;
+          _currentCycle = cycle;
+          _isYtd = true;
           _categorySpending = categoryData;
           _monthlySpendings = monthlyData;
           _trendMonthlySpendings = trendData;
@@ -103,6 +117,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       if (mounted) {
         setState(() {
           _categories = categories;
+          _currentCycle = cycle;
+          _isYtd = false;
           _categorySpending = categoryData;
           _monthlySpendings = monthlyData;
           _trendMonthlySpendings = trendData;
@@ -165,6 +181,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
     if (picked != null) {
       setState(() {
+        _periodMode = AnalyticsPeriodMode.custom;
+        _isYtd = false;
         _startDate = picked.start;
         _endDate = picked.end;
       });
@@ -260,6 +278,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildMonthSelectorCard(bool isDark) {
+    final cycle = _currentCycle;
     return CustomCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -272,83 +291,50 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: InkWell(
-                    borderRadius: AppBorderRadius.smallBorder,
-                    onTap: () {
-                      if (_isYtd) {
-                        setState(() {
-                          _isYtd = false;
-                          _isLoading = true;
-                        });
-                        unawaited(_loadAllData());
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: !_isYtd
-                            ? AppColors.emerald700
-                            : Colors.transparent,
-                        borderRadius: AppBorderRadius.smallBorder,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Monthly Range',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: !_isYtd
-                              ? Colors.white
-                              : (isDark
-                                    ? AppColors.gray300
-                                    : AppColors.gray700),
-                          fontWeight: !_isYtd
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
+                _buildPeriodTab(
+                  label: 'Current Cycle',
+                  isSelected: _periodMode == AnalyticsPeriodMode.cycle,
+                  isDark: isDark,
+                  onTap: () {
+                    if (_periodMode != AnalyticsPeriodMode.cycle) {
+                      setState(() {
+                        _periodMode = AnalyticsPeriodMode.cycle;
+                        _isYtd = false;
+                        _isLoading = true;
+                      });
+                      unawaited(_loadAllData());
+                    }
+                  },
                 ),
-                Expanded(
-                  child: InkWell(
-                    borderRadius: AppBorderRadius.smallBorder,
-                    onTap: () {
-                      if (!_isYtd) {
-                        setState(() {
-                          _isYtd = true;
-                          _isLoading = true;
-                        });
-                        unawaited(_loadAllData());
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isYtd
-                            ? AppColors.emerald700
-                            : Colors.transparent,
-                        borderRadius: AppBorderRadius.smallBorder,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Year-to-Date (YTD)',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: _isYtd
-                              ? Colors.white
-                              : (isDark
-                                    ? AppColors.gray300
-                                    : AppColors.gray700),
-                          fontWeight: _isYtd
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
+                _buildPeriodTab(
+                  label: 'Custom Range',
+                  isSelected: _periodMode == AnalyticsPeriodMode.custom,
+                  isDark: isDark,
+                  onTap: () {
+                    if (_periodMode != AnalyticsPeriodMode.custom) {
+                      setState(() {
+                        _periodMode = AnalyticsPeriodMode.custom;
+                        _isYtd = false;
+                        _isLoading = true;
+                      });
+                      unawaited(_loadAllData());
+                    }
+                  },
+                ),
+                _buildPeriodTab(
+                  label: 'Year-to-Date (YTD)',
+                  isSelected: _periodMode == AnalyticsPeriodMode.ytd,
+                  isDark: isDark,
+                  onTap: () {
+                    if (_periodMode != AnalyticsPeriodMode.ytd) {
+                      setState(() {
+                        _periodMode = AnalyticsPeriodMode.ytd;
+                        _isYtd = true;
+                        _isLoading = true;
+                      });
+                      unawaited(_loadAllData());
+                    }
+                  },
                 ),
               ],
             ),
@@ -363,16 +349,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isYtd ? 'Cumulative Period' : 'Spending Period',
+                      _periodMode == AnalyticsPeriodMode.cycle
+                          ? 'Active Salary Cycle'
+                          : (_periodMode == AnalyticsPeriodMode.ytd
+                                ? 'Cumulative Period'
+                                : 'Custom Spending Period'),
                       style: AppTypography.labelSmall.copyWith(
                         color: isDark ? AppColors.gray400 : AppColors.gray600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _isYtd
-                          ? 'Jan 1, ${DateTime.now().year} - ${DateFormat('MMM d, yyyy').format(DateTime.now())}'
-                          : '${DateFormat('MMM d, yyyy').format(_startDate)} - ${DateFormat('MMM d, yyyy').format(_endDate)}',
+                      _periodMode == AnalyticsPeriodMode.cycle && cycle != null
+                          ? '${cycle.cycleLabel} (${cycle.resetCountdownText})'
+                          : (_periodMode == AnalyticsPeriodMode.ytd
+                                ? 'Jan 1, ${DateTime.now().year} - ${DateFormat('MMM d, yyyy').format(DateTime.now())}'
+                                : '${DateFormat('MMM d, yyyy').format(_startDate)} - ${DateFormat('MMM d, yyyy').format(_endDate)}'),
                       style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -382,11 +374,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ],
                 ),
               ),
-              if (!_isYtd)
+              if (_periodMode == AnalyticsPeriodMode.custom)
                 IconButton(
                   tooltip: 'Change duration',
                   onPressed: _selectDuration,
                   icon: const Icon(Icons.date_range_rounded),
+                )
+              else if (_periodMode == AnalyticsPeriodMode.cycle &&
+                  cycle != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald600.withValues(alpha: 0.12),
+                    borderRadius: AppBorderRadius.pillBorder,
+                  ),
+                  child: Text(
+                    'Day ${cycle.salaryDay} Anchor',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.emerald600,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 )
               else
                 Container(
@@ -409,6 +420,39 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodTab({
+    required String label,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: AppBorderRadius.smallBorder,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.emerald700 : Colors.transparent,
+            borderRadius: AppBorderRadius.smallBorder,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? AppColors.gray300 : AppColors.gray700),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ),
     );
   }

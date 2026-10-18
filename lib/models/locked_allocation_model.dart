@@ -6,6 +6,7 @@ class LockedAllocation {
   final double amount;
   final String goalName;
   final String? creditCardName;
+  final int? transactionId;
 
   LockedAllocation({
     this.id,
@@ -15,6 +16,7 @@ class LockedAllocation {
     required this.amount,
     this.goalName = '',
     this.creditCardName,
+    this.transactionId,
   });
 
   bool get isCreditCardLock => creditCardId != null;
@@ -38,6 +40,7 @@ class LockedAllocation {
       amount: (map['amount'] as num).toDouble(),
       goalName: map['goal_name'] ?? '',
       creditCardName: map['credit_card_name'],
+      transactionId: map['transaction_id'],
     );
   }
 
@@ -48,6 +51,7 @@ class LockedAllocation {
       'credit_card_id': creditCardId,
       'account_id': accountId,
       'amount': amount,
+      if (transactionId != null) 'transaction_id': transactionId,
     };
   }
 }

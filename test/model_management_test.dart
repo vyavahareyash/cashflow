@@ -604,7 +604,11 @@ void main() {
       );
       ModelManagementService.setMockInstance(service);
 
-      await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BackupRestoreScreen(initialSection: SettingsSection.voiceAi),
+        ),
+      );
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       });
@@ -641,7 +645,11 @@ void main() {
       );
       ModelManagementService.setMockInstance(service);
 
-      await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BackupRestoreScreen(initialSection: SettingsSection.voiceAi),
+        ),
+      );
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 300));
       });
@@ -698,7 +706,11 @@ void main() {
         );
         ModelManagementService.setMockInstance(service);
 
-        await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: BackupRestoreScreen(initialSection: SettingsSection.voiceAi),
+          ),
+        );
         await tester.runAsync(() async {
           await Future<void>.delayed(const Duration(milliseconds: 300));
         });

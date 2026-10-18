@@ -226,7 +226,11 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(const MaterialApp(home: BackupRestoreScreen()));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: BackupRestoreScreen(initialSection: SettingsSection.privacy),
+          ),
+        );
         await tester.pumpAndSettle();
 
         final switchFinder = find.byKey(

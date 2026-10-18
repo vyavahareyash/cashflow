@@ -119,7 +119,7 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                               ? (modelService.statusDetail.isNotEmpty
                                     ? modelService.statusDetail
                                     : 'Downloading neural weights for on-device voice journaling...')
-                              : 'To protect your financial privacy, speech recognition and transaction extraction run 100% on your device with zero cloud servers.'),
+                              : 'To protect your financial privacy, voice transaction extraction and intelligent bank SMS parsing run 100% on your device with zero cloud servers.'),
                     style: AppTypography.bodyMedium.copyWith(
                       color: isDark
                           ? AppColors.darkTextSecondary
@@ -233,21 +233,21 @@ class VoiceModelDownloadSheet extends StatelessWidget {
                               _buildFeatureRow(
                                 icon: Icons.wifi_off_rounded,
                                 title: '100% Offline & Private',
-                                subtitle: 'Audio and transactions never leave your phone.',
+                                subtitle: 'Voice audio, SMS, and transactions never leave your phone.',
                                 isDark: isDark,
                               ),
-                              const SizedBox(height: AppSpacing.md),
+                              const SizedBox(height: AppSpacing.sm),
                               _buildFeatureRow(
                                 icon: Icons.storage_rounded,
                                 title: 'One-Time Download (~230 MB)',
-                                subtitle: 'SmolLM2 SLM neural model for extraction. Speech recognition requires zero download.',
+                                subtitle: 'SmolLM2 SLM neural model powers both voice journaling and intelligent SMS parsing.',
                                 isDark: isDark,
                               ),
-                              const SizedBox(height: AppSpacing.md),
+                              const SizedBox(height: AppSpacing.sm),
                               _buildFeatureRow(
                                 icon: Icons.memory_rounded,
                                 title: 'On-Demand Memory',
-                                subtitle: 'Models load into RAM only while journaling and free automatically when done.',
+                                subtitle: 'Models load into RAM only while processing voice or SMS and free automatically when done.',
                                 isDark: isDark,
                               ),
                             ],

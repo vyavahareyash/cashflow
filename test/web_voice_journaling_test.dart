@@ -251,7 +251,12 @@ void main() {
       'BackupRestoreScreen displays Web AI model card with 0.0 MB footprint',
       (tester) async {
         await tester.pumpWidget(
-          buildTestableWidget(const BackupRestoreScreen(isWeb: true)),
+          buildTestableWidget(
+            const BackupRestoreScreen(
+              isWeb: true,
+              initialSection: SettingsSection.voiceAi,
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 

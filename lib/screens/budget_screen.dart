@@ -25,6 +25,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Map<int, double> _incomeMap = {};
   double _totalBudgetLimit = 0.0;
   double _totalSpent = 0.0;
+  double _totalUnbudgetedSpent = 0.0;
   double _totalIncomeThisCycle = 0.0;
   int _salaryDay = 1;
   bool _isLoading = true;
@@ -60,6 +61,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
         .getMonthlySpendingByCategoryId(cycle: cycle);
     final monthlyIncome = await DatabaseHelper.instance
         .getMonthlyIncomeByCategoryId(cycle: cycle);
+    final totalCycleExpense = await DatabaseHelper.instance
+        .getTotalSpendingForSalaryCycle(cycle);
     double totalBudgetLimit = 0;
     double totalSpent = 0;
     final Map<int, double> spendingMap = {};
@@ -79,6 +82,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
       }
     }
 
+    // Unbudgeted = all cycle expenses outside of budgeted categories (includes unbudgeted categories, uncategorized transactions, and deleted categories)
+    final double totalUnbudgetedSpent = (totalCycleExpense - totalSpent).clamp(
+      0.0,
+      double.infinity,
+    );
+
     double totalIncome = 0;
     for (var cat in categories.where((c) => c.isIncome)) {
       if (cat.id != null) {
@@ -93,6 +102,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
         _incomeMap = monthlyIncome;
         _totalBudgetLimit = totalBudgetLimit;
         _totalSpent = totalSpent;
+        _totalUnbudgetedSpent = totalUnbudgetedSpent;
         _totalIncomeThisCycle = totalIncome;
         _salaryDay = salaryDay;
         _isLoading = false;
@@ -431,6 +441,36 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // SUMMARY SPEND CHIPS (Budgeted vs Unbudgeted vs Total)
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        _buildSpendChip(
+                          'Budgeted',
+                          AppFormatters.currency(_totalSpent),
+                          isDark ? AppColors.emerald500 : AppColors.emerald700,
+                          isDark,
+                        ),
+                        _buildSpendChip(
+                          'Unbudgeted',
+                          AppFormatters.currency(_totalUnbudgetedSpent),
+                          AppColors.orange,
+                          isDark,
+                        ),
+                        _buildSpendChip(
+                          'Total Cycle Outflow',
+                          AppFormatters.currency(
+                            _totalSpent + _totalUnbudgetedSpent,
+                          ),
+                          isDark ? AppColors.darkText : AppColors.gray900,
+                          isDark,
+                          isHighlight: true,
                         ),
                       ],
                     ),
@@ -1109,6 +1149,53 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpendChip(
+    String label,
+    String amount,
+    Color color,
+    bool isDark, {
+    bool isHighlight = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xxs + 2,
+      ),
+      decoration: BoxDecoration(
+        color: isHighlight
+            ? (isDark
+                  ? AppColors.emerald900.withValues(alpha: 0.25)
+                  : AppColors.emerald50)
+            : (isDark ? AppColors.darkSurfaceElevated : AppColors.gray100),
+        borderRadius: AppBorderRadius.pillBorder,
+        border: Border.all(
+          color: isHighlight
+              ? AppColors.emerald600.withValues(alpha: 0.4)
+              : (isDark ? AppColors.darkBorder : AppColors.gray300),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: AppTypography.labelSmall.copyWith(
+              color: isDark ? AppColors.gray400 : AppColors.gray600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            amount,
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-import 'dart:convert' show utf8;
+import 'dart:convert' show jsonEncode, utf8;
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
@@ -17,6 +17,7 @@ import 'package:cashflow/models/credit_card_model.dart';
 import 'package:cashflow/models/locked_allocation_model.dart';
 import 'package:cashflow/models/salary_cycle.dart';
 import 'package:cashflow/models/draft_transaction.dart';
+import 'package:cashflow/models/tracked_sms_message.dart';
 
 class DatabaseHelper {
   static String _dbName = 'money_tracker.db';
@@ -96,7 +97,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 6,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -119,6 +120,12 @@ class DatabaseHelper {
         }
         if (oldVersion < 4) {
           await _migrateV3toV4(db);
+        }
+        if (oldVersion < 5) {
+          await _migrateV4toV5(db);
+        }
+        if (oldVersion < 6) {
+          await _migrateV5toV6(db);
         }
       },
     );
@@ -385,6 +392,53 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> _migrateV4toV5(Database db) async {
+    // 1. Add account_number_suffix to accounts table if not present
+    final accCols = await db.rawQuery("PRAGMA table_info('accounts')");
+    final hasSuffix = accCols.any((c) => c['name'] == 'account_number_suffix');
+    if (!hasSuffix) {
+      await db.execute(
+        'ALTER TABLE accounts ADD COLUMN account_number_suffix TEXT',
+      );
+    }
+
+    // 2. Create tracked_sms_messages table if not exists
+    final smsTable = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tracked_sms_messages'",
+    );
+    if (smsTable.isEmpty) {
+      await db.execute('''
+        CREATE TABLE tracked_sms_messages (
+          id TEXT PRIMARY KEY,
+          sender TEXT NOT NULL,
+          raw_body TEXT NOT NULL,
+          received_at TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          draft_json TEXT,
+          account_suffix TEXT,
+          merchant TEXT
+        )
+      ''');
+    }
+  }
+
+  Future<void> _migrateV5toV6(Database db) async {
+    final lockTableExists = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'locked_allocations'",
+    );
+    if (lockTableExists.isEmpty) return;
+
+    final lockCols = await db.rawQuery(
+      "PRAGMA table_info('locked_allocations')",
+    );
+    final hasTxId = lockCols.any((c) => c['name'] == 'transaction_id');
+    if (!hasTxId) {
+      await db.execute(
+        'ALTER TABLE locked_allocations ADD COLUMN transaction_id INTEGER REFERENCES transactions(id) ON DELETE CASCADE',
+      );
+    }
+  }
+
   // --- CREATE TABLES ---
   Future _createDB(Database db, int version) async {
     // 1. Accounts Table
@@ -393,7 +447,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         balance REAL NOT NULL,
-        type TEXT NOT NULL
+        type TEXT NOT NULL,
+        account_number_suffix TEXT
       )
     ''');
 
@@ -461,9 +516,11 @@ class DatabaseHelper {
         credit_card_id INTEGER DEFAULT NULL,
         account_id INTEGER NOT NULL,
         amount REAL NOT NULL,
+        transaction_id INTEGER DEFAULT NULL,
         FOREIGN KEY (goal_id) REFERENCES goals (id),
         FOREIGN KEY (credit_card_id) REFERENCES credit_cards (id) ON DELETE CASCADE,
-        FOREIGN KEY (account_id) REFERENCES accounts (id)
+        FOREIGN KEY (account_id) REFERENCES accounts (id),
+        FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE CASCADE
       )
     ''');
 
@@ -472,6 +529,20 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+      )
+    ''');
+
+    // 8. Tracked SMS Messages Table
+    await db.execute('''
+      CREATE TABLE tracked_sms_messages (
+        id TEXT PRIMARY KEY,
+        sender TEXT NOT NULL,
+        raw_body TEXT NOT NULL,
+        received_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        draft_json TEXT,
+        account_suffix TEXT,
+        merchant TEXT
       )
     ''');
   }
@@ -887,6 +958,31 @@ class DatabaseHelper {
     return id;
   }
 
+  /// Atomically creates a transaction from a [TransactionModel], applying all balance and allocation effects.
+  Future<int> createTransaction(TransactionModel transaction) async {
+    _validateAmount(transaction.amount);
+    final db = await instance.database;
+    final id = await db.transaction((txn) async {
+      await _requireAccount(txn, transaction.accountId);
+      if (transaction.destinationAccountId != null) {
+        await _requireAccount(txn, transaction.destinationAccountId!);
+      }
+      if (transaction.categoryId != null) {
+        await _requireCategory(txn, transaction.categoryId!);
+      }
+      if (transaction.goalId != null) {
+        await _requireGoal(txn, transaction.goalId!);
+      }
+
+      final id = await txn.insert('transactions', transaction.toMap());
+      final insertedTx = transaction.copyWith(id: id);
+      await _applyTransactionEffects(txn, insertedTx);
+      return id;
+    });
+    notifyDataChanged();
+    return id;
+  }
+
   Future<int> createExpenseTransaction({
     required int accountId,
     required int categoryId,
@@ -1216,17 +1312,18 @@ class DatabaseHelper {
       if (categoryId != null) {
         await _requireCategory(txn, categoryId);
       }
-      await _adjustAccountBalance(txn, accountId, updateAccount);
-      return txn.insert('transactions', {
-        'account_id': accountId,
-        'destination_account_id': null,
-        'category_id': categoryId,
-        'goal_id': null,
-        'amount': amount,
-        'date': date,
-        'note': note,
-        'type': type,
-      });
+      final txModel = TransactionModel(
+        accountId: accountId,
+        categoryId: categoryId,
+        amount: amount,
+        date: date,
+        note: note,
+        type: type,
+      );
+      final id = await txn.insert('transactions', txModel.toMap());
+      final insertedTx = txModel.copyWith(id: id);
+      await _applyTransactionEffects(txn, insertedTx);
+      return id;
     });
     notifyDataChanged();
     return id;
@@ -1664,151 +1761,378 @@ class DatabaseHelper {
     return (res.first['amount'] as num).toDouble();
   }
 
+  Future<void> _applyExpenseEffect(
+    Transaction txn,
+    TransactionModel tx, {
+    int? explicitLockBankAccountId,
+    bool autoLockIfNoExplicit = true,
+  }) async {
+    await _adjustAccountBalance(txn, tx.accountId, -tx.amount);
+
+    final ccRows = await txn.query(
+      'credit_cards',
+      where: 'account_id = ?',
+      whereArgs: [tx.accountId],
+    );
+    if (ccRows.isNotEmpty) {
+      final ccRow = ccRows.first;
+      final ccId = ccRow['id'] as int;
+      final autoLock = (ccRow['auto_lock'] as int? ?? 1) == 1;
+      final defaultLockAcc = ccRow['default_lock_account_id'] as int?;
+
+      final targetLockAccountId =
+          explicitLockBankAccountId ??
+          (autoLockIfNoExplicit && autoLock ? defaultLockAcc : null);
+
+      if (targetLockAccountId != null) {
+        await _checkUsableFunds(txn, targetLockAccountId, tx.amount);
+        await txn.insert('locked_allocations', {
+          'goal_id': null,
+          'credit_card_id': ccId,
+          'account_id': targetLockAccountId,
+          'amount': tx.amount,
+          'transaction_id': tx.id,
+        });
+      }
+    }
+  }
+
+  Future<void> _reverseExpenseEffect(
+    Transaction txn,
+    TransactionModel tx,
+  ) async {
+    await _adjustAccountBalance(txn, tx.accountId, tx.amount);
+
+    if (tx.id != null) {
+      final linkedLocks = await txn.query(
+        'locked_allocations',
+        where: 'transaction_id = ?',
+        whereArgs: [tx.id],
+      );
+      if (linkedLocks.isNotEmpty) {
+        await txn.delete(
+          'locked_allocations',
+          where: 'transaction_id = ?',
+          whereArgs: [tx.id],
+        );
+        return;
+      }
+    }
+
+    final ccRows = await txn.query(
+      'credit_cards',
+      where: 'account_id = ?',
+      whereArgs: [tx.accountId],
+    );
+    if (ccRows.isNotEmpty) {
+      final ccId = ccRows.first['id'] as int;
+      final untrackedLocks = await txn.query(
+        'locked_allocations',
+        where: 'credit_card_id = ? AND transaction_id IS NULL',
+        whereArgs: [ccId],
+      );
+      if (untrackedLocks.isNotEmpty) {
+        await _reduceLockedAllocationByCreditCard(txn, ccId, tx.amount);
+      }
+    }
+  }
+
+  Future<void> _applyTransactionEffects(
+    Transaction txn,
+    TransactionModel tx, {
+    int? explicitLockBankAccountId,
+    bool autoLockIfNoExplicit = true,
+  }) async {
+    switch (tx.type) {
+      case 'expense':
+        await _applyExpenseEffect(
+          txn,
+          tx,
+          explicitLockBankAccountId: explicitLockBankAccountId,
+          autoLockIfNoExplicit: autoLockIfNoExplicit,
+        );
+        break;
+      case 'income':
+        await _adjustAccountBalance(txn, tx.accountId, tx.amount);
+        break;
+      case 'transfer':
+        if (tx.destinationAccountId == null) {
+          throw ArgumentError('Transfer requires destination account');
+        }
+        if (tx.accountId == tx.destinationAccountId) {
+          throw ArgumentError('Transfer accounts must be different');
+        }
+        await _requireAccount(txn, tx.destinationAccountId!);
+        await _adjustAccountBalance(txn, tx.accountId, -tx.amount);
+        await _adjustAccountBalance(txn, tx.destinationAccountId!, tx.amount);
+        break;
+      case 'goal_lock':
+        if (tx.goalId != null) {
+          await _checkUsableFunds(txn, tx.accountId, tx.amount);
+          await _restoreLockedAllocation(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+            tx.amount,
+          );
+          await txn.rawUpdate(
+            'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+            [tx.amount, tx.goalId!],
+          );
+        }
+        break;
+      case 'goal_unlock':
+        if (tx.goalId != null) {
+          final locked = await _getLockedAmountForGoal(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+          );
+          if (locked < tx.amount) {
+            throw StateError('Insufficient locked funds to unlock');
+          }
+          await _reduceLockedAllocationByGoalAndAccount(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+            tx.amount,
+          );
+          await txn.rawUpdate(
+            'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+            [tx.amount, tx.goalId!],
+          );
+        }
+        break;
+      case 'goal_payment':
+        await _adjustAccountBalance(txn, tx.accountId, -tx.amount);
+        if (tx.goalId != null) {
+          final locked = await _getLockedAmountForGoal(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+          );
+          if (locked < tx.amount) {
+            throw StateError('Insufficient locked funds for goal payment');
+          }
+          await _reduceLockedAllocationByGoalAndAccount(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+            tx.amount,
+          );
+          await txn.rawUpdate(
+            'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+            [tx.amount, tx.goalId!],
+          );
+        }
+        break;
+      case 'cc_payment':
+        if (tx.destinationAccountId == null) {
+          throw ArgumentError(
+            'Credit card payment requires credit card account',
+          );
+        }
+        await _adjustAccountBalance(txn, tx.accountId, -tx.amount);
+        await _adjustAccountBalance(txn, tx.destinationAccountId!, tx.amount);
+        final ccRows = await txn.query(
+          'credit_cards',
+          where: 'account_id = ?',
+          whereArgs: [tx.destinationAccountId!],
+        );
+        if (ccRows.isNotEmpty) {
+          final ccId = ccRows.first['id'] as int;
+          await _reduceLockedAllocationByCreditCard(txn, ccId, tx.amount);
+        }
+        break;
+      case 'cc_lock':
+        final targetCcAccId = tx.destinationAccountId ?? tx.accountId;
+        final ccRows = await txn.query(
+          'credit_cards',
+          where: 'account_id = ?',
+          whereArgs: [targetCcAccId],
+        );
+        if (ccRows.isNotEmpty) {
+          final ccId = ccRows.first['id'] as int;
+          await _checkUsableFunds(txn, tx.accountId, tx.amount);
+          await _restoreCreditCardLockedAllocation(
+            txn,
+            ccId,
+            tx.accountId,
+            tx.amount,
+          );
+        }
+        break;
+      case 'cc_unlock':
+        final targetUnlockCcAccId = tx.destinationAccountId ?? tx.accountId;
+        final unlockCcRows = await txn.query(
+          'credit_cards',
+          where: 'account_id = ?',
+          whereArgs: [targetUnlockCcAccId],
+        );
+        if (unlockCcRows.isNotEmpty) {
+          final ccId = unlockCcRows.first['id'] as int;
+          await _reduceLockedAllocationByCreditCardAndAccount(
+            txn,
+            ccId,
+            tx.accountId,
+            tx.amount,
+          );
+        }
+        break;
+      default:
+        await _adjustAccountBalance(txn, tx.accountId, -tx.amount);
+        break;
+    }
+  }
+
+  Future<void> _reverseTransactionEffects(
+    Transaction txn,
+    TransactionModel tx,
+  ) async {
+    switch (tx.type) {
+      case 'expense':
+        await _reverseExpenseEffect(txn, tx);
+        break;
+      case 'income':
+        await _adjustAccountBalance(txn, tx.accountId, -tx.amount);
+        break;
+      case 'transfer':
+        await _adjustAccountBalance(txn, tx.accountId, tx.amount);
+        if (tx.destinationAccountId != null) {
+          await _adjustAccountBalance(
+            txn,
+            tx.destinationAccountId!,
+            -tx.amount,
+          );
+        }
+        break;
+      case 'goal_lock':
+        if (tx.goalId != null) {
+          await _reduceLockedAllocationByGoalAndAccount(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+            tx.amount,
+          );
+          await txn.rawUpdate(
+            'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
+            [tx.amount, tx.goalId!],
+          );
+        }
+        break;
+      case 'goal_unlock':
+        if (tx.goalId != null) {
+          await _checkUsableFunds(txn, tx.accountId, tx.amount);
+          await _restoreLockedAllocation(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+            tx.amount,
+          );
+          await txn.rawUpdate(
+            'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+            [tx.amount, tx.goalId!],
+          );
+        }
+        break;
+      case 'goal_payment':
+        await _adjustAccountBalance(txn, tx.accountId, tx.amount);
+        if (tx.goalId != null) {
+          await _restoreLockedAllocation(
+            txn,
+            tx.goalId!,
+            tx.accountId,
+            tx.amount,
+          );
+          await txn.rawUpdate(
+            'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
+            [tx.amount, tx.goalId!],
+          );
+        }
+        break;
+      case 'cc_payment':
+        await _adjustAccountBalance(txn, tx.accountId, tx.amount);
+        if (tx.destinationAccountId != null) {
+          await _adjustAccountBalance(
+            txn,
+            tx.destinationAccountId!,
+            -tx.amount,
+          );
+          final ccRows = await txn.query(
+            'credit_cards',
+            where: 'account_id = ?',
+            whereArgs: [tx.destinationAccountId!],
+          );
+          if (ccRows.isNotEmpty &&
+              (ccRows.first['auto_lock'] as int? ?? 1) == 1) {
+            final ccId = ccRows.first['id'] as int;
+            final defaultLockAcc =
+                ccRows.first['default_lock_account_id'] as int? ?? tx.accountId;
+            await _restoreCreditCardLockedAllocation(
+              txn,
+              ccId,
+              defaultLockAcc,
+              tx.amount,
+            );
+          }
+        }
+        break;
+      case 'cc_lock':
+        final targetCcAccId = tx.destinationAccountId ?? tx.accountId;
+        final ccRows = await txn.query(
+          'credit_cards',
+          where: 'account_id = ?',
+          whereArgs: [targetCcAccId],
+        );
+        if (ccRows.isNotEmpty) {
+          final ccId = ccRows.first['id'] as int;
+          await _reduceLockedAllocationByCreditCardAndAccount(
+            txn,
+            ccId,
+            tx.accountId,
+            tx.amount,
+          );
+        }
+        break;
+      case 'cc_unlock':
+        final targetUnlockCcAccId = tx.destinationAccountId ?? tx.accountId;
+        final unlockCcRows = await txn.query(
+          'credit_cards',
+          where: 'account_id = ?',
+          whereArgs: [targetUnlockCcAccId],
+        );
+        if (unlockCcRows.isNotEmpty) {
+          final ccId = unlockCcRows.first['id'] as int;
+          await _restoreCreditCardLockedAllocation(
+            txn,
+            ccId,
+            tx.accountId,
+            tx.amount,
+          );
+        }
+        break;
+      default:
+        await _adjustAccountBalance(txn, tx.accountId, tx.amount);
+        break;
+    }
+  }
+
   /// Deletes a transaction and atomically reverses its effects on accounts, budgets, and goals.
   Future<void> deleteTransaction(int transactionId) async {
     final db = await instance.database;
 
-    final result = await db.query(
-      'transactions',
-      where: 'id = ?',
-      whereArgs: [transactionId],
-    );
-
-    if (result.isEmpty) return;
-
-    final tx = result.first;
-    final type = tx['type'] as String? ?? 'expense';
-    final accountId = tx['account_id'] as int;
-    final destinationAccountId = tx['destination_account_id'] as int?;
-    final goalId = tx['goal_id'] as int?;
-    final double amount = (tx['amount'] as num).toDouble();
-
     await db.transaction((txn) async {
-      switch (type) {
-        case 'expense':
-          await _adjustAccountBalance(txn, accountId, amount);
-          final ccRows = await txn.query(
-            'credit_cards',
-            where: 'account_id = ?',
-            whereArgs: [accountId],
-          );
-          if (ccRows.isNotEmpty) {
-            final ccId = ccRows.first['id'] as int;
-            await _reduceLockedAllocationByCreditCard(txn, ccId, amount);
-          }
-          break;
+      final result = await txn.query(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [transactionId],
+        limit: 1,
+      );
 
-        case 'cc_payment':
-          await _adjustAccountBalance(txn, accountId, amount);
-          if (destinationAccountId != null) {
-            await _adjustAccountBalance(txn, destinationAccountId, -amount);
-            final ccRows = await txn.query(
-              'credit_cards',
-              where: 'account_id = ?',
-              whereArgs: [destinationAccountId],
-            );
-            if (ccRows.isNotEmpty &&
-                (ccRows.first['auto_lock'] as int? ?? 1) == 1) {
-              final ccId = ccRows.first['id'] as int;
-              final defaultLockAcc =
-                  ccRows.first['default_lock_account_id'] as int? ?? accountId;
-              await txn.insert('locked_allocations', {
-                'goal_id': null,
-                'credit_card_id': ccId,
-                'account_id': defaultLockAcc,
-                'amount': amount,
-              });
-            }
-          }
-          break;
+      if (result.isEmpty) return;
 
-        case 'cc_lock':
-          final targetCcAccId = destinationAccountId ?? accountId;
-          final ccRows = await txn.query(
-            'credit_cards',
-            where: 'account_id = ?',
-            whereArgs: [targetCcAccId],
-          );
-          if (ccRows.isNotEmpty) {
-            final ccId = ccRows.first['id'] as int;
-            await _reduceLockedAllocationByCreditCardAndAccount(
-              txn,
-              ccId,
-              accountId,
-              amount,
-            );
-          }
-          break;
-
-        case 'cc_unlock':
-          final targetUnlockCcAccId = destinationAccountId ?? accountId;
-          final unlockCcRows = await txn.query(
-            'credit_cards',
-            where: 'account_id = ?',
-            whereArgs: [targetUnlockCcAccId],
-          );
-          if (unlockCcRows.isNotEmpty) {
-            final ccId = unlockCcRows.first['id'] as int;
-            await _restoreCreditCardLockedAllocation(
-              txn,
-              ccId,
-              accountId,
-              amount,
-            );
-          }
-          break;
-
-        case 'income':
-          await _adjustAccountBalance(txn, accountId, -amount);
-          break;
-
-        case 'transfer':
-          await _adjustAccountBalance(txn, accountId, amount);
-          if (destinationAccountId != null) {
-            await _adjustAccountBalance(txn, destinationAccountId, -amount);
-          }
-          break;
-
-        case 'goal_lock':
-          if (goalId != null) {
-            await _reduceLockedAllocationByGoalAndAccount(
-              txn,
-              goalId,
-              accountId,
-              amount,
-            );
-            await txn.rawUpdate(
-              'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-              [amount, goalId],
-            );
-          }
-          break;
-
-        case 'goal_unlock':
-          if (goalId != null) {
-            await _restoreLockedAllocation(txn, goalId, accountId, amount);
-            await txn.rawUpdate(
-              'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-              [amount, goalId],
-            );
-          }
-          break;
-
-        case 'goal_payment':
-          await _adjustAccountBalance(txn, accountId, amount);
-          if (goalId != null) {
-            await _restoreLockedAllocation(txn, goalId, accountId, amount);
-            await txn.rawUpdate(
-              'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-              [amount, goalId],
-            );
-          }
-          break;
-
-        default:
-          await _adjustAccountBalance(txn, accountId, amount);
-          break;
-      }
+      final tx = TransactionModel.fromMap(result.first);
+      await _reverseTransactionEffects(txn, tx);
 
       await txn.delete(
         'transactions',
@@ -1820,7 +2144,8 @@ class DatabaseHelper {
     notifyDataChanged();
   }
 
-  /// Updates an existing transaction and atomically adjusts balances and allocations.
+  /// Updates an existing transaction and atomically adjusts balances and allocations
+  /// using the Reverse-Then-Apply (RTA) pattern.
   Future<void> updateTransaction({
     required int id,
     required double amount,
@@ -1829,6 +2154,7 @@ class DatabaseHelper {
     int? categoryId,
     String? note,
     int? destinationAccountId,
+    String? type,
   }) async {
     _validateAmount(amount);
     final db = await instance.database;
@@ -1842,298 +2168,49 @@ class DatabaseHelper {
       );
       if (existing.isEmpty) throw StateError('Transaction not found: $id');
 
-      final oldTx = existing.first;
-      final type = oldTx['type'] as String? ?? 'expense';
-      final oldAmount = (oldTx['amount'] as num).toDouble();
-      final oldAccountId = oldTx['account_id'] as int;
-      final oldDestId = oldTx['destination_account_id'] as int?;
-      final goalId = oldTx['goal_id'] as int?;
+      final oldTx = TransactionModel.fromMap(existing.first);
 
       await _requireAccount(txn, accountId);
+      final resolvedDestId =
+          destinationAccountId ??
+          (oldTx.type == 'transfer' ? oldTx.destinationAccountId : null);
+      if (resolvedDestId != null) {
+        await _requireAccount(txn, resolvedDestId);
+      }
       if (categoryId != null) {
         await _requireCategory(txn, categoryId);
       }
 
-      switch (type) {
-        case 'expense':
-          if (oldAccountId == accountId) {
-            final balanceDelta = oldAmount - amount;
-            await _adjustAccountBalance(txn, accountId, balanceDelta);
-          } else {
-            await _adjustAccountBalance(txn, oldAccountId, oldAmount);
-            await _adjustAccountBalance(txn, accountId, -amount);
-          }
+      // 1. Reverse old transaction effects completely
+      await _reverseTransactionEffects(txn, oldTx);
 
-          // Sync CC locked allocations when expense amount changes
-          if (oldAmount != amount) {
-            final accType = await txn.query(
-              'accounts',
-              columns: ['type'],
-              where: 'id = ?',
-              whereArgs: [accountId],
-            );
-            if (accType.isNotEmpty && accType.first['type'] == 'Credit Card') {
-              final ccRows = await txn.query(
-                'credit_cards',
-                where: 'account_id = ?',
-                whereArgs: [accountId],
-              );
-              if (ccRows.isNotEmpty) {
-                final ccId = ccRows.first['id'] as int;
-                final locks = await txn.query(
-                  'locked_allocations',
-                  where: 'credit_card_id = ?',
-                  whereArgs: [ccId],
-                  orderBy: 'id DESC',
-                );
-                // Adjust the first lock that matches oldAmount
-                for (final lock in locks) {
-                  final lockAmount = (lock['amount'] as num).toDouble();
-                  if ((lockAmount - oldAmount).abs() < 0.005) {
-                    final lockId = lock['id'] as int;
-                    await txn.update(
-                      'locked_allocations',
-                      {'amount': amount},
-                      where: 'id = ?',
-                      whereArgs: [lockId],
-                    );
-                    break;
-                  }
-                }
-              }
-            }
-          }
-          break;
+      // 2. Build new transaction model
+      final targetType = type ?? oldTx.type;
+      final newTx = oldTx.copyWith(
+        id: id,
+        amount: amount,
+        date: date,
+        accountId: accountId,
+        destinationAccountId: resolvedDestId,
+        categoryId: categoryId,
+        note: note ?? oldTx.note,
+        type: targetType,
+      );
 
-        case 'income':
-          if (oldAccountId == accountId) {
-            final balanceDelta = amount - oldAmount;
-            await _adjustAccountBalance(txn, accountId, balanceDelta);
-          } else {
-            await _adjustAccountBalance(txn, oldAccountId, -oldAmount);
-            await _adjustAccountBalance(txn, accountId, amount);
-          }
-          break;
+      // 3. Apply new transaction effects completely
+      await _applyTransactionEffects(txn, newTx);
 
-        case 'transfer':
-          final targetDestId = destinationAccountId ?? oldDestId;
-          if (targetDestId == null) {
-            throw ArgumentError('Transfer requires destination account');
-          }
-          if (accountId == targetDestId) {
-            throw ArgumentError('Transfer accounts must be different');
-          }
-          await _requireAccount(txn, targetDestId);
-
-          await _adjustAccountBalance(txn, oldAccountId, oldAmount);
-          if (oldDestId != null) {
-            await _adjustAccountBalance(txn, oldDestId, -oldAmount);
-          }
-          await _adjustAccountBalance(txn, accountId, -amount);
-          await _adjustAccountBalance(txn, targetDestId, amount);
-          break;
-
-        case 'goal_lock':
-          if (goalId != null) {
-            if (oldAccountId == accountId) {
-              if (amount > oldAmount) {
-                final diff = amount - oldAmount;
-                await _checkUsableFunds(txn, accountId, diff);
-                await _restoreLockedAllocation(txn, goalId, accountId, diff);
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-                  [diff, goalId],
-                );
-              } else if (amount < oldAmount) {
-                final diff = oldAmount - amount;
-                await _reduceLockedAllocationByGoalAndAccount(
-                  txn,
-                  goalId,
-                  accountId,
-                  diff,
-                );
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-                  [diff, goalId],
-                );
-              }
-            } else {
-              await _reduceLockedAllocationByGoalAndAccount(
-                txn,
-                goalId,
-                oldAccountId,
-                oldAmount,
-              );
-              await _checkUsableFunds(txn, accountId, amount);
-              await _restoreLockedAllocation(txn, goalId, accountId, amount);
-              final diff = amount - oldAmount;
-              if (diff != 0) {
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = MAX(0.0, current_saved + ?) WHERE id = ?',
-                  [diff, goalId],
-                );
-              }
-            }
-          }
-          break;
-
-        case 'goal_unlock':
-          if (goalId != null) {
-            if (oldAccountId == accountId) {
-              if (amount > oldAmount) {
-                final diff = amount - oldAmount;
-                final locked = await _getLockedAmountForGoal(
-                  txn,
-                  goalId,
-                  accountId,
-                );
-                if (locked < diff) {
-                  throw StateError('Insufficient locked funds to unlock');
-                }
-                await _reduceLockedAllocationByGoalAndAccount(
-                  txn,
-                  goalId,
-                  accountId,
-                  diff,
-                );
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-                  [diff, goalId],
-                );
-              } else if (amount < oldAmount) {
-                final diff = oldAmount - amount;
-                await _checkUsableFunds(txn, accountId, diff);
-                await _restoreLockedAllocation(txn, goalId, accountId, diff);
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-                  [diff, goalId],
-                );
-              }
-            } else {
-              await _checkUsableFunds(txn, oldAccountId, oldAmount);
-              await _restoreLockedAllocation(
-                txn,
-                goalId,
-                oldAccountId,
-                oldAmount,
-              );
-              final locked = await _getLockedAmountForGoal(
-                txn,
-                goalId,
-                accountId,
-              );
-              if (locked < amount) {
-                throw StateError('Insufficient locked funds on target account');
-              }
-              await _reduceLockedAllocationByGoalAndAccount(
-                txn,
-                goalId,
-                accountId,
-                amount,
-              );
-              final diff = oldAmount - amount;
-              if (diff != 0) {
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = MAX(0.0, current_saved + ?) WHERE id = ?',
-                  [diff, goalId],
-                );
-              }
-            }
-          }
-          break;
-
-        case 'goal_payment':
-          if (goalId != null) {
-            if (oldAccountId == accountId) {
-              final balanceDelta = oldAmount - amount;
-              await _adjustAccountBalance(txn, accountId, balanceDelta);
-              if (amount > oldAmount) {
-                final diff = amount - oldAmount;
-                final locked = await _getLockedAmountForGoal(
-                  txn,
-                  goalId,
-                  accountId,
-                );
-                if (locked < diff) {
-                  throw StateError(
-                    'Insufficient locked funds for goal payment',
-                  );
-                }
-                await _reduceLockedAllocationByGoalAndAccount(
-                  txn,
-                  goalId,
-                  accountId,
-                  diff,
-                );
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = MAX(0.0, current_saved - ?) WHERE id = ?',
-                  [diff, goalId],
-                );
-              } else if (amount < oldAmount) {
-                final diff = oldAmount - amount;
-                await _restoreLockedAllocation(txn, goalId, accountId, diff);
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = current_saved + ? WHERE id = ?',
-                  [diff, goalId],
-                );
-              }
-            } else {
-              await _adjustAccountBalance(txn, oldAccountId, oldAmount);
-              await _restoreLockedAllocation(
-                txn,
-                goalId,
-                oldAccountId,
-                oldAmount,
-              );
-              final newAcc = await txn.query(
-                'accounts',
-                columns: ['balance'],
-                where: 'id = ?',
-                whereArgs: [accountId],
-              );
-              if (newAcc.isEmpty) {
-                throw StateError('Account not found: $accountId');
-              }
-              final newBal = (newAcc.first['balance'] as num).toDouble();
-              if (newBal < amount) {
-                throw StateError('Insufficient account funds for payment');
-              }
-              final locked = await _getLockedAmountForGoal(
-                txn,
-                goalId,
-                accountId,
-              );
-              if (locked < amount) {
-                throw StateError('Insufficient locked funds on target account');
-              }
-              await _adjustAccountBalance(txn, accountId, -amount);
-              await _reduceLockedAllocationByGoalAndAccount(
-                txn,
-                goalId,
-                accountId,
-                amount,
-              );
-              final diff = oldAmount - amount;
-              if (diff != 0) {
-                await txn.rawUpdate(
-                  'UPDATE goals SET current_saved = MAX(0.0, current_saved + ?) WHERE id = ?',
-                  [diff, goalId],
-                );
-              }
-            }
-          }
-          break;
-      }
-
+      // 4. Update row in transactions table
       await txn.update(
         'transactions',
         {
-          'account_id': accountId,
-          'destination_account_id': destinationAccountId ?? oldDestId,
-          'category_id': categoryId,
-          'amount': amount,
-          'date': date,
-          'note': note ?? '',
+          'account_id': newTx.accountId,
+          'destination_account_id': newTx.destinationAccountId,
+          'category_id': newTx.categoryId,
+          'amount': newTx.amount,
+          'date': newTx.date,
+          'note': newTx.note,
+          'type': newTx.type,
         },
         where: 'id = ?',
         whereArgs: [id],
@@ -2993,6 +3070,7 @@ class DatabaseHelper {
             'credit_card_id': ccId,
             'account_id': lockBankAccountId,
             'amount': amount,
+            'transaction_id': id,
           });
         }
       }
@@ -4205,6 +4283,18 @@ class DatabaseHelper {
     notifyDataChanged();
   }
 
+  /// Retrieves SMS SLM preference (defaults to true).
+  Future<bool> getSmsUseSlm() async {
+    final val = await getSetting('sms_use_slm', defaultValue: 'true');
+    return val == 'true';
+  }
+
+  /// Persists SMS SLM preference.
+  Future<void> setSmsUseSlm(bool enabled) async {
+    await setSetting('sms_use_slm', enabled ? 'true' : 'false');
+    notifyDataChanged();
+  }
+
   /// Synchronizes runtime dashboard privacy mode on application startup
   /// according to the startup privacy mode preference.
   Future<void> initStartupPrivacyMode() async {
@@ -4406,5 +4496,89 @@ class DatabaseHelper {
         notifyDataChanged();
       }
     } catch (_) {}
+  }
+
+  // --- TRACKED SMS MESSAGES (DEDUPLICATION & STAGING) ---
+
+  Future<int> insertTrackedSmsMessage(TrackedSmsMessage message) async {
+    final db = await instance.database;
+    final res = await db.insert(
+      'tracked_sms_messages',
+      message.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+    notifyDataChanged();
+    return res;
+  }
+
+  Future<TrackedSmsMessage?> readTrackedSmsMessage(String id) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'tracked_sms_messages',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (res.isNotEmpty) {
+      return TrackedSmsMessage.fromMap(res.first);
+    }
+    return null;
+  }
+
+  Future<List<TrackedSmsMessage>> readPendingTrackedSmsMessages() async {
+    final db = await instance.database;
+    final res = await db.query(
+      'tracked_sms_messages',
+      where: 'status = ?',
+      whereArgs: ['pending'],
+      orderBy: 'received_at DESC',
+    );
+    return res.map(TrackedSmsMessage.fromMap).toList();
+  }
+
+  Future<List<TrackedSmsMessage>> readAllTrackedSmsMessages({
+    int limit = 100,
+  }) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'tracked_sms_messages',
+      orderBy: 'received_at DESC',
+      limit: limit,
+    );
+    return res.map(TrackedSmsMessage.fromMap).toList();
+  }
+
+  Future<int> updateTrackedSmsStatus(String id, TrackedSmsStatus status) async {
+    final db = await instance.database;
+    final res = await db.update(
+      'tracked_sms_messages',
+      {'status': status.name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    notifyDataChanged();
+    return res;
+  }
+
+  Future<int> updateTrackedSmsDraft(String id, DraftTransaction draft) async {
+    final db = await instance.database;
+    final res = await db.update(
+      'tracked_sms_messages',
+      {'draft_json': jsonEncode(draft.toMap())},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    notifyDataChanged();
+    return res;
+  }
+
+  Future<int> deleteTrackedSmsMessage(String id) async {
+    final db = await instance.database;
+    final res = await db.delete(
+      'tracked_sms_messages',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    notifyDataChanged();
+    return res;
   }
 }
