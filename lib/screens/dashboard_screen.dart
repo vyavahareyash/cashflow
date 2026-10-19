@@ -16,6 +16,7 @@ import '../components/category_badge.dart';
 import '../components/choice_picker_field.dart';
 import '../components/app_dialogs.dart';
 import '../models/tracked_sms_message.dart';
+import '../services/sms_notification_service.dart';
 import '../services/sms_tracker_service.dart';
 import '../components/voice_transaction_staging_sheet.dart';
 import '../components/walkthrough/walkthrough_keys.dart';
@@ -60,6 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _salaryDay = 1;
   DateTime _selectedDate = DateTime.now();
   List<TrackedSmsMessage> _pendingSmsMessages = [];
+  StreamSubscription<void>? _openDraftsSub;
 
   @override
   void initState() {
@@ -69,10 +71,25 @@ class _DashboardScreenState extends State<DashboardScreen>
     DatabaseHelper.dataRevision.addListener(_onDataChanged);
     SmsTrackerService.instance.addListener(_onSmsDataChanged);
     unawaited(SmsTrackerService.instance.initialize());
+
+    _openDraftsSub = SmsTrackerService.instance.onOpenDraftsRequested.listen((
+      _,
+    ) {
+      if (mounted) {
+        unawaited(_openSmsStagingSheet());
+      }
+    });
+    SmsNotificationService.instance.onOpenDraftsSheet = () {
+      if (mounted) {
+        unawaited(_openSmsStagingSheet());
+      }
+    };
   }
 
   @override
   void dispose() {
+    unawaited(_openDraftsSub?.cancel());
+    SmsNotificationService.instance.onOpenDraftsSheet = null;
     WidgetsBinding.instance.removeObserver(this);
     DatabaseHelper.dataRevision.removeListener(_onDataChanged);
     SmsTrackerService.instance.removeListener(_onSmsDataChanged);

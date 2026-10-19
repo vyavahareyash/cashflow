@@ -1,6 +1,6 @@
 # Privacy Policy for Cashflow
 
-**Last Updated**: September 24, 2026
+**Last Updated**: October 19, 2026
 
 Cashflow is an offline-first personal finance and expense tracking application designed with user privacy as a foundational principle.
 
@@ -22,22 +22,30 @@ Cashflow is an offline-first personal finance and expense tracking application d
 - The biometric permission (`android.permission.USE_BIOMETRIC`) is utilized solely for the optional App Lock security feature.
 - Authentication is handled entirely by your operating system's secure hardware enclave. Cashflow never accesses, reads, collects, or stores your biometric data.
 
-## 5. Local Data Storage & Security
+## 5. SMS & Financial Transaction Data
+- The SMS permissions (`android.permission.RECEIVE_SMS`, `android.permission.READ_SMS`) are requested strictly for offline money management and automatic transaction tracking.
+- Cashflow inspects only incoming and existing transactional and banking SMS notifications to parse transaction amounts, dates, and merchant descriptions.
+- The notification permission (`android.permission.POST_NOTIFICATIONS`) is used strictly to alert you locally on-device when a bank transaction is detected, allowing you to review and confirm draft transactions before adding them to your ledger. Notifications are generated locally and contain no tracking or analytics.
+- All SMS parsing is performed entirely on-device (via local rule-based heuristics and local on-device SLM inference).
+- Personal SMS, non-financial messages, contact details, and OTPs/passwords are never collected, logged, or retained.
+- No SMS content or extracted data is ever transmitted off the device, sold, or shared with third parties.
+
+## 6. Local Data Storage & Security
 - All application data is stored in a private local SQLite database contained within the app's sandboxed storage directory on your device.
 - Data remains strictly on your device and is permanently deleted if you uninstall the application or clear application data through your device settings.
 
-## 6. Local Backup & Export
+## 7. Local Backup & Export
 - Cashflow allows you to manually export your financial ledger to JSON, CSV, or raw SQLite backup files and restore previous backups.
 - Export files are written only to storage locations explicitly selected by you via your operating system's native file picker. Cashflow does not upload, sync, or transmit these files to any external service.
 
-## 7. Third-Party Services & Libraries
+## 8. Third-Party Services & Libraries
 - Cashflow does not integrate with any third-party tracking, advertising, analytics, or behavioral profiling software development kits (SDKs).
 
-## 8. Children's Privacy
+## 9. Children's Privacy
 - Cashflow does not collect, store, or share information from anyone, including children under the age of 13.
 
-## 9. Changes to This Privacy Policy
+## 10. Changes to This Privacy Policy
 - Because Cashflow does not collect personal data, changes to this policy will be infrequent and will be reflected directly in this document and accompanying repository updates.
 
-## 10. Contact Information
+## 11. Contact Information
 - If you have questions regarding this Privacy Policy or Cashflow's privacy architecture, please open an issue in the public GitHub repository: [https://github.com/vyavahareyash/cashflow](https://github.com/vyavahareyash/cashflow).
