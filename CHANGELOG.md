@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.17.0] - 2026-10-19
+
+### Added
+- **Live Incoming SMS Draft Creation & Notifications**: Added background incoming SMS broadcast receiver, cold-start catch-up scan, actionable deep-linked notifications opening the transaction staging review sheet, and updated privacy policy (#171).
+
+---
+
 ## [4.16.0] - 2026-10-19
 
 ### Added
