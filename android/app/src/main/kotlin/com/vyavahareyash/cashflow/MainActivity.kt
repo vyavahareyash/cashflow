@@ -20,6 +20,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         private var smsMethodChannel: MethodChannel? = null
         private const val NOTIFICATION_CHANNEL_ID = "cashflow_transactions"
+        private const val NOTIFICATION_ID = 42001
 
         fun notifySmsReceived(context: android.content.Context, sender: String, body: String, timestamp: Long) {
             val payload = mapOf(
@@ -31,14 +32,9 @@ class MainActivity : FlutterFragmentActivity() {
             if (channel != null) {
                 channel.invokeMethod("onSmsReceived", payload)
             }
-
-            // Post notification if message resembles a transaction
-            if (body.contains(Regex("(?i)(debited|spent|paid|credited|transferred|withdrawn|purchase)"))) {
-                showTransactionNotification(context, body)
-            }
         }
 
-        private fun showTransactionNotification(context: android.content.Context, body: String) {
+        fun showDraftNotification(context: android.content.Context, title: String, body: String) {
             val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager ?: return
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -54,6 +50,7 @@ class MainActivity : FlutterFragmentActivity() {
 
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("open_sms_drafts", true)
             }
             val pendingIntent = android.app.PendingIntent.getActivity(
                 context,
@@ -65,22 +62,26 @@ class MainActivity : FlutterFragmentActivity() {
                     android.app.PendingIntent.FLAG_UPDATE_CURRENT
             )
 
-            // Extract approximate amount if possible for notification preview
-            val amountMatch = Regex("""(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)""", RegexOption.IGNORE_CASE).find(body)
-            val amountText = amountMatch?.groupValues?.get(1) ?: ""
-            val title = if (amountText.isNotEmpty()) "₹$amountText Transaction Detected" else "New Bank Transaction Detected"
-
             val notification = androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(title)
-                .setContentText("Tap to review and add this transaction to Cashflow.")
+                .setContentText("Tap to review and add to Cashflow.")
                 .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
                 .build()
 
-            notificationManager.notify((System.currentTimeMillis() % 100000).toInt(), notification)
+            // Fixed notification ID so multiple alerts replace each other without bombardment
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra("open_sms_drafts", false)) {
+            smsMethodChannel?.invokeMethod("openSmsDrafts", null)
         }
     }
 
@@ -126,6 +127,22 @@ class MainActivity : FlutterFragmentActivity() {
                     )
                     result.success(true)
                 }
+                "requestNotificationPermission" -> {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                            102
+                        )
+                    }
+                    result.success(true)
+                }
+                "showDraftNotification" -> {
+                    val title = call.argument<String>("title") ?: "Transaction Detected"
+                    val body = call.argument<String>("body") ?: "Tap to review"
+                    showDraftNotification(this, title, body)
+                    result.success(true)
+                }
                 "readInboxMessages" -> {
                     val days = (call.argument<Any>("days") as? Number)?.toInt() ?: 14
                     val startTimestamp = (call.argument<Any>("startTimestamp") as? Number)?.toLong()
@@ -135,6 +152,10 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+
+        if (intent?.getBooleanExtra("open_sms_drafts", false) == true) {
+            channel.invokeMethod("openSmsDrafts", null)
         }
     }
 

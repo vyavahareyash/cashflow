@@ -49,6 +49,22 @@ class SmsTrackerService extends ChangeNotifier {
   int get unreviewedDraftCount =>
       _pendingSmsMessages.where((m) => m.draft != null).length;
 
+  final StreamController<TrackedSmsMessage> _liveDraftCreatedController =
+      StreamController<TrackedSmsMessage>.broadcast();
+  Stream<TrackedSmsMessage> get onLiveDraftCreated =>
+      _liveDraftCreatedController.stream;
+
+  final StreamController<void> _openDraftsRequested =
+      StreamController<void>.broadcast();
+  Stream<void> get onOpenDraftsRequested => _openDraftsRequested.stream;
+
+  int _startupDraftCount = 0;
+  int get startupDraftCount => _startupDraftCount;
+
+  void consumeStartupDraftCount() {
+    _startupDraftCount = 0;
+  }
+
   SmsTrackerService._init() {
     _channel.setMethodCallHandler(_handleNativeCall);
   }
@@ -62,6 +78,15 @@ class SmsTrackerService extends ChangeNotifier {
     final slmSetting = await DatabaseHelper.instance.getSmsUseSlm();
     _useSlm = slmSetting;
     await refreshPendingMessages();
+
+    // Catch-up: scan last 1 day to pick up SMS received while app was killed
+    if (_isTrackingEnabled) {
+      final caught = await scanInbox(days: 1);
+      if (caught > 0) {
+        _startupDraftCount = caught;
+        notifyListeners();
+      }
+    }
   }
 
   /// Toggles whether SLM is used for SMS extraction when downloaded.
@@ -97,12 +122,27 @@ class SmsTrackerService extends ChangeNotifier {
         final body = args['body']?.toString() ?? '';
         final timestamp =
             args['timestamp']?.toString() ?? DateTime.now().toIso8601String();
-        await processIncomingSms(
+        final added = await processIncomingSms(
           sender: sender,
           body: body,
           timestamp: timestamp,
         );
+        if (added) {
+          final id = SmsExtractionService.computeSmsHash(
+            sender,
+            body,
+            timestamp,
+          );
+          final message = await DatabaseHelper.instance.readTrackedSmsMessage(
+            id,
+          );
+          if (message?.draft != null) {
+            _liveDraftCreatedController.add(message!);
+          }
+        }
       }
+    } else if (call.method == 'openSmsDrafts') {
+      _openDraftsRequested.add(null);
     }
     return null;
   }
@@ -112,6 +152,8 @@ class SmsTrackerService extends ChangeNotifier {
     if (kIsWeb) return false;
     try {
       final result = await _channel.invokeMethod<bool>('requestPermissions');
+      // Also request notification permission on Android 13+
+      await _channel.invokeMethod<bool>('requestNotificationPermission');
       return result ?? false;
     } catch (_) {
       return false;
@@ -207,15 +249,10 @@ class SmsTrackerService extends ChangeNotifier {
 
     final id = SmsExtractionService.computeSmsHash(sender, body, timestamp);
 
-    // 1. Check deduplication store - only deduplicate against committed (approved) or pending transactions
+    // 1. Check deduplication store - skip if already tracked (committed, pending, dismissed, or unparseable)
     final existing = await DatabaseHelper.instance.readTrackedSmsMessage(id);
     if (existing != null) {
-      if (existing.status == TrackedSmsStatus.committed ||
-          existing.status == TrackedSmsStatus.pending) {
-        return false;
-      }
-      // If previously dismissed, delete stale record so it can be re-scanned and drafted
-      await DatabaseHelper.instance.deleteTrackedSmsMessage(id);
+      return false;
     }
 
     // Resolve fallback date from SMS arrival timestamp
@@ -389,9 +426,19 @@ class SmsTrackerService extends ChangeNotifier {
     await refreshPendingMessages();
   }
 
-  /// Dismisses an SMS draft so it is removed from pending, allowing re-scanning later if requested.
+  /// Dismisses an SMS draft so it is marked dismissed and will not reappear on startup or manual scans.
   Future<void> dismissMessage(String id) async {
-    await DatabaseHelper.instance.deleteTrackedSmsMessage(id);
+    await DatabaseHelper.instance.updateTrackedSmsStatus(
+      id,
+      TrackedSmsStatus.dismissed,
+    );
     await refreshPendingMessages();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_liveDraftCreatedController.close());
+    unawaited(_openDraftsRequested.close());
+    super.dispose();
   }
 }

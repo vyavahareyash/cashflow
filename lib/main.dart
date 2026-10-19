@@ -21,6 +21,7 @@ import 'package:cashflow/components/walkthrough/walkthrough_controller.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_spotlight_overlay.dart';
 import 'package:cashflow/components/walkthrough/walkthrough_keys.dart';
 import 'package:cashflow/navigation/app_router.dart';
+import 'package:cashflow/services/sms_notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,6 +90,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
           settingsScreenBuilder: (context) => const BackupRestoreScreen(),
         );
     WidgetsBinding.instance.addObserver(this);
+    SmsNotificationService.instance.initialize();
     if (_locked) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _tryUnlock());
     } else {
@@ -98,6 +100,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
 
   @override
   void dispose() {
+    SmsNotificationService.instance.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -245,6 +248,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp>
       );
     }
     return MaterialApp.router(
+      scaffoldMessengerKey: SmsNotificationService.scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Cashflow',
       routeInformationParser: _routeInformationParser,
