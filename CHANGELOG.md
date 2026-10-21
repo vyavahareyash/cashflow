@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.17.1] - 2026-10-21
+
+### Fixed
+- Version bump for Play Console review resubmission.
+
+---
+
 ## [4.17.0] - 2026-10-19
 
 ### Added
